@@ -119,7 +119,7 @@ fn validate_iri_str<S: AsRef<str>>(s: S) -> Result<S, UrlParseError> {
 }
 
 
-/// IRI string slice.
+/// Absolute IRI string slice.
 // derive_hash_xor_eq (clippy lint):
 //  This does not matter because explicit `PartialEq` impls are only doing
 //  type conversion (`&AbsoluteIriStr` to `&str`) and equalness is preserved.
@@ -250,7 +250,7 @@ impl<'de> Deserialize<'de> for &'de AbsoluteIriStr {
 }
 
 
-/// Owned IRI string.
+/// Owned absolute IRI string.
 // derive_hash_xor_eq (clippy lint):
 //  This does not matter because explicit `PartialEq` impls are only doing
 //  type conversion (`&AbsoluteIriString` to `&str`) and equalness is preserved.
