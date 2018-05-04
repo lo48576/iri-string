@@ -9,6 +9,11 @@ repository = "https://github.com/lo48576/iri-string"
 keywords = ["IRI", "URI"]
 
 [dependencies]
+opaque_typedef = "^0.0.3"
+opaque_typedef_macros = "^0.0.3"
+serde = "^1.0"
+serde_derive = "^1.0"
+url = "^1.7"
 
 [badges]
 travis-ci = { repository = "lo48576/iri-string" }
