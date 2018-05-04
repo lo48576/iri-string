@@ -298,6 +298,24 @@ impl AbsoluteIriString {
         <Self as OpaqueTypedef>::try_from_inner(s)
     }
 
+    /// Creates a new `AbsoluteIriString` from the given string without
+    /// validation.
+    ///
+    /// # Safety
+    ///
+    /// This function is unsafe because it does not check that the string passed
+    /// to it is successfully parsable as IRI.
+    /// If this constraint is violated, undefined behavior results, as the rest
+    /// of Rust assumes that `AbsoluteIriString` is surely an IRI.
+    ///
+    /// So, the argument should fulfill:
+    ///
+    /// * [`url::Url::parse(&arg)`][`Url::parse`] should return `Ok(_)`.
+    pub unsafe fn from_string_unchecked(s: String) -> Self {
+        // It is caller's responsibility to ensure that this is safe.
+        <Self as OpaqueTypedef>::from_inner_unchecked(s)
+    }
+
     /// Returns [`&AbsoluteIriStr`][`AbsoluteIriStr`] slice for the inner IRI
     /// string.
     pub fn as_iri_str(&self) -> &AbsoluteIriStr {
