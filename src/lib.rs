@@ -3,16 +3,17 @@
 //! See [RFC 3987](https://tools.ietf.org/html/rfc3987) about IRI.
 #![warn(missing_docs)]
 
-extern crate serde;
+#[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_derive;
+extern crate serde;
 extern crate opaque_typedef;
 #[macro_use]
 extern crate opaque_typedef_macros;
 extern crate url;
 
 use opaque_typedef::{OpaqueTypedef, OpaqueTypedefUnsized};
-use serde::{Deserialize, Deserializer};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 pub use url::ParseError as UrlParseError;
 pub use url::Url;
 
@@ -96,6 +97,27 @@ impl AbsoluteIri {
     }
 }
 
+#[cfg(feature = "serde")]
+impl Serialize for AbsoluteIri {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self.raw())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for AbsoluteIri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        AbsoluteIri::new(s).map_err(serde::de::Error::custom)
+    }
+}
+
 
 /// Validates the given string as IRI.
 ///
@@ -107,7 +129,8 @@ fn validate_iri_str<S: AsRef<str>>(s: S) -> Result<S, UrlParseError> {
 
 
 /// IRI string slice.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, OpaqueTypedefUnsized, Serialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, OpaqueTypedefUnsized)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[repr(C)]
 #[opaque_typedef(
     derive(
@@ -220,6 +243,7 @@ impl ToOwned for AbsoluteIriStr {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for &'de AbsoluteIriStr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -232,7 +256,8 @@ impl<'de> Deserialize<'de> for &'de AbsoluteIriStr {
 
 
 /// Owned IRI string.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, OpaqueTypedef, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, OpaqueTypedef)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[opaque_typedef(
     derive(
         AsRef(Deref, Inner),
@@ -321,6 +346,7 @@ impl AsRef<str> for AbsoluteIriString {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for AbsoluteIriString {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -422,5 +448,23 @@ mod tests {
             "https://テスト.日本語/%E3%83%86%E3%82%B9%E3%83%88",
         ];
         ok_cases.into_iter().for_each(|&s| ensure_ok(s));
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn ensure_serde_traits() {
+        fn serializable<T: Serialize>(_: T) {}
+        fn deserializable<'de, T: Deserialize<'de>>(_: T) {}
+
+        let s = "https://example.com/";
+        let iri = AbsoluteIri::new(s).unwrap();
+        let iri_str = AbsoluteIriStr::new(s).unwrap();
+        let iri_string = AbsoluteIriString::new(s.to_owned()).unwrap();
+        serializable(iri.clone());
+        serializable(iri_str);
+        serializable(iri_string.clone());
+        deserializable(iri.clone());
+        deserializable(iri_str);
+        deserializable(iri_string.clone());
     }
 }

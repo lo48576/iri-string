@@ -8,11 +8,13 @@ description = "IRI as string"
 repository = "https://github.com/lo48576/iri-string"
 keywords = ["IRI", "URI"]
 
+[features]
+default = ["serde"]
+
 [dependencies]
 opaque_typedef = "^0.0.3"
 opaque_typedef_macros = "^0.0.3"
-serde = "^1.0"
-serde_derive = "^1.0"
+serde = { version = "^1.0.45", optional = true, features = ["derive"] }
 url = "^1.7"
 
 [badges]
