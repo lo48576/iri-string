@@ -1,0 +1,12 @@
+# Config for rustfmt 0.6.1-nightly (d8982e5 2018-05-02).
+required_version = "0.6.1"
+unstable_features = true
+
+blank_lines_upper_bound = 2
+error_on_line_overflow = false  # Default.
+match_block_trailing_comma = true
+newline_style = "Unix"  # Default.
+reorder_imports = true  # Default.
+reorder_modules = true  # Default.
+trailing_comma = "Vertical"  # Default.
+wrap_comments = true

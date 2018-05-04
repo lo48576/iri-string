@@ -1,0 +1,14 @@
+[package]
+name = "iri-string"
+version = "0.1.0"
+authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+description = "IRI as string"
+repository = "https://github.com/lo48576/iri-string"
+keywords = ["IRI", "URI"]
+
+[dependencies]
+
+[badges]
+travis-ci = { repository = "lo48576/iri-string" }
