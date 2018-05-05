@@ -249,7 +249,9 @@ impl<'de> Deserialize<'de> for &'de RelativeIriStr {
     )
 )]
 #[opaque_typedef(
-    deref(target = "RelativeIriStr", deref = "RelativeIriStr::from_str_unchecked_implicitly_unsafe")
+    deref(
+        target = "RelativeIriStr", deref = "RelativeIriStr::from_str_unchecked_implicitly_unsafe"
+    )
 )]
 #[opaque_typedef(
     validation(

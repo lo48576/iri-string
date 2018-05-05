@@ -1,4 +1,4 @@
-# Config for rustfmt 0.6.1-nightly (d8982e5 2018-05-02).
+# Config for rustfmt 0.6.1-nightly (b6cd17f 2018-05-04).
 required_version = "0.6.1"
 unstable_features = true
 

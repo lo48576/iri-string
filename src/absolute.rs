@@ -268,7 +268,9 @@ impl<'de> Deserialize<'de> for &'de AbsoluteIriStr {
     )
 )]
 #[opaque_typedef(
-    deref(target = "AbsoluteIriStr", deref = "AbsoluteIriStr::from_str_unchecked_implicitly_unsafe")
+    deref(
+        target = "AbsoluteIriStr", deref = "AbsoluteIriStr::from_str_unchecked_implicitly_unsafe"
+    )
 )]
 #[opaque_typedef(
     validation(
