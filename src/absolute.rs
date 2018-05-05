@@ -1,5 +1,7 @@
 //! Absolute IRI types.
 
+use std::hash;
+
 use opaque_typedef::{OpaqueTypedef, OpaqueTypedefUnsized};
 #[cfg(feature = "serde")]
 use serde;
@@ -11,10 +13,10 @@ use url::Url;
 
 /// Absolute IRI and resolved URI.
 ///
-/// **NOTE**: For now, it does not derive `{,Partial}{Eq,Ord}` and `Hash`
-/// because it is not sure how they should be ordered or compared by default.
-/// If you want to compare them, use raw absolute IRI (by [`AbsoluteIri::raw`])
-/// or resolved URI (by [`AbsoluteIri::resolved`]).
+/// Comparations (`PartialEq`, `Eq`, `PartialOrd`, `Ord`, `Hash`
+/// implementations) are done by raw IRI comparison (returned by
+/// [`AbsoluteIri::raw`]), not by resolved one (returned by
+/// [`AbsoluteIri::resolved`]).
 #[derive(Debug, Clone)]
 pub struct AbsoluteIri {
     /// Raw absolute IRI string.
@@ -85,6 +87,32 @@ impl AbsoluteIri {
     /// ```
     pub fn deconstruct(self) -> (AbsoluteIriString, Url) {
         (self.raw, self.resolved)
+    }
+}
+
+impl PartialEq for AbsoluteIri {
+    fn eq(&self, rhs: &AbsoluteIri) -> bool {
+        self.raw.eq(&rhs.raw)
+    }
+}
+
+impl Eq for AbsoluteIri {}
+
+impl PartialOrd for AbsoluteIri {
+    fn partial_cmp(&self, rhs: &AbsoluteIri) -> Option<::std::cmp::Ordering> {
+        self.raw.partial_cmp(&rhs.raw)
+    }
+}
+
+impl Ord for AbsoluteIri {
+    fn cmp(&self, rhs: &Self) -> ::std::cmp::Ordering {
+        self.raw.cmp(&rhs.raw)
+    }
+}
+
+impl hash::Hash for AbsoluteIri {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.raw.hash(state);
     }
 }
 

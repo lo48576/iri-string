@@ -9,6 +9,14 @@
       + Note that this is not well tested...
         Contributions are welcomed!
   * `AbsoluteIriString::from_string_unchecked` method is added for consistency.
+  * Implement `PartialEq`, `Eq`, `PartialOrd`, `Ord`, and `Hash` for
+    `AbsoluteIri`.
+      + Raw IRI is used to compare values.
+        Resolved URI is not used.
+      + When users have `AbsoluteIri`, basically they want to use raw IRI, and
+        this is why raw IRI is used for comparation.
+      + Think `AbsoluteIri` as "IRI with resolved URI cache".
+        It is primarily IRI.
 
 ### Changed (non-breaking)
 
