@@ -3,6 +3,36 @@
 ## [Unreleased]
 
 
+## [0.1.1] - 2018-05-06
+
+### Added
+
+  * Add `RelativeIri{Str,String}` types to `relative` module.
+      + Additionaly, `RelativeIriParseError` type is also added.
+      + Note that this is not well tested...
+        Contributions are welcomed!
+  * `AbsoluteIriString::from_string_unchecked` method is added for consistency.
+  * Implement `PartialEq`, `Eq`, `PartialOrd`, `Ord`, and `Hash` for
+    `AbsoluteIri`.
+      + Raw IRI is used to compare values.
+        Resolved URI is not used.
+      + When users have `AbsoluteIri`, basically they want to use raw IRI, and
+        this is why raw IRI is used for comparation.
+      + Think `AbsoluteIri` as "IRI with resolved URI cache".
+        It is primarily IRI.
+
+### Changed (non-breaking)
+
+  * Move `AbsoluteIri{,Str,String}` to `absolute` module.
+      + These types are re-exported at root, so this is not breaking change.
+
+### Fixed (non-breaking)
+
+  * Clippy lint `derive_hash_xor_eq` is explicitly disabled.
+      + See source comments at commit `23049e17d502` for detail.
+      + This does not affect normal use, affects only `cargo clippy`
+
+
 ## [0.1.0] - 2018-05-04
 
 Initial release.
@@ -15,5 +45,6 @@ Initial release.
 
 
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.1.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.1.1...develop>
+[0.0.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.1>
 [0.0.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.0>
