@@ -1,5 +1,5 @@
-# Config for rustfmt 0.6.1-nightly (b6cd17f 2018-05-04).
-required_version = "0.6.1"
+# Config for rustfmt 0.8.2-nightly (08da30d 2018-06-06).
+required_version = "0.8.2"
 unstable_features = true
 
 blank_lines_upper_bound = 2
