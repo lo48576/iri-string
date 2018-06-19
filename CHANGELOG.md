@@ -46,5 +46,5 @@ Initial release.
 
 
 [Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.1.1...develop>
-[0.0.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.1>
-[0.0.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.0>
+[0.1.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.1>
+[0.1.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.1.0>
