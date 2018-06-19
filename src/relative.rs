@@ -116,19 +116,18 @@ fn validate_relative_iri_str<S: AsRef<str>>(s: S) -> Result<S, RelativeIriParseE
         // It can be `"//" authority path-abempty`.
         let dummy_absolute = format!("http:{}", s.as_ref());
         let _ = Url::parse(&dummy_absolute)?;
-        return Ok(s);
-    } else if s.as_ref().starts_with("/") {
+        Ok(s)
+    } else if s.as_ref().starts_with('/') {
         // It can be `path-absolute`.
         let dummy_absolute = format!("{}:{}", UNKNOWN_DUMMY_SCHEME, s.as_ref());
         let _ = Url::parse(&dummy_absolute)?;
-        return Ok(s);
+        Ok(s)
+    } else if has_colon_before_slash(s.as_ref()) {
+        // Expected `path-noscheme` but invalid.
+        Err(RelativeIriParseError::FirstComponentHasColon)
     } else {
-        // It can be `path-noscheme`.
-        if has_colon_before_slash(s.as_ref()) {
-            return Err(RelativeIriParseError::FirstComponentHasColon);
-        } else {
-            return Ok(s);
-        }
+        // Got `path-noscheme`.
+        Ok(s)
     }
 }
 
