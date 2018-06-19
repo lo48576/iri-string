@@ -12,8 +12,8 @@ keywords = ["IRI", "URI"]
 default = ["serde"]
 
 [dependencies]
-opaque_typedef = "^0.0.3"
-opaque_typedef_macros = "^0.0.3"
+opaque_typedef = "^0.0.4"
+opaque_typedef_macros = "^0.0.4"
 serde = { version = "^1.0.45", optional = true, features = ["derive"] }
 url = "^1.7"
 
