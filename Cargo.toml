@@ -13,6 +13,7 @@ keywords = ["IRI", "URI"]
 all-features = true
 
 [dependencies]
+nom = "=5.0.0-alpha2"
 
 [badges]
 maintenance = { status = "experimental" }
