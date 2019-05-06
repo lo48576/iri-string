@@ -13,6 +13,7 @@ keywords = ["IRI", "URI"]
 all-features = true
 
 [dependencies]
+custom-slice-macros = "0.1.1"
 nom = "=5.0.0-alpha2"
 
 [badges]
