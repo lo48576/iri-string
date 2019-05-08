@@ -1,5 +1,7 @@
 //! Parser implementatitons.
 
+use crate::parser::IriReferenceComponents;
+
 use nom::{
     branch::{alt, or},
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
@@ -166,6 +168,31 @@ pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
+/// Parses RFC 3986 / 3987 IRI and returns components.
+fn decompose_uri<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+    try_context(
+        "uri",
+        map(
+            tuple((
+                scheme,
+                char_(':'),
+                decompose_hier_part::<E, R>,
+                opt(preceded(char_('?'), query::<E, R>)),
+                opt(preceded(char_('#'), fragment::<E, R>)),
+            )),
+            |(scheme, _colon, (authority, path), query, fragment)| IriReferenceComponents {
+                scheme: Some(scheme),
+                authority,
+                path,
+                query,
+                fragment,
+            },
+        ),
+    )(i)
+}
+
 /// Parses `hier-part` and `ihier-part` rules.
 fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     // > When authority is not present, the path cannot begin with two slash
@@ -192,11 +219,52 @@ fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
+/// Parses `hier-part` and `ihier-part` rules and returns authority and path.
+fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
+    // > When authority is not present, the path cannot begin with two slash
+    // > characters ("//").
+    // >
+    // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
+    try_context(
+        "hier-part",
+        alt((
+            map(preceded(tag("//"), path_absolute::<E, R>), |path| {
+                (None, path)
+            }),
+            pair(
+                preceded(
+                    tag("//"),
+                    map(
+                        authority::<E, R>,
+                        |s| if s.is_empty() { None } else { Some(s) },
+                    ),
+                ),
+                path_abempty::<E, R>,
+            ),
+            map(path_absolute::<E, R>, |path| (None, path)),
+            map(path_rootless::<E, R>, |path| (None, path)),
+            map(path_empty::<E>, |path| (None, path)),
+        )),
+    )(i)
+}
+
 /// Parses RFC 3986 / 3987 IRI reference.
 pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     try_context("uri_reference", or(uri::<E, R>, relative_ref::<E, R>))(i)
+}
+
+/// Parses RFC 3986 / 3987 IRI reference and returns components.
+pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+    try_context(
+        "uri_reference",
+        or(decompose_uri::<E, R>, decompose_relative_ref::<E, R>),
+    )(i)
 }
 
 /// Parses RFC 3986 / 3987 absolute IRI.
@@ -230,6 +298,29 @@ pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
+/// Parses RFC 3986 / 3987 relative reference and returns components.
+fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+    try_context(
+        "relative_ref",
+        map(
+            tuple((
+                decompose_relative_part::<E, R>,
+                opt(preceded(char_('?'), query::<E, R>)),
+                opt(preceded(char_('#'), fragment::<E, R>)),
+            )),
+            |((authority, path), query, fragment)| IriReferenceComponents {
+                scheme: None,
+                authority,
+                path,
+                query,
+                fragment,
+            },
+        ),
+    )(i)
+}
+
 /// Parses `relative_part` rule.
 fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     try_context(
@@ -239,6 +330,24 @@ fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
             path_absolute::<E, R>,
             path_noscheme::<E, R>,
             path_empty,
+        )),
+    )(i)
+}
+
+/// Parses `relative_part` rule and returns authority and path.
+fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
+    try_context(
+        "relative-part",
+        alt((
+            pair(
+                preceded(tag("//"), map(authority::<E, R>, Some)),
+                path_abempty::<E, R>,
+            ),
+            map(path_absolute::<E, R>, |path| (None, path)),
+            map(path_noscheme::<E, R>, |path| (None, path)),
+            map(path_empty, |path| (None, path)),
         )),
     )(i)
 }

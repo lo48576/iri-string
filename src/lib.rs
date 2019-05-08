@@ -3,5 +3,6 @@
 #![warn(clippy::missing_docs_in_private_items)]
 
 pub(crate) mod parser;
+pub mod resolve;
 pub mod types;
 pub mod validate;
