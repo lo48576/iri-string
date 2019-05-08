@@ -3,6 +3,7 @@
 use std::{convert::TryFrom, fmt};
 
 use crate::{
+    resolve::resolve_iri,
     types::{
         AbsoluteIriStr, AbsoluteIriString, IriStr, IriString, RelativeIriStr, RelativeIriString,
     },
@@ -143,6 +144,27 @@ impl IriReferenceStr {
             Ok(iri) => Err(iri),
             Err(relative) => Ok(relative),
         }
+    }
+
+    /// Returns resolved IRI using strict resolver.
+    ///
+    /// About reference resolution output example, see [RFC 3986 section
+    /// 5.4](https://tools.ietf.org/html/rfc3986#section-5.4).
+    ///
+    /// About resolver strictness, see [RFC 3986 section
+    /// 5.4.2](https://tools.ietf.org/html/rfc3986#section-5.4.2):
+    ///
+    /// > Some parsers allow the scheme name to be present in a relative
+    /// > reference if it is the same as the base URI scheme. This is considered
+    /// > to be a loophole in prior specifications of partial URI
+    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
+    /// avoided but is allowed for backward compatibility.
+    /// >
+    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+    ///
+    /// Usual users will want to use strict resolver.
+    pub fn resolve(&self, base: &AbsoluteIriStr) -> IriString {
+        resolve_iri(self, base, true)
     }
 }
 
