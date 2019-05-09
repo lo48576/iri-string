@@ -41,7 +41,15 @@ fn definite_context<I: Clone, E: ParseError<I>, F, O>(
 where
     F: Fn(I) -> IResult<I, O, E>,
 {
-    nom::error::context(context, f)
+    use nom::Err;
+
+    move |i: I| match f(i.clone()) {
+        Ok(o) => Ok(o),
+        Err(Err::Incomplete(i)) => Err(Err::Incomplete(i)),
+        Err(Err::Error(e)) | Err(Err::Failure(e)) => {
+            Err(Err::Failure(E::add_context(i, context, e)))
+        }
+    }
 }
 
 /// `one_of` with predicate (not characters list).
