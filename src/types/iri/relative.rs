@@ -2,7 +2,10 @@
 
 use std::{convert::TryFrom, fmt};
 
-use crate::validate::iri::{relative_ref, Error};
+use crate::{
+    types::{IriReferenceStr, IriReferenceString},
+    validate::iri::{relative_ref, Error},
+};
 
 custom_slice_macros::define_slice_types_pair! {
     /// An owned string of a relative IRI.
@@ -13,15 +16,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `RelativeIriString` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `RelativeIriString` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct RelativeIriString(String);
 
     /// A borrowed slice of a relative IRI.
@@ -34,16 +43,23 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&RelativeIriStr` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&RelativeIriStr` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct RelativeIriStr(str);
 
     /// Validates the given string as a relative IRI.
@@ -73,6 +89,14 @@ impl RelativeIriStr {
     }
 }
 
+impl std::ops::Deref for RelativeIriStr {
+    type Target = IriReferenceStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
 impl fmt::Display for RelativeIriString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         AsRef::<RelativeIriStr>::as_ref(self).fmt(f)
@@ -91,4 +115,18 @@ impl std::str::FromStr for RelativeIriString {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&RelativeIriStr>::try_from(s).map(ToOwned::to_owned)
     }
+}
+
+impl_std_traits! {
+    source: {
+        owned: RelativeIriString,
+        slice: RelativeIriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }

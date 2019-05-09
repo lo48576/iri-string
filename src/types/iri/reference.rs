@@ -4,9 +4,7 @@ use std::{convert::TryFrom, fmt};
 
 use crate::{
     resolve::resolve_iri,
-    types::{
-        AbsoluteIriStr, AbsoluteIriString, IriStr, IriString, RelativeIriStr, RelativeIriString,
-    },
+    types::{AbsoluteIriStr, IriStr, IriString, RelativeIriStr, RelativeIriString},
     validate::iri::{iri as validate_iri, iri_reference, Error},
 };
 
@@ -19,15 +17,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `IriReferenceString` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `IriReferenceString` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriReferenceString(String);
 
     /// A borrowed slice of an IRI reference.
@@ -40,16 +44,24 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        Deref,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&IriReferenceStr` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&IriReferenceStr` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriReferenceStr(str);
 
     /// Validates the given string as an IRI reference.
@@ -185,89 +197,5 @@ impl std::str::FromStr for IriReferenceString {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&IriReferenceStr>::try_from(s).map(ToOwned::to_owned)
-    }
-}
-
-impl From<AbsoluteIriString> for IriReferenceString {
-    fn from(s: AbsoluteIriString) -> Self {
-        IriString::from(s).into()
-    }
-}
-
-impl AsRef<IriReferenceStr> for AbsoluteIriString {
-    fn as_ref(&self) -> &IriReferenceStr {
-        AsRef::<IriStr>::as_ref(self).as_ref()
-    }
-}
-
-impl AsRef<IriReferenceStr> for AbsoluteIriStr {
-    fn as_ref(&self) -> &IriReferenceStr {
-        AsRef::<IriStr>::as_ref(self).as_ref()
-    }
-}
-
-impl From<RelativeIriString> for IriReferenceString {
-    fn from(s: RelativeIriString) -> Self {
-        debug_assert_eq!(validate(s.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because a relative IRI is also an IRI reference.
-            // See syntax rule.
-            Self::new_unchecked(s.into())
-        }
-    }
-}
-
-impl AsRef<IriReferenceStr> for RelativeIriString {
-    fn as_ref(&self) -> &IriReferenceStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because a relative IRI is also an IRI reference.
-            // See syntax rule.
-            IriReferenceStr::new_unchecked(self.as_ref())
-        }
-    }
-}
-
-impl AsRef<IriReferenceStr> for RelativeIriStr {
-    fn as_ref(&self) -> &IriReferenceStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because a relative IRI is also an IRI reference.
-            // See syntax rule.
-            IriReferenceStr::new_unchecked(self.as_ref())
-        }
-    }
-}
-
-impl From<IriString> for IriReferenceString {
-    fn from(s: IriString) -> Self {
-        debug_assert_eq!(validate(s.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an IRI is also an IRI reference.
-            // See syntax rule.
-            Self::new_unchecked(s.into())
-        }
-    }
-}
-
-impl AsRef<IriReferenceStr> for IriString {
-    fn as_ref(&self) -> &IriReferenceStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an IRI is also an IRI reference.
-            // See syntax rule.
-            IriReferenceStr::new_unchecked(self.as_ref())
-        }
-    }
-}
-
-impl AsRef<IriReferenceStr> for IriStr {
-    fn as_ref(&self) -> &IriReferenceStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an IRI is also an IRI reference.
-            // See syntax rule.
-            IriReferenceStr::new_unchecked(self.as_ref())
-        }
     }
 }

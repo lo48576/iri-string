@@ -30,6 +30,9 @@
 //! * `AsRef<BarStr> for FooStr`
 //! * `AsRef<BarStr> for FooString`
 //! * `From<FooString> for BarString`
+//! * `PartialEq<FooStr> for BarStr` and lots of impls like that
+//!     + `PartialEq` and `ParitalOrd`.
+//!     + Slice, owned, `Cow`, reference, etc...
 
 pub use self::{
     absolute::{AbsoluteIriStr, AbsoluteIriString},

@@ -6,7 +6,7 @@ use nom::combinator::complete;
 
 use crate::{
     parser::{self, IriRule},
-    types::{AbsoluteIriStr, AbsoluteIriString},
+    types::{AbsoluteIriStr, AbsoluteIriString, IriReferenceStr, IriReferenceString},
     validate::iri::{iri, Error},
 };
 
@@ -19,15 +19,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `IriString` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `IriString` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriString(String);
 
     /// A borrowed slice of an IRI.
@@ -40,16 +46,23 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&IriStr` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&IriStr` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriStr(str);
 
     /// Validates the given string as an IRI.
@@ -288,6 +301,14 @@ impl IriStr {
     }
 }
 
+impl std::ops::Deref for IriStr {
+    type Target = IriReferenceStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
 impl fmt::Display for IriString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         AsRef::<IriStr>::as_ref(self).fmt(f)
@@ -308,35 +329,16 @@ impl std::str::FromStr for IriString {
     }
 }
 
-impl From<AbsoluteIriString> for IriString {
-    fn from(s: AbsoluteIriString) -> Self {
-        debug_assert_eq!(validate(s.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriString::new_unchecked(s.into())
-        }
-    }
-}
-
-impl AsRef<IriStr> for AbsoluteIriString {
-    fn as_ref(&self) -> &IriStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriStr::new_unchecked(self.as_ref())
-        }
-    }
-}
-
-impl AsRef<IriStr> for AbsoluteIriStr {
-    fn as_ref(&self) -> &IriStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriStr::new_unchecked(self.as_ref())
-        }
-    }
+impl_std_traits! {
+    source: {
+        owned: IriString,
+        slice: IriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }

@@ -2,7 +2,10 @@
 
 use std::{convert::TryFrom, fmt};
 
-use crate::validate::iri::{absolute_iri, Error};
+use crate::{
+    types::{IriReferenceStr, IriReferenceString, IriStr, IriString},
+    validate::iri::{absolute_iri, Error},
+};
 
 custom_slice_macros::define_slice_types_pair! {
     /// An owned string of an absolute IRI.
@@ -13,15 +16,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `AbsoluteIriString` without validation.
-        unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `AbsoluteIriString` without validation.
+            unsafe fn new_always_unchecked
+        ")]
     pub struct AbsoluteIriString(String);
 
     /// A borrowed slice of an absolute IRI.
@@ -34,16 +43,23 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&AbsoluteIriStr` without validation.
-        unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&AbsoluteIriStr` without validation.
+            unsafe fn new_always_unchecked
+        ")]
     pub struct AbsoluteIriStr(str);
 
     /// Validates the given string as an absolute IRI.
@@ -73,6 +89,14 @@ impl AbsoluteIriStr {
     }
 }
 
+impl std::ops::Deref for AbsoluteIriStr {
+    type Target = IriStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
 impl fmt::Display for AbsoluteIriString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         AsRef::<AbsoluteIriStr>::as_ref(self).fmt(f)
@@ -91,4 +115,22 @@ impl std::str::FromStr for AbsoluteIriString {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&AbsoluteIriStr>::try_from(s).map(ToOwned::to_owned)
     }
+}
+
+impl_std_traits! {
+    source: {
+        owned: AbsoluteIriString,
+        slice: AbsoluteIriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriString,
+            slice: IriStr,
+        },
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }
