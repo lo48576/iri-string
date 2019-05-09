@@ -38,7 +38,7 @@ custom_slice_macros::define_slice_types_pair! {
     #[custom_slice(slice)]
     #[custom_slice(derive(
         AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
+        DefaultRef, PartialEqBulk, PartialEqInnerBulk,
         PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
         TryFromInner,
     ))]
@@ -73,6 +73,14 @@ impl RelativeIriStr {
     pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
         debug_assert_eq!(validate(s), Ok(()));
         Self::new_always_unchecked(s)
+    }
+}
+
+impl std::ops::Deref for RelativeIriStr {
+    type Target = IriReferenceStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 

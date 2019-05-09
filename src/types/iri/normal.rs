@@ -41,7 +41,7 @@ custom_slice_macros::define_slice_types_pair! {
     #[custom_slice(slice)]
     #[custom_slice(derive(
         AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
+        DefaultRef, PartialEqBulk, PartialEqInnerBulk,
         PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
         TryFromInner,
     ))]
@@ -285,6 +285,14 @@ impl IriStr {
     /// ```
     pub fn fragment(&self) -> Option<&str> {
         self.split_fragment().1
+    }
+}
+
+impl std::ops::Deref for IriStr {
+    type Target = IriReferenceStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
     }
 }
 
