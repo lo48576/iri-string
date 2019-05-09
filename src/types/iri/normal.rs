@@ -19,15 +19,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `IriString` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `IriString` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriString(String);
 
     /// A borrowed slice of an IRI.
@@ -40,16 +46,23 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&IriStr` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&IriStr` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriStr(str);
 
     /// Validates the given string as an IRI.

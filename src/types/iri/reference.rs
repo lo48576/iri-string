@@ -17,15 +17,21 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[custom_slice(owned)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner, Deref, IntoInner,
-        PartialEqBulk, PartialEqInnerBulk, PartialOrdBulk, PartialOrdInnerBulk,
+        AsRefSlice,
+        AsRefSliceInner,
+        Deref,
+        IntoInner,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `IriReferenceString` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `IriReferenceString` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriReferenceString(String);
 
     /// A borrowed slice of an IRI reference.
@@ -38,16 +44,24 @@ custom_slice_macros::define_slice_types_pair! {
     #[allow(clippy::derive_hash_xor_eq)]
     #[custom_slice(slice)]
     #[custom_slice(derive(
-        AsRefSlice, AsRefSliceInner,
-        DefaultRef, Deref, PartialEqBulk, PartialEqInnerBulk,
-        PartialOrdBulk, PartialOrdInnerBulk, IntoArc, IntoBox, IntoRc,
+        AsRefSlice,
+        AsRefSliceInner,
+        DefaultRef,
+        Deref,
+        PartialEqBulk,
+        PartialEqInnerBulk,
+        PartialOrdBulk,
+        PartialOrdInnerBulk,
+        IntoArc,
+        IntoBox,
+        IntoRc,
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
     #[custom_slice(new_unchecked = "
-        /// Creates a new `&IriReferenceStr` without validation.
-        pub(crate) unsafe fn new_always_unchecked
-    ")]
+            /// Creates a new `&IriReferenceStr` without validation.
+            pub(crate) unsafe fn new_always_unchecked
+        ")]
     pub struct IriReferenceStr(str);
 
     /// Validates the given string as an IRI reference.
