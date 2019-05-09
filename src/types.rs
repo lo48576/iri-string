@@ -47,4 +47,7 @@ pub use self::iri::{
     RelativeIriStr, RelativeIriString,
 };
 
+#[macro_use]
+mod macros;
+
 mod iri;

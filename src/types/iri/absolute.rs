@@ -2,7 +2,10 @@
 
 use std::{convert::TryFrom, fmt};
 
-use crate::validate::iri::{absolute_iri, Error};
+use crate::{
+    types::{IriReferenceStr, IriReferenceString, IriStr, IriString},
+    validate::iri::{absolute_iri, Error},
+};
 
 custom_slice_macros::define_slice_types_pair! {
     /// An owned string of an absolute IRI.
@@ -91,4 +94,22 @@ impl std::str::FromStr for AbsoluteIriString {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&AbsoluteIriStr>::try_from(s).map(ToOwned::to_owned)
     }
+}
+
+impl_std_traits! {
+    source: {
+        owned: AbsoluteIriString,
+        slice: AbsoluteIriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriString,
+            slice: IriStr,
+        },
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }

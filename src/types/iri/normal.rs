@@ -6,7 +6,7 @@ use nom::combinator::complete;
 
 use crate::{
     parser::{self, IriRule},
-    types::{AbsoluteIriStr, AbsoluteIriString},
+    types::{AbsoluteIriStr, AbsoluteIriString, IriReferenceStr, IriReferenceString},
     validate::iri::{iri, Error},
 };
 
@@ -308,35 +308,16 @@ impl std::str::FromStr for IriString {
     }
 }
 
-impl From<AbsoluteIriString> for IriString {
-    fn from(s: AbsoluteIriString) -> Self {
-        debug_assert_eq!(validate(s.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriString::new_unchecked(s.into())
-        }
-    }
-}
-
-impl AsRef<IriStr> for AbsoluteIriString {
-    fn as_ref(&self) -> &IriStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriStr::new_unchecked(self.as_ref())
-        }
-    }
-}
-
-impl AsRef<IriStr> for AbsoluteIriStr {
-    fn as_ref(&self) -> &IriStr {
-        debug_assert_eq!(validate(self.as_ref()), Ok(()));
-        unsafe {
-            // This is safe because an absolute IRI is also an IRI.
-            // See syntax rule.
-            IriStr::new_unchecked(self.as_ref())
-        }
-    }
+impl_std_traits! {
+    source: {
+        owned: IriString,
+        slice: IriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }

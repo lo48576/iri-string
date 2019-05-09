@@ -2,7 +2,10 @@
 
 use std::{convert::TryFrom, fmt};
 
-use crate::validate::iri::{relative_ref, Error};
+use crate::{
+    types::{IriReferenceStr, IriReferenceString},
+    validate::iri::{relative_ref, Error},
+};
 
 custom_slice_macros::define_slice_types_pair! {
     /// An owned string of a relative IRI.
@@ -91,4 +94,18 @@ impl std::str::FromStr for RelativeIriString {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&RelativeIriStr>::try_from(s).map(ToOwned::to_owned)
     }
+}
+
+impl_std_traits! {
+    source: {
+        owned: RelativeIriString,
+        slice: RelativeIriStr,
+        error: Error,
+    },
+    target: [
+        {
+            owned: IriReferenceString,
+            slice: IriReferenceStr,
+        },
+    ],
 }
