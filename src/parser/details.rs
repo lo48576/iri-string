@@ -3,7 +3,7 @@
 use crate::parser::IriReferenceComponents;
 
 use nom::{
-    branch::{alt, or},
+    branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
     combinator::{map, map_opt, opt},
@@ -262,7 +262,7 @@ fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
 pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
-    try_context("uri_reference", or(uri::<E, R>, relative_ref::<E, R>))(i)
+    try_context("uri_reference", alt((uri::<E, R>, relative_ref::<E, R>)))(i)
 }
 
 /// Parses RFC 3986 / 3987 IRI reference and returns components.
@@ -271,7 +271,7 @@ pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
     try_context(
         "uri_reference",
-        or(decompose_uri::<E, R>, decompose_relative_ref::<E, R>),
+        alt((decompose_uri::<E, R>, decompose_relative_ref::<E, R>)),
     )(i)
 }
 
@@ -389,13 +389,13 @@ fn authority<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
 fn userinfo<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     try_context(
         "userinfo",
-        many0_count(or(
+        many0_count(alt((
             map(
                 take_while1(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == ':'),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
-        )),
+        ))),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
@@ -414,7 +414,7 @@ fn port<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> 
 fn ip_literal<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     try_context(
         "IP-literal",
-        delimited(char_('['), or(ipv6address, ipvfuture), char_(']')),
+        delimited(char_('['), alt((ipv6address, ipvfuture)), char_(']')),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
@@ -427,7 +427,7 @@ fn ipvfuture<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
     try_context(
         "IPvFuture",
         tuple((
-            or(char_('v'), char_('V')),
+            alt((char_('v'), char_('V'))),
             take_while1(|c: char| c.is_ascii_hexdigit()),
             char_('.'),
             take_while1(|c: char| UriRule::is_unreserved(c) || is_sub_delim(c) || c == ':'),
@@ -458,7 +458,7 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
         num_max_h16: usize,
     ) -> impl Fn(&'b str) -> IResult<&'b str, &'b str, E> {
         assert!(num_max_h16 >= 2);
-        ret_raw(or(
+        ret_raw(alt((
             pair(
                 many_m_n_count(0, num_max_h16 - 1, terminated(h16, char_(':'))),
                 terminated(h16, not(char_('.'))),
@@ -467,7 +467,7 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
                 many_m_n_count(0, num_max_h16 - 2, terminated(h16, char_(':'))),
                 ipv4address,
             ),
-        ))
+        )))
     }
 
     try_context(
@@ -542,13 +542,13 @@ fn dec_octet<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
 fn reg_name<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     try_context(
         "reg-name",
-        many0_count(or(
+        many0_count(alt((
             map(
                 take_while1(|c: char| R::is_unreserved(c) || is_sub_delim(c)),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
-        )),
+        ))),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
@@ -638,26 +638,26 @@ fn segment_nz<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a st
 fn segment_nz_nc<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     try_context(
         "segment-nz-nc",
-        many1_count(or(
+        many1_count(alt((
             map(
                 one_is(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == '@'),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
-        )),
+        ))),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `pchar` and `ipchar` rules.
 fn pchar<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    or(
+    alt((
         map(
             one_is(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
             |_| (),
         ),
         map(pct_encoded, |_| ()),
-    )(i)
+    ))(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
