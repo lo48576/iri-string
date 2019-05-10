@@ -1,0 +1,22 @@
+[package]
+name = "iri-string"
+version = "0.2.0-beta.0"
+authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+edition = "2018"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = "IRI as string types"
+repository = "https://github.com/lo48576/iri-string"
+keywords = ["IRI", "URI"]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+custom-slice-macros = "0.1.1"
+nom = "=5.0.0-beta1"
+serde = { version = "1", features = ["derive"], optional = true }
+
+[badges]
+maintenance = { status = "experimental" }
+travis-ci = { repository = "lo48576/iri-string" }
