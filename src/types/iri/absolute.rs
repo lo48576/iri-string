@@ -2,6 +2,12 @@
 
 use std::{convert::TryFrom, fmt};
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
+
 use crate::{
     types::{IriReferenceStr, IriReferenceString, IriStr, IriString},
     validate::iri::{absolute_iri, Error},
@@ -14,6 +20,8 @@ custom_slice_macros::define_slice_types_pair! {
     /// This is `scheme ":" ihier-part [ "?" iquery ]`.
     /// In other words, this is `IriString` without fragment part.
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    #[cfg_attr(feature = "serde", serde(transparent))]
     #[custom_slice(owned)]
     #[custom_slice(derive(
         AsRefSlice,
@@ -41,6 +49,8 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[repr(transparent)]
     #[allow(clippy::derive_hash_xor_eq)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    #[cfg_attr(feature = "serde", serde(transparent))]
     #[custom_slice(slice)]
     #[custom_slice(derive(
         AsRefSlice,
@@ -133,4 +143,75 @@ impl_std_traits! {
             slice: IriReferenceStr,
         },
     ],
+}
+
+/// `AbsoluteIriString` visitor.
+#[cfg(feature = "serde")]
+#[derive(Debug, Clone, Copy)]
+struct AbsoluteIriStringVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for AbsoluteIriStringVisitor {
+    type Value = AbsoluteIriString;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("an absolute IRI")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        <&AbsoluteIriStr>::try_from(v)
+            .map(ToOwned::to_owned)
+            .map_err(E::custom)
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        AbsoluteIriString::try_from(v).map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for AbsoluteIriString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(AbsoluteIriStringVisitor)
+    }
+}
+
+/// `AbsoluteIriStr` visitor.
+#[cfg(feature = "serde")]
+#[derive(Debug, Clone, Copy)]
+struct AbsoluteIriStrVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for AbsoluteIriStrVisitor {
+    type Value = &'de AbsoluteIriStr;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("an absolute IRI")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        <&'de AbsoluteIriStr>::try_from(v).map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a> Deserialize<'de> for &'a AbsoluteIriStr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(AbsoluteIriStrVisitor)
+    }
 }
