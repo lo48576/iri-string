@@ -2,6 +2,12 @@
 
 use std::{convert::TryFrom, fmt};
 
+#[cfg(feature = "serde")]
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
+
 use crate::{
     resolve::resolve_iri,
     types::{AbsoluteIriStr, IriStr, IriString, RelativeIriStr, RelativeIriString},
@@ -15,6 +21,8 @@ custom_slice_macros::define_slice_types_pair! {
     /// This is `IRI / irelative-ref`
     /// In other words, this is union of `IriString` and `RelativeIriString.
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    #[cfg_attr(feature = "serde", serde(transparent))]
     #[custom_slice(owned)]
     #[custom_slice(derive(
         AsRefSlice,
@@ -42,6 +50,8 @@ custom_slice_macros::define_slice_types_pair! {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[repr(transparent)]
     #[allow(clippy::derive_hash_xor_eq)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
+    #[cfg_attr(feature = "serde", serde(transparent))]
     #[custom_slice(slice)]
     #[custom_slice(derive(
         AsRefSlice,
@@ -197,5 +207,76 @@ impl std::str::FromStr for IriReferenceString {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         <&IriReferenceStr>::try_from(s).map(ToOwned::to_owned)
+    }
+}
+
+/// `IriReferenceString` visitor.
+#[cfg(feature = "serde")]
+#[derive(Debug, Clone, Copy)]
+struct IriReferenceStringVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for IriReferenceStringVisitor {
+    type Value = IriReferenceString;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("an IRI reference")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        <&IriReferenceStr>::try_from(v)
+            .map(ToOwned::to_owned)
+            .map_err(E::custom)
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        IriReferenceString::try_from(v).map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for IriReferenceString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(IriReferenceStringVisitor)
+    }
+}
+
+/// `IriReferenceStr` visitor.
+#[cfg(feature = "serde")]
+#[derive(Debug, Clone, Copy)]
+struct IriReferenceStrVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for IriReferenceStrVisitor {
+    type Value = &'de IriReferenceStr;
+
+    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("an IRI reference")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        <&'de IriReferenceStr>::try_from(v).map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a> Deserialize<'de> for &'a IriReferenceStr {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(IriReferenceStrVisitor)
     }
 }

@@ -15,6 +15,7 @@ all-features = true
 [dependencies]
 custom-slice-macros = "0.1.1"
 nom = "=5.0.0-alpha2"
+serde = { version = "1", features = ["derive"], optional = true }
 
 [badges]
 maintenance = { status = "experimental" }
