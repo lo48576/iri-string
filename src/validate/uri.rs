@@ -7,7 +7,7 @@ use nom::combinator::all_consuming;
 use crate::parser::{self, UriRule};
 
 /// URI validation error.
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error(());
 
 impl fmt::Display for Error {
