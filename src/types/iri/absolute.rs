@@ -9,7 +9,7 @@ use serde::{
 };
 
 use crate::{
-    types::{IriReferenceStr, IriReferenceString, IriStr, IriString},
+    types::{CreationError, IriReferenceStr, IriReferenceString, IriStr, IriString},
     validate::iri::{absolute_iri, Error},
 };
 
@@ -34,7 +34,7 @@ custom_slice_macros::define_slice_types_pair! {
         PartialOrdInnerBulk,
         TryFromInner,
     ))]
-    #[custom_slice(error(type = "Error"))]
+    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
     #[custom_slice(new_unchecked = "
             /// Creates a new `AbsoluteIriString` without validation.
             unsafe fn new_always_unchecked
@@ -131,7 +131,8 @@ impl_std_traits! {
     source: {
         owned: AbsoluteIriString,
         slice: AbsoluteIriStr,
-        error: Error,
+        creation_error: CreationError,
+        validation_error: Error,
     },
     target: [
         {
