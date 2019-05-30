@@ -7,7 +7,7 @@ use nom::combinator::all_consuming;
 use crate::parser::{self, IriRule};
 
 /// IRI validation error.
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error(());
 
 impl fmt::Display for Error {
@@ -49,4 +49,9 @@ pub fn relative_ref(s: &str) -> Result<(), Error> {
 /// Validates RFC 3987 IRI path.
 pub fn path(s: &str) -> Result<(), Error> {
     conv_err(all_consuming(parser::path::<(), IriRule>)(s))
+}
+
+/// Validates RFC 3987 IRI fragment.
+pub fn fragment(s: &str) -> Result<(), Error> {
+    conv_err(all_consuming(parser::fragment::<(), IriRule>)(s))
 }

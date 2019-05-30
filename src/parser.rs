@@ -4,7 +4,7 @@ use nom::combinator::all_consuming;
 
 use self::details::decompose_uri_reference;
 pub(crate) use self::details::{
-    absolute_uri, path, relative_ref, uri, uri_reference, IriRule, UriRule,
+    absolute_uri, fragment, path, relative_ref, uri, uri_reference, IriRule, UriRule,
 };
 pub use crate::types::IriReferenceStr;
 

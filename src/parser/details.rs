@@ -22,14 +22,7 @@ fn try_context<I: Clone, E: ParseError<I>, F, O>(
 where
     F: Fn(I) -> IResult<I, O, E>,
 {
-    use nom::Err;
-
-    move |i: I| match f(i.clone()) {
-        Ok(o) => Ok(o),
-        Err(Err::Incomplete(i)) => Err(Err::Incomplete(i)),
-        Err(Err::Error(e)) => Err(Err::Error(E::add_context(i, context, e))),
-        Err(Err::Failure(e)) => Err(Err::Failure(E::add_context(i, context, e))),
-    }
+    nom::error::context(context, f)
 }
 
 /// Context whose error is critical.
@@ -673,7 +666,9 @@ fn query<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'
 }
 
 /// Parses `fragment` and `ifragment` rules.
-fn fragment<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+pub(crate) fn fragment<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'#'`
     // exists before the `fragment`.
     definite_context(

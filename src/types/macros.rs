@@ -31,7 +31,8 @@ macro_rules! impl_std_traits {
         source: {
             owned: $owned:ty,
             slice: $slice:ty,
-            error: $ty_error:ty,
+            creation_error: $ty_creation_error:ident,
+            validation_error: $ty_validation_error:ident,
         },
         target: [
         $(
@@ -60,7 +61,7 @@ macro_rules! impl_std_traits {
             }
 
             impl std::convert::TryFrom<$target_owned> for $owned {
-                type Error = $ty_error;
+                type Error = $ty_creation_error<String>;
 
                 fn try_from(v: $target_owned) -> Result<Self, Self::Error> {
                     Self::try_from(Into::<String>::into(v))
@@ -68,7 +69,7 @@ macro_rules! impl_std_traits {
             }
 
             impl<'a> std::convert::TryFrom<&'a $target_slice> for &'a $slice {
-                type Error = $ty_error;
+                type Error = $ty_validation_error;
 
                 fn try_from(v: &'a $target_slice) -> Result<Self, Self::Error> {
                     Self::try_from(AsRef::<str>::as_ref(v))

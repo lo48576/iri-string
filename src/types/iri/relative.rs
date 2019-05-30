@@ -9,7 +9,9 @@ use serde::{
 };
 
 use crate::{
-    types::{IriReferenceStr, IriReferenceString},
+    types::{
+        iri::set_fragment, CreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+    },
     validate::iri::{relative_ref, Error},
 };
 
@@ -34,7 +36,7 @@ custom_slice_macros::define_slice_types_pair! {
         PartialOrdInnerBulk,
         TryFromInner,
     ))]
-    #[custom_slice(error(type = "Error"))]
+    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
     #[custom_slice(new_unchecked = "
             /// Creates a new `RelativeIriString` without validation.
             pub(crate) unsafe fn new_always_unchecked
@@ -87,6 +89,19 @@ impl RelativeIriString {
         debug_assert_eq!(validate(&s), Ok(()));
         Self::new_always_unchecked(s)
     }
+
+    /// Sets the fragment part to the given string.
+    ///
+    /// Removes fragment part (and following `#` character) if `None` is given.
+    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
+        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
+        debug_assert!(relative_ref(&self.0).is_ok());
+    }
+
+    /// Shrinks the capacity of the inner buffer to match its length.
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
+    }
 }
 
 impl RelativeIriStr {
@@ -96,6 +111,11 @@ impl RelativeIriStr {
     pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
         debug_assert_eq!(validate(s), Ok(()));
         Self::new_always_unchecked(s)
+    }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
     }
 }
 
@@ -115,7 +135,7 @@ impl fmt::Display for RelativeIriString {
 
 impl fmt::Display for &RelativeIriStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<str>::as_ref(self).fmt(f)
+        f.write_str(self.as_str())
     }
 }
 
@@ -131,7 +151,8 @@ impl_std_traits! {
     source: {
         owned: RelativeIriString,
         slice: RelativeIriStr,
-        error: Error,
+        creation_error: CreationError,
+        validation_error: Error,
     },
     target: [
         {
