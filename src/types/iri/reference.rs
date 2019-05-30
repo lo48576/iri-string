@@ -127,6 +127,11 @@ impl IriReferenceString {
             Err(relative) => Ok(relative),
         }
     }
+
+    /// Shrinks the capacity of the inner buffer to match its length.
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
+    }
 }
 
 impl IriReferenceStr {
