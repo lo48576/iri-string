@@ -36,12 +36,14 @@
 
 pub use self::{
     absolute::{AbsoluteIriStr, AbsoluteIriString},
+    error::CreationError,
     normal::{IriStr, IriString},
     reference::{IriReferenceStr, IriReferenceString},
     relative::{RelativeIriStr, RelativeIriString},
 };
 
 mod absolute;
+mod error;
 mod normal;
 mod reference;
 mod relative;

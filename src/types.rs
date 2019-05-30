@@ -46,8 +46,8 @@
 //! Currently not implemented :-P.
 
 pub use self::iri::{
-    AbsoluteIriStr, AbsoluteIriString, IriReferenceStr, IriReferenceString, IriStr, IriString,
-    RelativeIriStr, RelativeIriString,
+    AbsoluteIriStr, AbsoluteIriString, CreationError, IriReferenceStr, IriReferenceString, IriStr,
+    IriString, RelativeIriStr, RelativeIriString,
 };
 
 #[macro_use]
