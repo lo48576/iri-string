@@ -15,26 +15,26 @@
 
 ### Changed (non-breaking)
 * Implement `Clone` and `Copy` for validation error types
-  (`validate::{iri,uri}::Error`).
+  (`validate::{iri,uri}::Error`) (8c6af409963a).
 
 #### Added
-* Add `shrink_to_fit()` methods for `types::iri::*String` types.
+* Add `shrink_to_fit()` methods for `types::iri::*String` types (c8671876229f).
 * Add `set_fragment()` methods for `types::iri::*String` types
-  (except for `AbsoluteIriString`).
-* Add `as_str()` method for `types::iri::*Str` types.
-* Add `types::iri::IriFragment{Str,String}` type.
+  (except for `AbsoluteIriString`) (5ae09a327d93).
+* Add `as_str()` method for `types::iri::*Str` types (0984140105a1).
+* Add `types::iri::IriFragment{Str,String}` type (1c5e06192cf8).
     + This represents fragment part of an IRI.
 
 ### Changed (breaking)
 * `types::iri::{AbsoluteIri,Iri,IriReference,RelativeIri}String::TryFrom<_>` now
-  returns `types::iri::CreationError` as an error.
+  returns `types::iri::CreationError` as an error (8c6af409963a).
     + `CreationError` owns the source data so that it is not lost on conversion
       failure.
     + `CreationError::into_source()` returns the source data which cannot be
       converted into an IRI type.
     + Previously `validate::iri::Error` is used to represent error, but it does
       not own the source data.
-* Move `fragment()` from `IriStr` to `IriReferenceStr`.
+* Move `fragment()` from `IriStr` to `IriReferenceStr` (1c5e06192cf8).
     + `v.fragment()` for `v: &IriStr` is still available thanks to `Deref`.
 
 ## [0.2.0-beta.0]
