@@ -37,6 +37,7 @@
 pub use self::{
     absolute::{AbsoluteIriStr, AbsoluteIriString},
     error::CreationError,
+    fragment::{IriFragmentStr, IriFragmentString},
     normal::{IriStr, IriString},
     reference::{IriReferenceStr, IriReferenceString},
     relative::{RelativeIriStr, RelativeIriString},
@@ -44,6 +45,7 @@ pub use self::{
 
 mod absolute;
 mod error;
+mod fragment;
 mod normal;
 mod reference;
 mod relative;
