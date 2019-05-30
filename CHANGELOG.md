@@ -4,10 +4,14 @@
 
 * Implement `Clone` and `Copy` for validation error types.
 * Let an error type contain source string for conversion from owned string.
+* Add `shrink_to_fit()` methods for `types::iri::*String` types.
 
 ### Changed (non-breaking)
 * Implement `Clone` and `Copy` for validation error types
   (`validate::{iri,uri}::Error`).
+
+#### Added
+* Add `shrink_to_fit()` methods for `types::iri::*String` types.
 
 ### Changed (breaking)
 * `types::iri::{AbsoluteIri,Iri,IriReference,RelativeIri}String::TryFrom<_>` now
