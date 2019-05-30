@@ -12,7 +12,8 @@ use serde::{
 use crate::{
     parser::{self, IriRule},
     types::{
-        AbsoluteIriStr, AbsoluteIriString, CreationError, IriReferenceStr, IriReferenceString,
+        AbsoluteIriStr, AbsoluteIriString, CreationError, IriFragmentStr, IriFragmentString,
+        IriReferenceStr, IriReferenceString,
     },
     validate::iri::{iri, Error},
 };
@@ -98,34 +99,36 @@ impl IriString {
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriString, validate::iri::Error};
+    /// # use iri_string::types::{IriFragmentString, IriString};
     /// let iri = "foo://bar/baz?qux=quux#corge".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
+    /// let fragment_expected = IriFragmentString::try_from("corge".to_owned())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some("corge".to_owned()));
-    /// # Ok::<_, Error>(())
+    /// assert_eq!(fragment, Some(fragment_expected));
+    /// # Ok::<_, Box<std::error::Error>>(())
     /// ```
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriString, validate::iri::Error};
+    /// # use iri_string::types::{IriFragmentString, IriString};
     /// let iri = "foo://bar/baz?qux=quux#".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
+    /// let fragment_expected = IriFragmentString::try_from("".to_owned())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some("".to_owned()));
-    /// # Ok::<_, Error>(())
+    /// assert_eq!(fragment, Some(fragment_expected));
+    /// # Ok::<_, Box<std::error::Error>>(())
     /// ```
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriString, validate::iri::Error};
+    /// # use iri_string::types::IriString;
     /// let iri = "foo://bar/baz?qux=quux".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, None);
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Box<std::error::Error>>(())
     /// ```
-    pub fn into_absolute_and_fragment(self) -> (AbsoluteIriString, Option<String>) {
+    pub fn into_absolute_and_fragment(self) -> (AbsoluteIriString, Option<IriFragmentString>) {
         let (abs_iri, fragment) = self.split_fragment();
         if fragment.is_none() {
             let abs_iri = unsafe {
@@ -152,6 +155,11 @@ impl IriString {
             // This is safe because `absolute_part_len()` guarantees that
             // `&s[..abs_len]` is parsable with `absolute_uri`.
             AbsoluteIriString::new_unchecked(s)
+        };
+        let fragment = unsafe {
+            // This is safe because the fragment part of the valid `IriString`
+            // is guaranteed to be a valid fragment.
+            IriFragmentString::new_unchecked(fragment)
         };
         (abs_iri, Some(fragment))
     }
@@ -222,21 +230,23 @@ impl IriStr {
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
     /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
+    /// let fragment_expected = <&IriFragmentStr>::try_from("corge")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some("corge"));
+    /// assert_eq!(fragment, Some(fragment_expected));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
     /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
+    /// let fragment_expected = <&IriFragmentStr>::try_from("")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some(""));
+    /// assert_eq!(fragment, Some(fragment_expected));
     /// # Ok::<_, Error>(())
     /// ```
     ///
@@ -249,7 +259,7 @@ impl IriStr {
     /// assert_eq!(fragment, None);
     /// # Ok::<_, Error>(())
     /// ```
-    pub fn to_absolute_and_fragment(&self) -> (&AbsoluteIriStr, Option<&str>) {
+    pub fn to_absolute_and_fragment(&self) -> (&AbsoluteIriStr, Option<&IriFragmentStr>) {
         let (abs_iri, fragment) = self.split_fragment();
         let abs_iri = unsafe {
             // This is safe because the `abs_uri` is parsable with
@@ -257,6 +267,11 @@ impl IriStr {
             // This is ensured by `split_fragment()`.
             AbsoluteIriStr::new_unchecked(abs_iri)
         };
+        let fragment = fragment.map(|fragment| unsafe {
+            // This is safe because the fragment part of the valid `IriString`
+            // is guaranteed to be a valid fragment.
+            IriFragmentStr::new_unchecked(fragment)
+        });
         (abs_iri, fragment)
     }
 
@@ -281,39 +296,6 @@ impl IriStr {
     /// ```
     pub fn to_absolute(&self) -> &AbsoluteIriStr {
         self.to_absolute_and_fragment().0
-    }
-
-    /// Returns the fragment part if exists.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
-    /// assert_eq!(iri.fragment(), Some("corge"));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#")?;
-    /// assert_eq!(iri.fragment(), Some(""));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
-    /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
-    /// ```
-    pub fn fragment(&self) -> Option<&str> {
-        self.split_fragment().1
     }
 }
 

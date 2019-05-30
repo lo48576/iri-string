@@ -50,3 +50,8 @@ pub fn relative_ref(s: &str) -> Result<(), Error> {
 pub fn path(s: &str) -> Result<(), Error> {
     conv_err(all_consuming(parser::path::<(), IriRule>)(s))
 }
+
+/// Validates RFC 3987 IRI fragment.
+pub fn fragment(s: &str) -> Result<(), Error> {
+    conv_err(all_consuming(parser::fragment::<(), IriRule>)(s))
+}

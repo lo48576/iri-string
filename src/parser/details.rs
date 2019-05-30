@@ -666,7 +666,9 @@ fn query<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'
 }
 
 /// Parses `fragment` and `ifragment` rules.
-fn fragment<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+pub(crate) fn fragment<'a, E: ParseError<&'a str>, R: Rule>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'#'`
     // exists before the `fragment`.
     definite_context(

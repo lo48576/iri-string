@@ -10,7 +10,10 @@ use serde::{
 
 use crate::{
     resolve::resolve_iri,
-    types::{AbsoluteIriStr, CreationError, IriStr, IriString, RelativeIriStr, RelativeIriString},
+    types::{
+        AbsoluteIriStr, CreationError, IriFragmentStr, IriStr, IriString, RelativeIriStr,
+        RelativeIriString,
+    },
     validate::iri::{iri as validate_iri, iri_reference, Error},
 };
 
@@ -192,6 +195,63 @@ impl IriReferenceStr {
     /// Usual users will want to use strict resolver.
     pub fn resolve(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
+    }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux#corge")?;
+    /// let fragment = <&IriFragmentStr>::try_from("corge")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux#")?;
+    /// let fragment = <&IriFragmentStr>::try_from("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// let iri = <&IriReferenceStr>::try_from("#foo")?;
+    /// let fragment = <&IriFragmentStr>::try_from("foo")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// let iri = <&IriReferenceStr>::try_from("")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn fragment(&self) -> Option<&IriFragmentStr> {
+        let s: &str = self.as_ref();
+        s.find('#').map(|colon_pos| unsafe {
+            // This is safe because the fragment part of the valid
+            // `IriReferenceStr` is guaranteed to be a valid fragment.
+            IriFragmentStr::new_unchecked(&s[(colon_pos + 1)..])
+        })
     }
 }
 
