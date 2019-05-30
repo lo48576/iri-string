@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.0-beta.1]
+
 * Implement `Clone` and `Copy` for validation error types.
 * Let an error type contain source string for conversion from owned string.
 * Add `shrink_to_fit()` methods for `types::iri::*String` types.
@@ -39,5 +41,6 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.0-beta.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.0-beta.1...develop>
+[0.2.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.1>
 [0.2.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.0>
