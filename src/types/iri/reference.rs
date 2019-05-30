@@ -150,19 +150,18 @@ impl IriReferenceStr {
     ///
     /// If it is not an IRI, then `&RelativeIriStr` is returned as `Err(_)`.
     pub fn to_iri(&self) -> Result<&IriStr, &RelativeIriStr> {
-        let s: &str = self.as_ref();
         // Check with `IRI` rule first, because of the syntax.
         //
         // > Some productions are ambiguous. The "first-match-wins" (a.k.a.
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
         // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
-        <&IriStr>::try_from(s).map_err(|_| unsafe {
+        <&IriStr>::try_from(self.as_str()).map_err(|_| unsafe {
             // This is safe because of the syntax rule
             // `IRI-reference = IRI / irelative-ref`.
             // It says that if an IRI reference is not an IRI, then it is
             // a relative IRI.
-            RelativeIriStr::new_unchecked(s)
+            RelativeIriStr::new_unchecked(self)
         })
     }
 
@@ -268,7 +267,7 @@ impl fmt::Display for IriReferenceString {
 
 impl fmt::Display for &IriReferenceStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<str>::as_ref(self).fmt(f)
+        f.write_str(self.as_str())
     }
 }
 

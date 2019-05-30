@@ -320,7 +320,7 @@ impl fmt::Display for IriString {
 
 impl fmt::Display for &IriStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<str>::as_ref(self).fmt(f)
+        f.write_str(self.as_str())
     }
 }
 
