@@ -5,6 +5,7 @@
 * Implement `Clone` and `Copy` for validation error types.
 * Let an error type contain source string for conversion from owned string.
 * Add `shrink_to_fit()` methods for `types::iri::*String` types.
+* Add `as_str()` method for `types::iri::*Str` types.
 * Add `types::iri::IriFragment{Str,String}` type.
 * Move `fragment()` from `IriStr` to `IriReferenceStr`.
 
@@ -14,6 +15,7 @@
 
 #### Added
 * Add `shrink_to_fit()` methods for `types::iri::*String` types.
+* Add `as_str()` method for `types::iri::*Str` types.
 * Add `types::iri::IriFragment{Str,String}` type.
     + This represents fragment part of an IRI.
 
