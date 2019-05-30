@@ -100,6 +100,11 @@ impl IriFragmentStr {
         debug_assert_eq!(validate(&s), Ok(()));
         Self::new_always_unchecked(s)
     }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
 }
 
 impl fmt::Display for IriFragmentString {

@@ -253,6 +253,11 @@ impl IriReferenceStr {
             IriFragmentStr::new_unchecked(&s[(colon_pos + 1)..])
         })
     }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
 }
 
 impl fmt::Display for IriReferenceString {

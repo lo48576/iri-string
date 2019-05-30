@@ -297,6 +297,11 @@ impl IriStr {
     pub fn to_absolute(&self) -> &AbsoluteIriStr {
         self.to_absolute_and_fragment().0
     }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
 }
 
 impl std::ops::Deref for IriStr {
