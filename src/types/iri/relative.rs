@@ -9,7 +9,9 @@ use serde::{
 };
 
 use crate::{
-    types::{CreationError, IriReferenceStr, IriReferenceString},
+    types::{
+        iri::set_fragment, CreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+    },
     validate::iri::{relative_ref, Error},
 };
 
@@ -86,6 +88,14 @@ impl RelativeIriString {
     pub(crate) unsafe fn new_unchecked(s: String) -> Self {
         debug_assert_eq!(validate(&s), Ok(()));
         Self::new_always_unchecked(s)
+    }
+
+    /// Sets the fragment part to the given string.
+    ///
+    /// Removes fragment part (and following `#` character) if `None` is given.
+    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
+        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
+        debug_assert!(relative_ref(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.

@@ -11,8 +11,8 @@ use serde::{
 use crate::{
     resolve::resolve_iri,
     types::{
-        AbsoluteIriStr, CreationError, IriFragmentStr, IriStr, IriString, RelativeIriStr,
-        RelativeIriString,
+        iri::set_fragment, AbsoluteIriStr, CreationError, IriFragmentStr, IriStr, IriString,
+        RelativeIriStr, RelativeIriString,
     },
     validate::iri::{iri as validate_iri, iri_reference, Error},
 };
@@ -129,6 +129,14 @@ impl IriReferenceString {
             Ok(iri) => Err(iri),
             Err(relative) => Ok(relative),
         }
+    }
+
+    /// Sets the fragment part to the given string.
+    ///
+    /// Removes fragment part (and following `#` character) if `None` is given.
+    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
+        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
+        debug_assert!(iri_reference(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
