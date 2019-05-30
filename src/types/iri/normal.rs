@@ -12,8 +12,8 @@ use serde::{
 use crate::{
     parser::{self, IriRule},
     types::{
-        AbsoluteIriStr, AbsoluteIriString, CreationError, IriFragmentStr, IriFragmentString,
-        IriReferenceStr, IriReferenceString,
+        iri::set_fragment, AbsoluteIriStr, AbsoluteIriString, CreationError, IriFragmentStr,
+        IriFragmentString, IriReferenceStr, IriReferenceString,
     },
     validate::iri::{iri, Error},
 };
@@ -191,6 +191,14 @@ impl IriString {
             // `&s[..abs_len]` is parsable with `absolute_uri`.
             AbsoluteIriString::new_unchecked(s)
         }
+    }
+
+    /// Sets the fragment part to the given string.
+    ///
+    /// Removes fragment part (and following `#` character) if `None` is given.
+    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
+        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
+        debug_assert!(iri(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
