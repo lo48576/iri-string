@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.2.0]
+
+* Use nom 5.0.0.
+    + This is non-breaking change.
+
 ## [0.2.0-beta.1]
 
 * Implement `Clone` and `Copy` for validation error types.
@@ -41,6 +46,7 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.0-beta.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.0...develop>
+[0.2.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0>
 [0.2.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.1>
 [0.2.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.0>
