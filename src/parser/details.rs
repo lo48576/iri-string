@@ -6,44 +6,12 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
-    combinator::{map, map_opt, opt},
-    error::ParseError,
+    combinator::{cut, map, map_opt, opt},
+    error::{context, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
 };
-
-/// Context whose error is not critical.
-// See <https://github.com/Geal/nom/issues/942>.
-fn try_context<I: Clone, E: ParseError<I>, F, O>(
-    context: &'static str,
-    f: F,
-) -> impl Fn(I) -> IResult<I, O, E>
-where
-    F: Fn(I) -> IResult<I, O, E>,
-{
-    nom::error::context(context, f)
-}
-
-/// Context whose error is critical.
-// See <https://github.com/Geal/nom/issues/942>.
-fn definite_context<I: Clone, E: ParseError<I>, F, O>(
-    context: &'static str,
-    f: F,
-) -> impl Fn(I) -> IResult<I, O, E>
-where
-    F: Fn(I) -> IResult<I, O, E>,
-{
-    use nom::Err;
-
-    move |i: I| match f(i.clone()) {
-        Ok(o) => Ok(o),
-        Err(Err::Incomplete(i)) => Err(Err::Incomplete(i)),
-        Err(Err::Error(e)) | Err(Err::Failure(e)) => {
-            Err(Err::Failure(E::add_context(i, context, e)))
-        }
-    }
-}
 
 /// `one_of` with predicate (not characters list).
 fn one_is<I, F, E: ParseError<I>>(pred: F) -> impl Fn(I) -> IResult<I, char, E>
@@ -156,7 +124,7 @@ impl Rule for IriRule {
 
 /// Parses RFC 3986 / 3987 IRI.
 pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "uri",
         tuple((
             scheme,
@@ -173,7 +141,7 @@ pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'
 fn decompose_uri<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
-    try_context(
+    context(
         "uri",
         map(
             tuple((
@@ -200,7 +168,7 @@ fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
     // > characters ("//").
     // >
     // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
-    try_context(
+    context(
         "hier-part",
         alt((
             ret_raw(pair(tag("//"), path_absolute::<E, R>)),
@@ -228,7 +196,7 @@ fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
     // > characters ("//").
     // >
     // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
-    try_context(
+    context(
         "hier-part",
         alt((
             map(preceded(tag("//"), path_absolute::<E, R>), |path| {
@@ -255,14 +223,14 @@ fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
 pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
-    try_context("uri_reference", alt((uri::<E, R>, relative_ref::<E, R>)))(i)
+    context("uri_reference", alt((uri::<E, R>, relative_ref::<E, R>)))(i)
 }
 
 /// Parses RFC 3986 / 3987 IRI reference and returns components.
 pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
-    try_context(
+    context(
         "uri_reference",
         alt((decompose_uri::<E, R>, decompose_relative_ref::<E, R>)),
     )(i)
@@ -272,7 +240,7 @@ pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
 pub(crate) fn absolute_uri<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "absolute_uri",
         tuple((
             scheme,
@@ -288,7 +256,7 @@ pub(crate) fn absolute_uri<'a, E: ParseError<&'a str>, R: Rule>(
 pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "relative_ref",
         tuple((
             relative_part::<E, R>,
@@ -303,7 +271,7 @@ pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
 fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
-    try_context(
+    context(
         "relative_ref",
         map(
             tuple((
@@ -324,7 +292,7 @@ fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
 
 /// Parses `relative_part` rule.
 fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "relative-part",
         alt((
             ret_raw(tuple((tag("//"), authority::<E, R>, path_abempty::<E, R>))),
@@ -339,7 +307,7 @@ fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
-    try_context(
+    context(
         "relative-part",
         alt((
             pair(
@@ -355,7 +323,7 @@ fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Rule>(
 
 /// Parses `scheme` rule.
 fn scheme<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "scheme",
         pair(
             one_is(|c: char| c.is_ascii_alphabetic()),
@@ -367,7 +335,7 @@ fn scheme<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E
 
 /// Parses `authority` and `iauthority` rules.
 fn authority<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "authority",
         tuple((
             opt(terminated(userinfo::<E, R>, char_('@'))),
@@ -380,7 +348,7 @@ fn authority<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
 
 /// Parses `userinfo` and `iuserinfo` rules.
 fn userinfo<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "userinfo",
         many0_count(alt((
             map(
@@ -395,17 +363,17 @@ fn userinfo<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str,
 
 /// Parses `host` and `ihost` rules.
 fn host<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context("host", alt((ip_literal, ipv4address, reg_name::<E, R>)))(i)
+    context("host", alt((ip_literal, ipv4address, reg_name::<E, R>)))(i)
 }
 
 /// Parses `port` rule.
 fn port<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context("port", take_while(|c: char| c.is_ascii_digit()))(i)
+    context("port", take_while(|c: char| c.is_ascii_digit()))(i)
 }
 
 /// Parses `IP-literal` rules.
 fn ip_literal<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "IP-literal",
         delimited(char_('['), alt((ipv6address, ipvfuture)), char_(']')),
     )(i)
@@ -417,7 +385,7 @@ fn ipvfuture<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
     // > If a URI containing an IP-literal that starts with "v" (case-insensitive),
     // >
     // > --- <https://tools.ietf.org/html/rfc3986#section-3.2.2>
-    try_context(
+    context(
         "IPvFuture",
         tuple((
             alt((char_('v'), char_('V'))),
@@ -463,7 +431,7 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
         )))
     }
 
-    try_context(
+    context(
         "IPv6Address",
         alt((
             ret_raw(tuple((tag("::"), after_double_colon(7)))),
@@ -494,7 +462,7 @@ fn h16<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
 
 /// Parses `IPv4Address` rules.
 fn ipv4address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "IPv4Address",
         tuple((
             terminated(dec_octet, char_('.')),
@@ -508,7 +476,7 @@ fn ipv4address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
 
 /// Parses `dec-octet` rule.
 fn dec_octet<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "dec-octet",
         alt((
             ret_raw(pair(tag("25"), one_of("012345"))),
@@ -533,7 +501,7 @@ fn dec_octet<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
 
 /// Parses `reg-name` and `ireg-name` rules.
 fn reg_name<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "reg-name",
         many0_count(alt((
             map(
@@ -551,7 +519,7 @@ pub(crate) fn path<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     // `path-abempty` rule here is ambiguous and can be removed.
-    try_context(
+    context(
         "path",
         alt((
             path_absolute::<E, R>,
@@ -564,7 +532,7 @@ pub(crate) fn path<'a, E: ParseError<&'a str>, R: Rule>(
 
 /// Parses `path-abempty` and `ipath-abempty` rules.
 fn path_abempty<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "path-abempty",
         many0_count(preceded(char_('/'), segment::<E, R>)),
     )(i)
@@ -573,7 +541,7 @@ fn path_abempty<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a 
 
 /// Parses `path-absolute` and `ipath-absolute` rules.
 fn path_absolute<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "path-absolute",
         preceded(
             char_('/'),
@@ -588,7 +556,7 @@ fn path_absolute<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 
 /// Parses `path-noscheme` and `ipath-noscheme` rules.
 fn path_noscheme<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "path-noscheme",
         pair(
             segment_nz_nc::<E, R>,
@@ -600,7 +568,7 @@ fn path_noscheme<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 
 /// Parses `path-rootless` and `ipath-rootless` rules.
 fn path_rootless<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "path-rootless",
         pair(
             segment_nz::<E, R>,
@@ -617,19 +585,19 @@ fn path_empty<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a st
 
 /// Parses `segment` and `isegment` rules.
 fn segment<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context("segment", many0_count(pchar::<E, R>))(i)
+    context("segment", many0_count(pchar::<E, R>))(i)
         .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `segment-nz` and `isegment-nz` rules.
 fn segment_nz<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context("segment-nz", many1_count(pchar::<E, R>))(i)
+    context("segment-nz", many1_count(pchar::<E, R>))(i)
         .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `segment-nz-nc` and `isegment-nz-nc` rules.
 fn segment_nz_nc<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    try_context(
+    context(
         "segment-nz-nc",
         many1_count(alt((
             map(
@@ -658,9 +626,14 @@ fn pchar<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'
 fn query<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'?'`
     // exists before the `query`.
-    definite_context(
+    context(
         "query",
-        many0_count(alt((pchar::<E, R>, private::<E, R>, tag("/"), tag("?")))),
+        cut(many0_count(alt((
+            pchar::<E, R>,
+            private::<E, R>,
+            tag("/"),
+            tag("?"),
+        )))),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
@@ -671,20 +644,20 @@ pub(crate) fn fragment<'a, E: ParseError<&'a str>, R: Rule>(
 ) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'#'`
     // exists before the `fragment`.
-    definite_context(
+    context(
         "fragment",
-        many0_count(alt((pchar::<E, R>, tag("/"), tag("?")))),
+        cut(many0_count(alt((pchar::<E, R>, tag("/"), tag("?"))))),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `pct-encoded` rule.
 fn pct_encoded<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, (char, char), E> {
-    try_context(
+    context(
         "pct-encoded",
         preceded(
             char_('%'),
-            definite_context("pct-encoded/hexdigits", pair(hexdig, hexdig)),
+            context("pct-encoded/hexdigits", cut(pair(hexdig, hexdig))),
         ),
     )(i)
 }
