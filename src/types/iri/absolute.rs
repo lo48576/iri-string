@@ -66,6 +66,14 @@ custom_slice_macros::define_slice_types_pair! {
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
+    #[custom_slice(new_checked = "
+            /// Creates a new `&AbsoluteIriStr`.
+            ///
+            /// # Safety
+            ///
+            /// The given value must be a valid absolute IRI.
+            pub fn new
+        ")]
     #[custom_slice(new_unchecked = "
             /// Creates a new `&AbsoluteIriStr` without validation.
             unsafe fn new_always_unchecked

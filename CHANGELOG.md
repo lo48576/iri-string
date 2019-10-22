@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+* `*Str::new()` methods are added.
+
+### Added
+* `*Str::new()` methods are added.
+    + Previously the string slices are created as `<&FooStr>::try_from(s).expect("...")`
+      (where `s: &str`), but this can be redundant when you know the string is valid (especially
+      when passing constant strings).
+      Now `FooStr::new(s)` can be used instead.
+    + This panics if the given string is valid.
+      Use `TryFrom::try_from` if you are not sure the string is valid.
+
 ## [0.2.0]
 
 * Use nom 5.0.0.

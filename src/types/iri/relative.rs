@@ -68,6 +68,14 @@ custom_slice_macros::define_slice_types_pair! {
         TryFromInner,
     ))]
     #[custom_slice(error(type = "Error"))]
+    #[custom_slice(new_checked = "
+            /// Creates a new `&RelativeIriStr`.
+            ///
+            /// # Safety
+            ///
+            /// The given value must be a valid relative IRI.
+            pub fn new
+        ")]
     #[custom_slice(new_unchecked = "
             /// Creates a new `&RelativeIriStr` without validation.
             pub(crate) unsafe fn new_always_unchecked
