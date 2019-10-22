@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * `*Str::new()` methods are added.
+* Reduced indirect dependencies
 
 ### Added
 * `*Str::new()` methods are added.
@@ -12,6 +13,10 @@
       Now `FooStr::new(s)` can be used instead.
     + This panics if the given string is valid.
       Use `TryFrom::try_from` if you are not sure the string is valid.
+
+### Changed (non-breaking)
+* Disabled `lexical` feature of `nom` crate.
+    + This reduces indirect dependencies.
 
 ## [0.2.0]
 
