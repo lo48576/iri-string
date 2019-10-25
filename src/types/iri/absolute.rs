@@ -1,114 +1,85 @@
 //! Absolute IRI.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
 };
+use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
     types::{CreationError, IriReferenceStr, IriReferenceString, IriStr, IriString},
     validate::iri::{absolute_iri, Error},
 };
 
-custom_slice_macros::define_slice_types_pair! {
-    /// An owned string of an absolute IRI.
-    ///
-    /// This corresponds to `absolute-IRI` rule in RFC 3987.
-    /// This is `scheme ":" ihier-part [ "?" iquery ]`.
-    /// In other words, this is `IriString` without fragment part.
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(owned)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        Deref,
-        IntoInner,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `AbsoluteIriString` without validation.
-            unsafe fn new_always_unchecked
-        ")]
-    pub struct AbsoluteIriString(String);
-
-    /// A borrowed slice of an absolute IRI.
-    ///
-    /// This corresponds to `absolute-IRI` rule in RFC 3987.
-    /// This is `scheme ":" ihier-part [ "?" iquery ]`.
-    /// In other words, this is `IriStr` without fragment part.
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(transparent)]
-    #[allow(clippy::derive_hash_xor_eq)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(slice)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        DefaultRef,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        IntoArc,
-        IntoBox,
-        IntoRc,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "Error"))]
-    #[custom_slice(new_checked = "
-            /// Creates a new `&AbsoluteIriStr`.
-            ///
-            /// # Safety
-            ///
-            /// The given value must be a valid absolute IRI.
-            pub fn new
-        ")]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `&AbsoluteIriStr` without validation.
-            unsafe fn new_always_unchecked
-        ")]
-    pub struct AbsoluteIriStr(str);
-
-    /// Validates the given string as an absolute IRI.
-    #[custom_slice(validator)]
-    fn validate(s: &str) -> Result<(), Error> {
-        absolute_iri(s)
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: AbsoluteIriStr,
+        validator: absolute_iri,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: AbsoluteIriString,
+        error: CreationError<String>,
+    },
 }
+
+/// An owned string of an absolute IRI.
+///
+/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This is `scheme ":" ihier-part [ "?" iquery ]`.
+/// In other words, this is `IriString` without fragment part.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct AbsoluteIriString(String);
+
+/// A borrowed slice of an absolute IRI.
+///
+/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This is `scheme ":" ihier-part [ "?" iquery ]`.
+/// In other words, this is `IriStr` without fragment part.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+#[allow(clippy::derive_hash_xor_eq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct AbsoluteIriStr(str);
 
 impl AbsoluteIriString {
     /// Creates a new `AbsoluteIriString` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(validate(&s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
+    #[inline]
     pub fn shrink_to_fit(&mut self) {
         self.0.shrink_to_fit()
     }
 }
 
 impl AbsoluteIriStr {
+    /// Creates a new `&AbsoluteIriStr`.
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
+
     /// Creates a new `&AbsoluteIriStr` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(validate(s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
     }
 
     /// Returns `&str`.
@@ -125,27 +96,7 @@ impl std::ops::Deref for AbsoluteIriStr {
     }
 }
 
-impl fmt::Display for AbsoluteIriString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<AbsoluteIriStr>::as_ref(self).fmt(f)
-    }
-}
-
-impl fmt::Display for &AbsoluteIriStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl std::str::FromStr for AbsoluteIriString {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        <&AbsoluteIriStr>::try_from(s).map(ToOwned::to_owned)
-    }
-}
-
-impl_std_traits! {
+impl_conv_and_cmp! {
     source: {
         owned: AbsoluteIriString,
         slice: AbsoluteIriStr,

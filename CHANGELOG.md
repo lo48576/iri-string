@@ -17,6 +17,8 @@
 ### Changed (non-breaking)
 * Disabled `lexical` feature of `nom` crate.
     + This reduces indirect dependencies.
+* Migrate code generator from proc-macro crate to non-proc-macro one.
+    + This reduces indirect dependencies, and may also reduce compilation time.
 
 ## [0.2.0]
 

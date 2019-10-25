@@ -1,97 +1,62 @@
 //! Fragment string.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
 };
+use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
     types::CreationError,
     validate::iri::{fragment, Error},
 };
 
-custom_slice_macros::define_slice_types_pair! {
-    /// An owned string of an IRI fragment.
-    ///
-    /// This corresponds to `ifragment` rule in RFC 3987.
-    /// This is `*( ipchar / "/" / "?" )`.
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(owned)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        Deref,
-        IntoInner,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `IriFragmentString` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct IriFragmentString(String);
-
-    /// A borrowed slice of an IRI.
-    ///
-    /// This corresponds to `ifragment` rule in RFC 3987.
-    /// This is `*( ipchar / "/" / "?" )`.
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(transparent)]
-    #[allow(clippy::derive_hash_xor_eq)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(slice)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        DefaultRef,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        IntoArc,
-        IntoBox,
-        IntoRc,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "Error"))]
-    #[custom_slice(new_checked = "
-            /// Creates a new `&IriFragmentStr`.
-            ///
-            /// # Safety
-            ///
-            /// The given value must be a valid IRI fragment.
-            pub fn new
-        ")]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `&IriFragmentStr` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct IriFragmentStr(str);
-
-    /// Validates the given string as an IRI.
-    #[custom_slice(validator)]
-    fn validate(s: &str) -> Result<(), Error> {
-        fragment(s)
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: IriFragmentStr,
+        validator: fragment,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: IriFragmentString,
+        error: CreationError<String>,
+    },
 }
+
+/// An owned string of an IRI fragment.
+///
+/// This corresponds to `ifragment` rule in RFC 3987.
+/// This is `*( ipchar / "/" / "?" )`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriFragmentString(String);
+
+/// A borrowed slice of an IRI.
+///
+/// This corresponds to `ifragment` rule in RFC 3987.
+/// This is `*( ipchar / "/" / "?" )`.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+#[allow(clippy::derive_hash_xor_eq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriFragmentStr(str);
 
 impl IriFragmentString {
     /// Creates a new `IriFragmentString` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(validate(&s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
@@ -101,48 +66,23 @@ impl IriFragmentString {
 }
 
 impl IriFragmentStr {
+    /// Creates a new `&IriFragmentStr`.
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
+
     /// Creates a new `IriFragmentStr` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(validate(&s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
     }
 
     /// Returns `&str`.
     pub fn as_str(&self) -> &str {
         self.as_ref()
     }
-}
-
-impl fmt::Display for IriFragmentString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<IriFragmentStr>::as_ref(self).fmt(f)
-    }
-}
-
-impl fmt::Display for &IriFragmentStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl std::str::FromStr for IriFragmentString {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        <&IriFragmentStr>::try_from(s).map(ToOwned::to_owned)
-    }
-}
-
-impl_std_traits! {
-    source: {
-        owned: IriFragmentString,
-        slice: IriFragmentStr,
-        creation_error: CreationError,
-        validation_error: Error,
-    },
-    target: [],
 }
 
 /// `IriFragmentString` visitor.

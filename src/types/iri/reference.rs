@@ -1,12 +1,15 @@
 //! IRI reference.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize,
 };
+use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
     resolve::resolve_iri,
@@ -17,88 +20,59 @@ use crate::{
     validate::iri::{iri as validate_iri, iri_reference, Error},
 };
 
-custom_slice_macros::define_slice_types_pair! {
-    /// An owned string of an IRI reference.
-    ///
-    /// This corresponds to `IRI-reference` rule in RFC 3987.
-    /// This is `IRI / irelative-ref`
-    /// In other words, this is union of `IriString` and `RelativeIriString.
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(owned)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        Deref,
-        IntoInner,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `IriReferenceString` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct IriReferenceString(String);
-
-    /// A borrowed slice of an IRI reference.
-    ///
-    /// This corresponds to `IRI-reference` rule in RFC 3987.
-    /// This is `IRI / irelative-ref`
-    /// In other words, this is union of `IriStr` and `RelativeIriStr.
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(transparent)]
-    #[allow(clippy::derive_hash_xor_eq)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(slice)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        DefaultRef,
-        Deref,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        IntoArc,
-        IntoBox,
-        IntoRc,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "Error"))]
-    #[custom_slice(new_checked = "
-            /// Creates a new `&IriReferenceStr`.
-            ///
-            /// # Safety
-            ///
-            /// The given value must be a valid IRI reference.
-            pub fn new
-        ")]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `&IriReferenceStr` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct IriReferenceStr(str);
-
-    /// Validates the given string as an IRI reference.
-    #[custom_slice(validator)]
-    fn validate(s: &str) -> Result<(), Error> {
-        iri_reference(s)
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: IriReferenceStr,
+        validator: iri_reference,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: IriReferenceString,
+        error: CreationError<String>,
+    },
 }
+
+validated_slice::impl_std_traits_for_slice! {
+    Spec {
+        spec: StrSpec,
+        custom: IriReferenceStr,
+        inner: str,
+        error: Error,
+    };
+    { Deref<Target = {Inner}> };
+}
+
+/// An owned string of an IRI reference.
+///
+/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This is `IRI / irelative-ref`
+/// In other words, this is union of `IriString` and `RelativeIriString.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriReferenceString(String);
+
+/// A borrowed slice of an IRI reference.
+///
+/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This is `IRI / irelative-ref`
+/// In other words, this is union of `IriStr` and `RelativeIriStr.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+#[allow(clippy::derive_hash_xor_eq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriReferenceStr(str);
 
 impl IriReferenceString {
     /// Creates a new `IriReferenceString` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(validate(&s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
     }
 
     /// Returns the string as `IriString`, if it is valid as an IRI.
@@ -154,12 +128,17 @@ impl IriReferenceString {
 }
 
 impl IriReferenceStr {
+    /// Creates a new `&IriReferenceStr`.
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
+
     /// Creates a new `&IriReferenceStr` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(validate(s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
     }
 
     /// Returns the string as `&IriStr`, if it is valid as an IRI.
@@ -272,26 +251,6 @@ impl IriReferenceStr {
     /// Returns `&str`.
     pub fn as_str(&self) -> &str {
         self.as_ref()
-    }
-}
-
-impl fmt::Display for IriReferenceString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<IriReferenceStr>::as_ref(self).fmt(f)
-    }
-}
-
-impl fmt::Display for &IriReferenceStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl std::str::FromStr for IriReferenceString {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        <&IriReferenceStr>::try_from(s).map(ToOwned::to_owned)
     }
 }
 
