@@ -211,16 +211,6 @@ impl IriFragmentStr {
     }
 }
 
-impl_std_traits! {
-    source: {
-        owned: IriFragmentString,
-        slice: IriFragmentStr,
-        creation_error: CreationError,
-        validation_error: Error,
-    },
-    target: [],
-}
-
 /// `IriFragmentString` visitor.
 #[cfg(feature = "serde")]
 #[derive(Debug, Clone, Copy)]

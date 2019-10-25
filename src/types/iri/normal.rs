@@ -437,7 +437,7 @@ impl std::ops::Deref for IriStr {
     }
 }
 
-impl_std_traits! {
+impl_conv_and_cmp! {
     source: {
         owned: IriString,
         slice: IriStr,

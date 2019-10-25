@@ -231,7 +231,7 @@ impl std::ops::Deref for RelativeIriStr {
     }
 }
 
-impl_std_traits! {
+impl_conv_and_cmp! {
     source: {
         owned: RelativeIriString,
         slice: RelativeIriStr,

@@ -25,8 +25,8 @@ macro_rules! impl_cmp {
     };
 }
 
-/// Implement std traits for the given URI / IRI types.
-macro_rules! impl_std_traits {
+/// Implement conversions and comparisons among different kinds of URI / IRI types.
+macro_rules! impl_conv_and_cmp {
     (
         source: {
             owned: $owned:ty,
@@ -40,7 +40,7 @@ macro_rules! impl_std_traits {
                 owned: $target_owned:ty,
                 slice: $target_slice:ty,
             }
-        ),* $(,)?
+        ),+ $(,)?
         ],
     ) => {
         $(

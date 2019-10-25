@@ -222,7 +222,7 @@ impl std::ops::Deref for AbsoluteIriStr {
     }
 }
 
-impl_std_traits! {
+impl_conv_and_cmp! {
     source: {
         owned: AbsoluteIriString,
         slice: AbsoluteIriStr,
