@@ -1,6 +1,8 @@
 //! IRI reference.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{

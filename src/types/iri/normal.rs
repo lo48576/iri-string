@@ -1,6 +1,8 @@
 //! Absolute IRI.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
+#[cfg(feature = "serde")]
+use std::fmt;
 
 use nom::combinator::complete;
 #[cfg(feature = "serde")]
