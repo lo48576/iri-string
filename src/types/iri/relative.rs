@@ -1,14 +1,9 @@
 //! Relative IRI.
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -120,73 +115,8 @@ impl_conv_and_cmp! {
     ],
 }
 
-/// `RelativeIriString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct RelativeIriStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for RelativeIriStringVisitor {
-    type Value = RelativeIriString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a relative IRI")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&RelativeIriStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        RelativeIriString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for RelativeIriString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(RelativeIriStringVisitor)
-    }
-}
-
-/// `RelativeIriStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct RelativeIriStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for RelativeIriStrVisitor {
-    type Value = &'de RelativeIriStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a relative IRI")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de RelativeIriStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a RelativeIriStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(RelativeIriStrVisitor)
-    }
+impl_serde! {
+    expecting: "a relative IRI",
+    slice: RelativeIriStr,
+    owned: RelativeIriString,
 }

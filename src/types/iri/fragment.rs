@@ -1,14 +1,9 @@
 //! Fragment string.
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -85,73 +80,8 @@ impl IriFragmentStr {
     }
 }
 
-/// `IriFragmentString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriFragmentStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriFragmentStringVisitor {
-    type Value = IriFragmentString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI fragment")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&IriFragmentStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        IriFragmentString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for IriFragmentString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(IriFragmentStringVisitor)
-    }
-}
-
-/// `IriStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriFragmentStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriFragmentStrVisitor {
-    type Value = &'de IriFragmentStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI fragment")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de IriFragmentStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a IriFragmentStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(IriFragmentStrVisitor)
-    }
+impl_serde! {
+    expecting: "an IRI fragment",
+    slice: IriFragmentStr,
+    owned: IriFragmentString,
 }

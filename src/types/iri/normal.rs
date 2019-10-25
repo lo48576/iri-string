@@ -1,15 +1,10 @@
 //! Absolute IRI.
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 use nom::combinator::complete;
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -325,74 +320,8 @@ impl_conv_and_cmp! {
         },
     ],
 }
-
-/// `IriString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriStringVisitor {
-    type Value = IriString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&IriStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        IriString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for IriString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(IriStringVisitor)
-    }
-}
-
-/// `IriStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriStrVisitor {
-    type Value = &'de IriStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an absolute IRI")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de IriStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a IriStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(IriStrVisitor)
-    }
+impl_serde! {
+    expecting: "an IRI",
+    slice: IriStr,
+    owned: IriString,
 }

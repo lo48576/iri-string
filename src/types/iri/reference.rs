@@ -1,14 +1,9 @@
 //! IRI reference.
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -253,74 +248,8 @@ impl IriReferenceStr {
         self.as_ref()
     }
 }
-
-/// `IriReferenceString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriReferenceStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriReferenceStringVisitor {
-    type Value = IriReferenceString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI reference")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&IriReferenceStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        IriReferenceString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for IriReferenceString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(IriReferenceStringVisitor)
-    }
-}
-
-/// `IriReferenceStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriReferenceStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriReferenceStrVisitor {
-    type Value = &'de IriReferenceStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI reference")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de IriReferenceStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a IriReferenceStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(IriReferenceStrVisitor)
-    }
+impl_serde! {
+    expecting: "an IRI reference",
+    slice: IriReferenceStr,
+    owned: IriReferenceString,
 }
