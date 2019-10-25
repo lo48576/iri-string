@@ -19,146 +19,18 @@ use crate::{
     validate::iri::{iri, Error},
 };
 
-/// Spec of `IriStr`.
-enum StrSpec {}
-
-impl SliceSpec for StrSpec {
-    type Custom = IriStr;
-    type Inner = str;
-    type Error = Error;
-
-    #[inline]
-    fn validate(s: &Self::Inner) -> Result<(), Self::Error> {
-        iri(s)
-    }
-
-    validated_slice::impl_slice_spec_methods! {
-        field=0;
-        methods=[
-            as_inner,
-            as_inner_mut,
-            from_inner_unchecked,
-            from_inner_unchecked_mut,
-        ];
-    }
-}
-
-validated_slice::impl_std_traits_for_slice! {
-    Spec {
+impl_basics! {
+    Slice {
         spec: StrSpec,
         custom: IriStr,
-        inner: str,
+        validator: iri,
         error: Error,
-    };
-    { AsRef<str> };
-    { AsRef<{Custom}> };
-    { From<&{Custom}> for Arc<{Custom}> };
-    { From<&{Custom}> for Box<{Custom}> };
-    { From<&{Custom}> for Rc<{Custom}> };
-    { TryFrom<&{Inner}> for &{Custom} };
-    { Default for &{Custom} };
-    { Display };
-}
-
-validated_slice::impl_cmp_for_slice! {
-    Spec {
-        spec: StrSpec,
-        custom: IriStr,
-        inner: str,
-        base: Inner,
-    };
-    Cmp { PartialEq, PartialOrd };
-    { ({Custom}), (&{Custom}), rev };
-    { ({Custom}), (Cow<{Custom}>), rev };
-
-    { ({Custom}), ({Inner}), rev };
-    { ({Custom}), (&{Inner}), rev };
-    { (&{Custom}), ({Inner}), rev };
-    { ({Custom}), (Cow<{Inner}>), rev };
-    { (&{Custom}), (Cow<{Inner}>), rev };
-}
-
-/// Spec of `IriString`.
-enum StringSpec {}
-
-impl OwnedSliceSpec for StringSpec {
-    type Custom = IriString;
-    type Inner = String;
-    type Error = CreationError<Self::Inner>;
-    type SliceSpec = StrSpec;
-    type SliceCustom = IriStr;
-    type SliceInner = str;
-    type SliceError = Error;
-
-    #[inline]
-    fn convert_validation_error(e: Self::SliceError, v: Self::Inner) -> Self::Error {
-        CreationError::new(e, v)
-    }
-
-    #[inline]
-    fn as_slice_inner(s: &Self::Custom) -> &Self::SliceInner {
-        &s.0
-    }
-
-    #[inline]
-    fn as_slice_inner_mut(s: &mut Self::Custom) -> &mut Self::SliceInner {
-        &mut s.0
-    }
-
-    #[inline]
-    fn inner_as_slice_inner(s: &Self::Inner) -> &Self::SliceInner {
-        s
-    }
-
-    #[inline]
-    unsafe fn from_inner_unchecked(s: Self::Inner) -> Self::Custom {
-        IriString(s)
-    }
-
-    #[inline]
-    fn into_inner(s: Self::Custom) -> Self::Inner {
-        s.0
-    }
-}
-
-validated_slice::impl_std_traits_for_owned_slice! {
-    Spec {
+    },
+    Owned {
         spec: StringSpec,
         custom: IriString,
-        inner: String,
         error: CreationError<String>,
-        slice_custom: IriStr,
-        slice_inner: str,
-        slice_error: Error,
-    };
-    { Borrow<str> };
-    { Borrow<{SliceCustom}> };
-    { ToOwned<Owned = {Custom}> for {SliceCustom} };
-    { AsRef<str> };
-    { AsRef<{SliceCustom}> };
-    { From<{Custom}> for {Inner} };
-    { TryFrom<{Inner}> };
-    { Display };
-    { Deref<Target = {SliceCustom}> };
-    { FromStr };
-}
-
-validated_slice::impl_cmp_for_owned_slice! {
-    Spec {
-        spec: StringSpec,
-        custom: IriString,
-        inner: String,
-        slice_custom: IriStr,
-        slice_inner: str,
-        base: Inner,
-    };
-    Cmp { PartialEq, PartialOrd };
-    { ({Custom}), ({SliceCustom}), rev };
-    { ({Custom}), (&{SliceCustom}), rev };
-    { ({Custom}), (Cow<{SliceCustom}>), rev };
-    { ({Custom}), ({SliceInner}), rev };
-    { ({Custom}), (&{SliceInner}), rev };
-    { ({Custom}), (Cow<{SliceInner}>), rev };
+    },
 }
 
 /// An owned string of an IRI.
