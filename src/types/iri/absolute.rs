@@ -1,4 +1,4 @@
-//! Absolute IRI.
+//! Absolute IRI (without fragment part).
 
 use std::convert::TryFrom;
 
