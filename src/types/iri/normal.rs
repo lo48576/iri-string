@@ -1,15 +1,10 @@
-//! Absolute IRI.
+//! Usual absolute IRI (fragment part being allowed).
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 use nom::combinator::complete;
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -20,30 +15,6 @@ use crate::{
     },
     validate::iri::{iri, Error},
 };
-
-impl_basics! {
-    Slice {
-        spec: StrSpec,
-        custom: IriStr,
-        validator: iri,
-        error: Error,
-    },
-    Owned {
-        spec: StringSpec,
-        custom: IriString,
-        error: CreationError<String>,
-    },
-}
-
-/// An owned string of an IRI.
-///
-/// This corresponds to `IRI` rule in RFC 3987.
-/// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
-/// In other words, this is `AbsoluteIriString` with fragment part allowed.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct IriString(String);
 
 /// A borrowed slice of an IRI.
 ///
@@ -56,6 +27,126 @@ pub struct IriString(String);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriStr(str);
+
+impl IriStr {
+    /// Creates a new `&IriStr`.
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
+
+    /// Creates a new `IriStr` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
+    }
+
+    /// Returns the absolute IRI part and fragment part in raw string slices.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    fn split_fragment(&self) -> (&str, Option<&str>) {
+        match complete(parser::absolute_uri::<(), IriRule>)(&self.0) {
+            Ok(("", abs_iri)) => (abs_iri, None),
+            Ok((hash_frag, abs_iri)) => {
+                assert_eq!(hash_frag.as_bytes()[0], b'#');
+                (abs_iri, Some(&hash_frag[1..]))
+            }
+            Err(_) => unreachable!(
+                "Should never reach here: IRI should contain absolute IRI as its prefix"
+            ),
+        }
+    }
+
+    /// Splits the IRI into absolute IRI part and fragment part.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
+    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
+    /// let fragment_expected = <&IriFragmentStr>::try_from("corge")?;
+    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
+    /// assert_eq!(fragment, Some(fragment_expected));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#")?;
+    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
+    /// let fragment_expected = <&IriFragmentStr>::try_from("")?;
+    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
+    /// assert_eq!(fragment, Some(fragment_expected));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
+    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
+    /// assert_eq!(fragment, None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn to_absolute_and_fragment(&self) -> (&AbsoluteIriStr, Option<&IriFragmentStr>) {
+        let (abs_iri, fragment) = self.split_fragment();
+        let abs_iri = unsafe {
+            // This is safe because the `abs_uri` is parsable with
+            // `absolute_uri`.
+            // This is ensured by `split_fragment()`.
+            AbsoluteIriStr::new_unchecked(abs_iri)
+        };
+        let fragment = fragment.map(|fragment| unsafe {
+            // This is safe because the fragment part of the valid `IriString`
+            // is guaranteed to be a valid fragment.
+            IriFragmentStr::new_unchecked(fragment)
+        });
+        (abs_iri, fragment)
+    }
+
+    /// Strips the fragment part if exists, and returns `&AbsoluteIriStr`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
+    /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn to_absolute(&self) -> &AbsoluteIriStr {
+        self.to_absolute_and_fragment().0
+    }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+}
+
+/// An owned string of an IRI.
+///
+/// This corresponds to `IRI` rule in RFC 3987.
+/// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
+/// In other words, this is `AbsoluteIriString` with fragment part allowed.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriString(String);
 
 impl IriString {
     /// Creates a new `IriString` without validation.
@@ -193,114 +284,18 @@ impl IriString {
     }
 }
 
-impl IriStr {
-    /// Creates a new `&IriStr`.
-    pub fn new(s: &str) -> Result<&Self, Error> {
-        TryFrom::try_from(s)
-    }
-
-    /// Creates a new `IriStr` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(StrSpec::validate(s), Ok(()));
-        StrSpec::from_inner_unchecked(s)
-    }
-
-    /// Returns the absolute IRI part and fragment part in raw string slices.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    fn split_fragment(&self) -> (&str, Option<&str>) {
-        match complete(parser::absolute_uri::<(), IriRule>)(&self.0) {
-            Ok(("", abs_iri)) => (abs_iri, None),
-            Ok((hash_frag, abs_iri)) => {
-                assert_eq!(hash_frag.as_bytes()[0], b'#');
-                (abs_iri, Some(&hash_frag[1..]))
-            }
-            Err(_) => unreachable!(
-                "Should never reach here: IRI should contain absolute IRI as its prefix"
-            ),
-        }
-    }
-
-    /// Splits the IRI into absolute IRI part and fragment part.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
-    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
-    /// let fragment_expected = <&IriFragmentStr>::try_from("corge")?;
-    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#")?;
-    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
-    /// let fragment_expected = <&IriFragmentStr>::try_from("")?;
-    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
-    /// let (absolute, fragment) = iri.to_absolute_and_fragment();
-    /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
-    /// assert_eq!(fragment, None);
-    /// # Ok::<_, Error>(())
-    /// ```
-    pub fn to_absolute_and_fragment(&self) -> (&AbsoluteIriStr, Option<&IriFragmentStr>) {
-        let (abs_iri, fragment) = self.split_fragment();
-        let abs_iri = unsafe {
-            // This is safe because the `abs_uri` is parsable with
-            // `absolute_uri`.
-            // This is ensured by `split_fragment()`.
-            AbsoluteIriStr::new_unchecked(abs_iri)
-        };
-        let fragment = fragment.map(|fragment| unsafe {
-            // This is safe because the fragment part of the valid `IriString`
-            // is guaranteed to be a valid fragment.
-            IriFragmentStr::new_unchecked(fragment)
-        });
-        (abs_iri, fragment)
-    }
-
-    /// Strips the fragment part if exists, and returns `&AbsoluteIriStr`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
-    /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
-    /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
-    /// ```
-    pub fn to_absolute(&self) -> &AbsoluteIriStr {
-        self.to_absolute_and_fragment().0
-    }
-
-    /// Returns `&str`.
-    pub fn as_str(&self) -> &str {
-        self.as_ref()
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: IriStr,
+        validator: iri,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: IriString,
+        error: CreationError<String>,
+    },
 }
 
 impl std::ops::Deref for IriStr {
@@ -325,74 +320,8 @@ impl_conv_and_cmp! {
         },
     ],
 }
-
-/// `IriString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriStringVisitor {
-    type Value = IriString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&IriStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        IriString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for IriString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(IriStringVisitor)
-    }
-}
-
-/// `IriStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriStrVisitor {
-    type Value = &'de IriStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an absolute IRI")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de IriStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a IriStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(IriStrVisitor)
-    }
+impl_serde! {
+    expecting: "an IRI",
+    slice: IriStr,
+    owned: IriString,
 }

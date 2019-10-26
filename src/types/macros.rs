@@ -274,3 +274,92 @@ macro_rules! impl_basics {
         }
     };
 }
+
+/// Implement serialization and deserialization with serde.
+///
+/// * `$expecting`: `&'static str` value.
+/// * `$slice`, `$owned`: identifier of the custom slice types.
+macro_rules! impl_serde {
+    (
+        expecting: $expecting:expr,
+        slice: $slice:ident,
+        owned: $owned:ident,
+    ) => {
+        #[cfg(feature = "serde")]
+        mod __serde {
+            use super::{$owned, $slice};
+
+            use std::{convert::TryFrom, fmt};
+
+            use serde::{
+                de::{self, Visitor},
+                Deserialize, Deserializer,
+            };
+
+            /// Custom owned string visitor.
+            #[derive(Debug, Clone, Copy)]
+            struct CustomStringVisitor;
+
+            impl<'de> Visitor<'de> for CustomStringVisitor {
+                type Value = $owned;
+
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str($expecting)
+                }
+
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    <&$slice>::try_from(v)
+                        .map(ToOwned::to_owned)
+                        .map_err(E::custom)
+                }
+
+                fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    <$owned>::try_from(v).map_err(E::custom)
+                }
+            }
+
+            impl<'de> Deserialize<'de> for $owned {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    deserializer.deserialize_str(CustomStringVisitor)
+                }
+            }
+
+            /// Custom borrowed string visitor.
+            #[derive(Debug, Clone, Copy)]
+            struct CustomStrVisitor;
+
+            impl<'de> Visitor<'de> for CustomStrVisitor {
+                type Value = &'de $slice;
+
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str($expecting)
+                }
+
+                fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    <&'de $slice>::try_from(v).map_err(E::custom)
+                }
+            }
+
+            impl<'de: 'a, 'a> Deserialize<'de> for &'a $slice {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    deserializer.deserialize_string(CustomStrVisitor)
+                }
+            }
+        }
+    };
+}

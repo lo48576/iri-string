@@ -1,14 +1,9 @@
 //! IRI reference.
 
 use std::convert::TryFrom;
-#[cfg(feature = "serde")]
-use std::fmt;
 
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
@@ -19,40 +14,6 @@ use crate::{
     },
     validate::iri::{iri as validate_iri, iri_reference, Error},
 };
-
-impl_basics! {
-    Slice {
-        spec: StrSpec,
-        custom: IriReferenceStr,
-        validator: iri_reference,
-        error: Error,
-    },
-    Owned {
-        spec: StringSpec,
-        custom: IriReferenceString,
-        error: CreationError<String>,
-    },
-}
-
-validated_slice::impl_std_traits_for_slice! {
-    Spec {
-        spec: StrSpec,
-        custom: IriReferenceStr,
-        inner: str,
-        error: Error,
-    };
-    { Deref<Target = {Inner}> };
-}
-
-/// An owned string of an IRI reference.
-///
-/// This corresponds to `IRI-reference` rule in RFC 3987.
-/// This is `IRI / irelative-ref`
-/// In other words, this is union of `IriString` and `RelativeIriString.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct IriReferenceString(String);
 
 /// A borrowed slice of an IRI reference.
 ///
@@ -65,67 +26,6 @@ pub struct IriReferenceString(String);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriReferenceStr(str);
-
-impl IriReferenceString {
-    /// Creates a new `IriReferenceString` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
-        StringSpec::from_inner_unchecked(s)
-    }
-
-    /// Returns the string as `IriString`, if it is valid as an IRI.
-    ///
-    /// If it is not an IRI, then `RelativeIriString` is returned as `Err(_)`.
-    pub fn into_iri(self) -> Result<IriString, RelativeIriString> {
-        let s: String = self.into();
-        // Check with `IRI` rule first, because of the syntax.
-        //
-        // > Some productions are ambiguous. The "first-match-wins" (a.k.a.
-        // > "greedy") algorithm applies. For details, see [RFC3986].
-        // >
-        // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
-        if validate_iri(&s).is_ok() {
-            Ok(unsafe {
-                // This is safe because `s` is already validated by condition
-                // of `if`.
-                IriString::new_always_unchecked(s)
-            })
-        } else {
-            Err(unsafe {
-                // This is safe because of the syntax rule
-                // `IRI-reference = IRI / irelative-ref`.
-                // It says that if an IRI reference is not an IRI, then it is
-                // a relative IRI.
-                RelativeIriString::new_unchecked(s)
-            })
-        }
-    }
-
-    /// Returns the string as `RelativeIriString`, if it is valid as an IRI.
-    ///
-    /// If it is not an IRI, then `IriString` is returned as `Err(_)`.
-    pub fn into_relative_iri(self) -> Result<RelativeIriString, IriString> {
-        match self.into_iri() {
-            Ok(iri) => Err(iri),
-            Err(relative) => Ok(relative),
-        }
-    }
-
-    /// Sets the fragment part to the given string.
-    ///
-    /// Removes fragment part (and following `#` character) if `None` is given.
-    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
-        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
-        debug_assert!(iri_reference(&self.0).is_ok());
-    }
-
-    /// Shrinks the capacity of the inner buffer to match its length.
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
-    }
-}
 
 impl IriReferenceStr {
     /// Creates a new `&IriReferenceStr`.
@@ -254,73 +154,103 @@ impl IriReferenceStr {
     }
 }
 
-/// `IriReferenceString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriReferenceStringVisitor;
+/// An owned string of an IRI reference.
+///
+/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This is `IRI / irelative-ref`
+/// In other words, this is union of `IriString` and `RelativeIriString.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriReferenceString(String);
 
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriReferenceStringVisitor {
-    type Value = IriReferenceString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI reference")
+impl IriReferenceString {
+    /// Creates a new `IriReferenceString` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&IriReferenceStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
+    /// Returns the string as `IriString`, if it is valid as an IRI.
+    ///
+    /// If it is not an IRI, then `RelativeIriString` is returned as `Err(_)`.
+    pub fn into_iri(self) -> Result<IriString, RelativeIriString> {
+        let s: String = self.into();
+        // Check with `IRI` rule first, because of the syntax.
+        //
+        // > Some productions are ambiguous. The "first-match-wins" (a.k.a.
+        // > "greedy") algorithm applies. For details, see [RFC3986].
+        // >
+        // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
+        if validate_iri(&s).is_ok() {
+            Ok(unsafe {
+                // This is safe because `s` is already validated by condition
+                // of `if`.
+                IriString::new_always_unchecked(s)
+            })
+        } else {
+            Err(unsafe {
+                // This is safe because of the syntax rule
+                // `IRI-reference = IRI / irelative-ref`.
+                // It says that if an IRI reference is not an IRI, then it is
+                // a relative IRI.
+                RelativeIriString::new_unchecked(s)
+            })
+        }
     }
 
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        IriReferenceString::try_from(v).map_err(E::custom)
+    /// Returns the string as `RelativeIriString`, if it is valid as an IRI.
+    ///
+    /// If it is not an IRI, then `IriString` is returned as `Err(_)`.
+    pub fn into_relative_iri(self) -> Result<RelativeIriString, IriString> {
+        match self.into_iri() {
+            Ok(iri) => Err(iri),
+            Err(relative) => Ok(relative),
+        }
+    }
+
+    /// Sets the fragment part to the given string.
+    ///
+    /// Removes fragment part (and following `#` character) if `None` is given.
+    pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
+        set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
+        debug_assert!(iri_reference(&self.0).is_ok());
+    }
+
+    /// Shrinks the capacity of the inner buffer to match its length.
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
     }
 }
 
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for IriReferenceString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(IriReferenceStringVisitor)
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: IriReferenceStr,
+        validator: iri_reference,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: IriReferenceString,
+        error: CreationError<String>,
+    },
 }
 
-/// `IriReferenceStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct IriReferenceStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for IriReferenceStrVisitor {
-    type Value = &'de IriReferenceStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("an IRI reference")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de IriReferenceStr>::try_from(v).map_err(E::custom)
-    }
+validated_slice::impl_std_traits_for_slice! {
+    Spec {
+        spec: StrSpec,
+        custom: IriReferenceStr,
+        inner: str,
+        error: Error,
+    };
+    { Deref<Target = {Inner}> };
 }
 
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a IriReferenceStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(IriReferenceStrVisitor)
-    }
+impl_serde! {
+    expecting: "an IRI reference",
+    slice: IriReferenceStr,
+    owned: IriReferenceString,
 }
