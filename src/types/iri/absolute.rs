@@ -11,30 +11,6 @@ use crate::{
     validate::iri::{absolute_iri, Error},
 };
 
-impl_basics! {
-    Slice {
-        spec: StrSpec,
-        custom: AbsoluteIriStr,
-        validator: absolute_iri,
-        error: Error,
-    },
-    Owned {
-        spec: StringSpec,
-        custom: AbsoluteIriString,
-        error: CreationError<String>,
-    },
-}
-
-/// An owned string of an absolute IRI.
-///
-/// This corresponds to `absolute-IRI` rule in RFC 3987.
-/// This is `scheme ":" ihier-part [ "?" iquery ]`.
-/// In other words, this is `IriString` without fragment part.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct AbsoluteIriString(String);
-
 /// A borrowed slice of an absolute IRI.
 ///
 /// This corresponds to `absolute-IRI` rule in RFC 3987.
@@ -46,22 +22,6 @@ pub struct AbsoluteIriString(String);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct AbsoluteIriStr(str);
-
-impl AbsoluteIriString {
-    /// Creates a new `AbsoluteIriString` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
-        StringSpec::from_inner_unchecked(s)
-    }
-
-    /// Shrinks the capacity of the inner buffer to match its length.
-    #[inline]
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
-    }
-}
 
 impl AbsoluteIriStr {
     /// Creates a new `&AbsoluteIriStr`.
@@ -81,6 +41,46 @@ impl AbsoluteIriStr {
     pub fn as_str(&self) -> &str {
         self.as_ref()
     }
+}
+
+/// An owned string of an absolute IRI.
+///
+/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This is `scheme ":" ihier-part [ "?" iquery ]`.
+/// In other words, this is `IriString` without fragment part.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct AbsoluteIriString(String);
+
+impl AbsoluteIriString {
+    /// Creates a new `AbsoluteIriString` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
+    }
+
+    /// Shrinks the capacity of the inner buffer to match its length.
+    #[inline]
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
+    }
+}
+
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: AbsoluteIriStr,
+        validator: absolute_iri,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: AbsoluteIriString,
+        error: CreationError<String>,
+    },
 }
 
 impl std::ops::Deref for AbsoluteIriStr {

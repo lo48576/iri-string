@@ -11,29 +11,6 @@ use crate::{
     validate::iri::{fragment, Error},
 };
 
-impl_basics! {
-    Slice {
-        spec: StrSpec,
-        custom: IriFragmentStr,
-        validator: fragment,
-        error: Error,
-    },
-    Owned {
-        spec: StringSpec,
-        custom: IriFragmentString,
-        error: CreationError<String>,
-    },
-}
-
-/// An owned string of an IRI fragment.
-///
-/// This corresponds to `ifragment` rule in RFC 3987.
-/// This is `*( ipchar / "/" / "?" )`.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct IriFragmentString(String);
-
 /// A borrowed slice of an IRI.
 ///
 /// This corresponds to `ifragment` rule in RFC 3987.
@@ -44,21 +21,6 @@ pub struct IriFragmentString(String);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriFragmentStr(str);
-
-impl IriFragmentString {
-    /// Creates a new `IriFragmentString` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
-        StringSpec::from_inner_unchecked(s)
-    }
-
-    /// Shrinks the capacity of the inner buffer to match its length.
-    pub fn shrink_to_fit(&mut self) {
-        self.0.shrink_to_fit()
-    }
-}
 
 impl IriFragmentStr {
     /// Creates a new `&IriFragmentStr`.
@@ -78,6 +40,44 @@ impl IriFragmentStr {
     pub fn as_str(&self) -> &str {
         self.as_ref()
     }
+}
+
+/// An owned string of an IRI fragment.
+///
+/// This corresponds to `ifragment` rule in RFC 3987.
+/// This is `*( ipchar / "/" / "?" )`.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct IriFragmentString(String);
+
+impl IriFragmentString {
+    /// Creates a new `IriFragmentString` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: String) -> Self {
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
+    }
+
+    /// Shrinks the capacity of the inner buffer to match its length.
+    pub fn shrink_to_fit(&mut self) {
+        self.0.shrink_to_fit()
+    }
+}
+
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: IriFragmentStr,
+        validator: fragment,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: IriFragmentString,
+        error: CreationError<String>,
+    },
 }
 
 impl_serde! {

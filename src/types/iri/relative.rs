@@ -13,30 +13,6 @@ use crate::{
     validate::iri::{relative_ref, Error},
 };
 
-impl_basics! {
-    Slice {
-        spec: StrSpec,
-        custom: RelativeIriStr,
-        validator: relative_ref,
-        error: Error,
-    },
-    Owned {
-        spec: StringSpec,
-        custom: RelativeIriString,
-        error: CreationError<String>,
-    },
-}
-
-/// An owned string of a relative IRI.
-///
-/// This corresponds to `irelative-ref` rule in RFC 3987.
-/// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
-/// In other words, this is roughly `IriString` without scheme part.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
-pub struct RelativeIriString(String);
-
 /// A borrowed slice of a relative IRI.
 ///
 /// This corresponds to `irelative-ref` rule in RFC 3987.
@@ -48,6 +24,36 @@ pub struct RelativeIriString(String);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct RelativeIriStr(str);
+
+impl RelativeIriStr {
+    /// Creates a new `&RelativeIriStr`.
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
+
+    /// Creates a new `&RelativeIriStr` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
+    }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+}
+
+/// An owned string of a relative IRI.
+///
+/// This corresponds to `irelative-ref` rule in RFC 3987.
+/// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
+/// In other words, this is roughly `IriString` without scheme part.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct RelativeIriString(String);
 
 impl RelativeIriString {
     /// Creates a new `RelativeIriString` maybe without validation.
@@ -72,24 +78,18 @@ impl RelativeIriString {
     }
 }
 
-impl RelativeIriStr {
-    /// Creates a new `&RelativeIriStr`.
-    pub fn new(s: &str) -> Result<&Self, Error> {
-        TryFrom::try_from(s)
-    }
-
-    /// Creates a new `&RelativeIriStr` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(StrSpec::validate(s), Ok(()));
-        StrSpec::from_inner_unchecked(s)
-    }
-
-    /// Returns `&str`.
-    pub fn as_str(&self) -> &str {
-        self.as_ref()
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: RelativeIriStr,
+        validator: relative_ref,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: RelativeIriString,
+        error: CreationError<String>,
+    },
 }
 
 impl std::ops::Deref for RelativeIriStr {
