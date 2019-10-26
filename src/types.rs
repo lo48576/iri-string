@@ -46,7 +46,7 @@
 //! Currently not implemented :-P.
 
 pub use self::iri::{
-    AbsoluteIriStr, AbsoluteIriString, CreationError, IriFragmentStr, IriFragmentString,
+    AbsoluteIriStr, AbsoluteIriString, IriCreationError, IriFragmentStr, IriFragmentString,
     IriReferenceStr, IriReferenceString, IriStr, IriString, RelativeIriStr, RelativeIriString,
 };
 
@@ -54,3 +54,7 @@ pub use self::iri::{
 mod macros;
 
 mod iri;
+
+/// Error on conversion into an IRI type.
+#[deprecated(since = "0.2.1", note = "Renamed to `IriCreationError`")]
+pub type CreationError<T> = IriCreationError<T>;

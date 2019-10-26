@@ -36,7 +36,7 @@
 
 pub use self::{
     absolute::{AbsoluteIriStr, AbsoluteIriString},
-    error::CreationError,
+    error::IriCreationError,
     fragment::{IriFragmentStr, IriFragmentString},
     normal::{IriStr, IriString},
     reference::{IriReferenceStr, IriReferenceString},

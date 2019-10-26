@@ -9,7 +9,7 @@ use validated_slice::{OwnedSliceSpec, SliceSpec};
 use crate::{
     resolve::resolve_iri,
     types::{
-        iri::set_fragment, AbsoluteIriStr, CreationError, IriFragmentStr, IriStr, IriString,
+        iri::set_fragment, AbsoluteIriStr, IriCreationError, IriFragmentStr, IriStr, IriString,
         RelativeIriStr, RelativeIriString,
     },
     validate::iri::{iri as validate_iri, iri_reference, Error},
@@ -235,7 +235,7 @@ impl_basics! {
     Owned {
         spec: StringSpec,
         custom: IriReferenceString,
-        error: CreationError<String>,
+        error: IriCreationError<String>,
     },
 }
 

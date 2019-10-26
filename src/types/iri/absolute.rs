@@ -7,7 +7,7 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
-    types::{CreationError, IriReferenceStr, IriReferenceString, IriStr, IriString},
+    types::{IriCreationError, IriReferenceStr, IriReferenceString, IriStr, IriString},
     validate::iri::{absolute_iri, Error},
 };
 
@@ -79,7 +79,7 @@ impl_basics! {
     Owned {
         spec: StringSpec,
         custom: AbsoluteIriString,
-        error: CreationError<String>,
+        error: IriCreationError<String>,
     },
 }
 
@@ -95,7 +95,7 @@ impl_conv_and_cmp! {
     source: {
         owned: AbsoluteIriString,
         slice: AbsoluteIriStr,
-        creation_error: CreationError,
+        creation_error: IriCreationError,
         validation_error: Error,
     },
     target: [

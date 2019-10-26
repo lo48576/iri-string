@@ -4,16 +4,16 @@ use std::{error, fmt};
 
 use crate::validate::iri::Error;
 
-/// Error on converting from `String`.
+/// Error on conversion into an IRI type.
 #[derive(Debug, Clone)]
-pub struct CreationError<T> {
+pub struct IriCreationError<T> {
     /// Soruce data.
     source: T,
     /// Validation error.
     error: Error,
 }
 
-impl<T> CreationError<T> {
+impl<T> IriCreationError<T> {
     /// Returns the source data.
     pub fn into_source(self) -> T {
         self.source
@@ -30,10 +30,10 @@ impl<T> CreationError<T> {
     }
 }
 
-impl<T> fmt::Display for CreationError<T> {
+impl<T> fmt::Display for IriCreationError<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.error.fmt(f)
     }
 }
 
-impl<T: fmt::Debug> error::Error for CreationError<T> {}
+impl<T: fmt::Debug> error::Error for IriCreationError<T> {}
