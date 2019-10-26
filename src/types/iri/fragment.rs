@@ -7,7 +7,7 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
-    types::CreationError,
+    types::IriCreationError,
     validate::iri::{fragment, Error},
 };
 
@@ -76,7 +76,7 @@ impl_basics! {
     Owned {
         spec: StringSpec,
         custom: IriFragmentString,
-        error: CreationError<String>,
+        error: IriCreationError<String>,
     },
 }
 

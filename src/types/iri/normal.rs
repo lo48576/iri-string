@@ -10,7 +10,7 @@ use validated_slice::{OwnedSliceSpec, SliceSpec};
 use crate::{
     parser::{self, IriRule},
     types::{
-        iri::set_fragment, AbsoluteIriStr, AbsoluteIriString, CreationError, IriFragmentStr,
+        iri::set_fragment, AbsoluteIriStr, AbsoluteIriString, IriCreationError, IriFragmentStr,
         IriFragmentString, IriReferenceStr, IriReferenceString,
     },
     validate::iri::{iri, Error},
@@ -294,7 +294,7 @@ impl_basics! {
     Owned {
         spec: StringSpec,
         custom: IriString,
-        error: CreationError<String>,
+        error: IriCreationError<String>,
     },
 }
 
@@ -310,7 +310,7 @@ impl_conv_and_cmp! {
     source: {
         owned: IriString,
         slice: IriStr,
-        creation_error: CreationError,
+        creation_error: IriCreationError,
         validation_error: Error,
     },
     target: [

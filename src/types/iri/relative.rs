@@ -8,7 +8,7 @@ use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
     types::{
-        iri::set_fragment, CreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+        iri::set_fragment, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
     },
     validate::iri::{relative_ref, Error},
 };
@@ -88,7 +88,7 @@ impl_basics! {
     Owned {
         spec: StringSpec,
         custom: RelativeIriString,
-        error: CreationError<String>,
+        error: IriCreationError<String>,
     },
 }
 
@@ -104,7 +104,7 @@ impl_conv_and_cmp! {
     source: {
         owned: RelativeIriString,
         slice: RelativeIriStr,
-        creation_error: CreationError,
+        creation_error: IriCreationError,
         validation_error: Error,
     },
     target: [
