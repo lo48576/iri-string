@@ -4,7 +4,7 @@ use std::{error, fmt};
 
 use crate::validate::iri::Error;
 
-/// Error on converting from `String`.
+/// Error on conversion into an IRI type.
 #[derive(Debug, Clone)]
 pub struct IriCreationError<T> {
     /// Soruce data.
