@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1]
+
 * `*Str::new()` methods are added.
 * `IriFragmentStr::from_prefixed()` is added.
 * `types::CreationError` is renamed to `types::IriCreationError`.
@@ -69,7 +71,8 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.1...develop>
+[0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>
 [0.2.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0>
 [0.2.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.1>
 [0.2.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.0>
