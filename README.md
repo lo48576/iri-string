@@ -1,6 +1,6 @@
 # iri-string
 
-[![Build Status](https://travis-ci.org/lo48576/iri-string.svg?branch=develop)](https://travis-ci.org/lo48576/iri-string)
+[![Build Status](https://travis-ci.com/lo48576/iri-string.svg?branch=develop)](https://travis-ci.com/lo48576/iri-string)
 [![Latest version](https://img.shields.io/crates/v/iri-string.svg)](https://crates.io/crates/iri-string)
 [![Documentation](https://docs.rs/iri-string/badge.svg)](https://docs.rs/iri-string)
 ![Minimum rustc version: 1.34](https://img.shields.io/badge/rustc-1.34+-lightgray.svg)
