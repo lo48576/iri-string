@@ -11,20 +11,22 @@
 * Reduced indirect dependencies
 
 ### Added
-* `*Str::new()` methods are added.
+* `*Str::new()` methods are added (39c8f735ccf6f28aaf2f16dcdc579fb3838bb5fb).
     + Previously the string slices are created as `<&FooStr>::try_from(s)` (where `s: &str`),
       but this is redundant.
       Now `FooStr::new(s)` can be used instead of `<&FooStr>::try_from(s)` for `s: &str`.
-* `IriFragmentStr::from_prefixed()` is added.
+* `IriFragmentStr::from_prefixed()` is added (34cec2f422ba8046134668bdb662f69c9db7f52c).
     * This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
       For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
 
 ### Changed (non-breaking)
-* `types::CreationError` is renamed to `types::IriCreationError`.
+* `types::CreationError` is renamed to `types::IriCreationError`
+  (c6e930608f158281d059e632ffc6117bddf18ebc, c0e650c5e19f1775cf82960afc9610994afba66e).
     + The old name will be kept until the next minor version bump to keep compatibility.
-* Disabled `lexical` feature of `nom` crate.
+* Disabled `lexical` feature of `nom` crate (a2d5bcd02e02e80af1c4fc8c14d768ca519ef467).
     + This reduces indirect dependencies.
-* Migrate code generator from proc-macro crate to non-proc-macro one.
+* Migrate code generator from proc-macro crate to non-proc-macro one
+  (363337e720a9fdfa7e17153ffc63192bd49f7cc3).
     + This reduces indirect dependencies, and may also reduce compilation time.
 
 ## [0.2.0]
