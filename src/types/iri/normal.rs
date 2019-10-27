@@ -18,9 +18,11 @@ use crate::{
 
 /// A borrowed string of an absolute IRI possibly with fragment part.
 ///
-/// This corresponds to `IRI` rule in RFC 3987.
+/// This corresponds to `IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
 /// In other words, this is `AbsoluteIriStr` with fragment part allowed.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -159,12 +161,13 @@ impl IriStr {
 
 /// An owned string of an absolute IRI possibly with fragment part.
 ///
-/// This corresponds to `IRI` rule in RFC 3987.
+/// This corresponds to `IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
 /// In other words, this is `AbsoluteIriString` with fragment part allowed.
 ///
 /// See documentation for [`IriStr`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]

@@ -17,9 +17,11 @@ use crate::{
 
 /// A borrowed slice of an IRI reference.
 ///
-/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This corresponds to `IRI-reference` rule in [RFC 3987].
 /// This is `IRI / irelative-ref`
 /// In other words, this is union of `IriStr` and `RelativeIriStr.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -176,12 +178,13 @@ impl IriReferenceStr {
 
 /// An owned string of an IRI reference.
 ///
-/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This corresponds to `IRI-reference` rule in [RFC 3987].
 /// This is `IRI / irelative-ref`
 /// In other words, this is union of `IriString` and `RelativeIriString.
 ///
 /// See documentation for [`IriReferenceStr`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriReferenceStr`]: struct.IriReferenceStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]

@@ -13,12 +13,13 @@ use crate::{
 
 /// A borrowed slice of an absolute IRI without fragment part.
 ///
-/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This corresponds to `absolute-IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ]`.
 /// In other words, this is [`IriStr`] without fragment part.
 ///
 /// If you want to accept fragment part, use [`IriStr`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -66,7 +67,7 @@ impl AbsoluteIriStr {
 
 /// An owned string of an absolute IRI without fragment part.
 ///
-/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This corresponds to `absolute-IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ]`.
 /// In other words, this is [`IriString`] without fragment part.
 ///
@@ -75,6 +76,7 @@ impl AbsoluteIriStr {
 ///
 /// See documentation for [`IriString`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html
 /// [`IriString`]: struct.IriString.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

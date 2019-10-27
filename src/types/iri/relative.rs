@@ -15,9 +15,11 @@ use crate::{
 
 /// A borrowed slice of a relative IRI.
 ///
-/// This corresponds to `irelative-ref` rule in RFC 3987.
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
 /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
 /// In other words, this is roughly `IriStr` without scheme part.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -64,12 +66,13 @@ impl RelativeIriStr {
 
 /// An owned string of a relative IRI.
 ///
-/// This corresponds to `irelative-ref` rule in RFC 3987.
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
 /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
 /// In other words, this is roughly `IriString` without scheme part.
 ///
 /// See documentation for [`RelativeIriStr`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`RelativeIriStr`]: struct.RelativeIriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]

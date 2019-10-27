@@ -13,8 +13,10 @@ use crate::{
 
 /// A borrowed slice of an IRI.
 ///
-/// This corresponds to `ifragment` rule in RFC 3987.
+/// This corresponds to `ifragment` rule in [RFC 3987].
 /// This is `*( ipchar / "/" / "?" )`.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -57,11 +59,12 @@ impl IriFragmentStr {
 
 /// An owned string of an IRI fragment.
 ///
-/// This corresponds to `ifragment` rule in RFC 3987.
+/// This corresponds to `ifragment` rule in [RFC 3987].
 /// This is `*( ipchar / "/" / "?" )`.
 ///
 /// See documentation for [`IriFragmentStr`].
 ///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriFragmentStr`]: struct.IriFragmentStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
