@@ -15,9 +15,11 @@ use crate::{
 
 /// A borrowed slice of a relative IRI.
 ///
-/// This corresponds to `irelative-ref` rule in RFC 3987.
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
 /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
 /// In other words, this is roughly `IriStr` without scheme part.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -27,6 +29,23 @@ pub struct RelativeIriStr(str);
 
 impl RelativeIriStr {
     /// Creates a new `&RelativeIriStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::RelativeIriStr;
+    /// assert!(RelativeIriStr::new("foo").is_ok());
+    /// assert!(RelativeIriStr::new("foo/bar").is_ok());
+    /// assert!(RelativeIriStr::new("/foo").is_ok());
+    /// assert!(RelativeIriStr::new("//foo/bar").is_ok());
+    /// assert!(RelativeIriStr::new("?foo").is_ok());
+    /// assert!(RelativeIriStr::new("#foo").is_ok());
+    /// assert!(RelativeIriStr::new("foo/bar?baz#qux").is_ok());
+    ///
+    /// // Absolute IRI is not allowed.
+    /// assert!(RelativeIriStr::new("https://example.com/").is_err());
+    /// assert!(RelativeIriStr::new("foo:bar").is_err());
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(RelativeIriStr::new("<not allowed>").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
@@ -47,9 +66,14 @@ impl RelativeIriStr {
 
 /// An owned string of a relative IRI.
 ///
-/// This corresponds to `irelative-ref` rule in RFC 3987.
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
 /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
 /// In other words, this is roughly `IriString` without scheme part.
+///
+/// See documentation for [`RelativeIriStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`RelativeIriStr`]: struct.RelativeIriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

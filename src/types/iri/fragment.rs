@@ -13,8 +13,10 @@ use crate::{
 
 /// A borrowed slice of an IRI.
 ///
-/// This corresponds to `ifragment` rule in RFC 3987.
+/// This corresponds to `ifragment` rule in [RFC 3987].
 /// This is `*( ipchar / "/" / "?" )`.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -24,6 +26,19 @@ pub struct IriFragmentStr(str);
 
 impl IriFragmentStr {
     /// Creates a new `&IriFragmentStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriFragmentStr;
+    /// assert!(IriFragmentStr::new("foo").is_ok());
+    /// assert!(IriFragmentStr::new("foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("/foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("//foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriFragmentStr::new("https://example.com/").is_ok());
+    ///
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(IriFragmentStr::new("<not allowed>").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
@@ -44,8 +59,13 @@ impl IriFragmentStr {
 
 /// An owned string of an IRI fragment.
 ///
-/// This corresponds to `ifragment` rule in RFC 3987.
+/// This corresponds to `ifragment` rule in [RFC 3987].
 /// This is `*( ipchar / "/" / "?" )`.
+///
+/// See documentation for [`IriFragmentStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`IriFragmentStr`]: struct.IriFragmentStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

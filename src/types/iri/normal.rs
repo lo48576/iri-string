@@ -16,11 +16,13 @@ use crate::{
     validate::iri::{iri, Error},
 };
 
-/// A borrowed slice of an IRI.
+/// A borrowed string of an absolute IRI possibly with fragment part.
 ///
-/// This corresponds to `IRI` rule in RFC 3987.
+/// This corresponds to `IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
 /// In other words, this is `AbsoluteIriStr` with fragment part allowed.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -30,6 +32,25 @@ pub struct IriStr(str);
 
 impl IriStr {
     /// Creates a new `&IriStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriStr;
+    /// assert!(IriStr::new("https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriStr::new("https://example.com/").is_ok());
+    /// assert!(IriStr::new("https://example.com/foo?bar=baz").is_ok());
+    /// assert!(IriStr::new("https://example.com/foo?bar=baz#qux").is_ok());
+    /// assert!(IriStr::new("foo:bar").is_ok());
+    ///
+    /// // Relative IRI is not allowed.
+    /// assert!(IriStr::new("foo/bar").is_err());
+    /// assert!(IriStr::new("/foo/bar").is_err());
+    /// assert!(IriStr::new("//foo/bar").is_err());
+    /// assert!(IriStr::new("#foo").is_err());
+    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
+    /// // >
+    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
+    /// assert!(IriStr::new("foo:////").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
@@ -138,11 +159,16 @@ impl IriStr {
     }
 }
 
-/// An owned string of an IRI.
+/// An owned string of an absolute IRI possibly with fragment part.
 ///
-/// This corresponds to `IRI` rule in RFC 3987.
+/// This corresponds to `IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
 /// In other words, this is `AbsoluteIriString` with fragment part allowed.
+///
+/// See documentation for [`IriStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

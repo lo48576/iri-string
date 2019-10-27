@@ -17,9 +17,11 @@ use crate::{
 
 /// A borrowed slice of an IRI reference.
 ///
-/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This corresponds to `IRI-reference` rule in [RFC 3987].
 /// This is `IRI / irelative-ref`
 /// In other words, this is union of `IriStr` and `RelativeIriStr.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -29,6 +31,26 @@ pub struct IriReferenceStr(str);
 
 impl IriReferenceStr {
     /// Creates a new `&IriReferenceStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriReferenceStr;
+    /// assert!(IriReferenceStr::new("https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz#qux").is_ok());
+    /// assert!(IriReferenceStr::new("foo:bar").is_ok());
+    /// assert!(IriReferenceStr::new("foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("/foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("//foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("#foo").is_ok());
+    ///
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(IriReferenceStr::new("<not allowed>").is_err());
+    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
+    /// // >
+    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
+    /// assert!(IriReferenceStr::new("foo:////").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
@@ -156,9 +178,14 @@ impl IriReferenceStr {
 
 /// An owned string of an IRI reference.
 ///
-/// This corresponds to `IRI-reference` rule in RFC 3987.
+/// This corresponds to `IRI-reference` rule in [RFC 3987].
 /// This is `IRI / irelative-ref`
 /// In other words, this is union of `IriString` and `RelativeIriString.
+///
+/// See documentation for [`IriReferenceStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`IriReferenceStr`]: struct.IriReferenceStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

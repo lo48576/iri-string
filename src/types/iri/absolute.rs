@@ -11,11 +11,16 @@ use crate::{
     validate::iri::{absolute_iri, Error},
 };
 
-/// A borrowed slice of an absolute IRI.
+/// A borrowed slice of an absolute IRI without fragment part.
 ///
-/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This corresponds to `absolute-IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ]`.
-/// In other words, this is `IriStr` without fragment part.
+/// In other words, this is [`IriStr`] without fragment part.
+///
+/// If you want to accept fragment part, use [`IriStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 #[allow(clippy::derive_hash_xor_eq)]
@@ -25,6 +30,23 @@ pub struct AbsoluteIriStr(str);
 
 impl AbsoluteIriStr {
     /// Creates a new `&AbsoluteIriStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::AbsoluteIriStr;
+    /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo:bar").is_ok());
+    ///
+    /// // Relative IRI is not allowed.
+    /// assert!(AbsoluteIriStr::new("foo/bar").is_err());
+    /// assert!(AbsoluteIriStr::new("/foo/bar").is_err());
+    /// assert!(AbsoluteIriStr::new("//foo/bar").is_err());
+    /// // Fragment part is not allowed.
+    /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz#qux").is_err());
+    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
+    /// // >
+    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
+    /// assert!(AbsoluteIriStr::new("foo:////").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
@@ -43,11 +65,20 @@ impl AbsoluteIriStr {
     }
 }
 
-/// An owned string of an absolute IRI.
+/// An owned string of an absolute IRI without fragment part.
 ///
-/// This corresponds to `absolute-IRI` rule in RFC 3987.
+/// This corresponds to `absolute-IRI` rule in [RFC 3987].
 /// This is `scheme ":" ihier-part [ "?" iquery ]`.
-/// In other words, this is `IriString` without fragment part.
+/// In other words, this is [`IriString`] without fragment part.
+///
+/// If you want to accept fragment part, use [`IriString`].
+///
+///
+/// See documentation for [`IriString`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html
+/// [`IriString`]: struct.IriString.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
