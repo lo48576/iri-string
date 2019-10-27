@@ -1,93 +1,93 @@
 //! Relative IRI.
 
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
 
 #[cfg(feature = "serde")]
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::Serialize;
+use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
     types::{
-        iri::set_fragment, CreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+        iri::set_fragment, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
     },
     validate::iri::{relative_ref, Error},
 };
 
-custom_slice_macros::define_slice_types_pair! {
-    /// An owned string of a relative IRI.
-    ///
-    /// This corresponds to `irelative-ref` rule in RFC 3987.
-    /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
-    /// In other words, this is roughly `IriString` without scheme part.
-    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(owned)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        Deref,
-        IntoInner,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "CreationError<String>", map = "{|e, v| CreationError::new(e, v)}"))]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `RelativeIriString` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct RelativeIriString(String);
+/// A borrowed slice of a relative IRI.
+///
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
+/// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
+/// In other words, this is roughly `IriStr` without scheme part.
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+#[allow(clippy::derive_hash_xor_eq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct RelativeIriStr(str);
 
-    /// A borrowed slice of a relative IRI.
+impl RelativeIriStr {
+    /// Creates a new `&RelativeIriStr`.
     ///
-    /// This corresponds to `irelative-ref` rule in RFC 3987.
-    /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
-    /// In other words, this is roughly `IriStr` without scheme part.
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(transparent)]
-    #[allow(clippy::derive_hash_xor_eq)]
-    #[cfg_attr(feature = "serde", derive(Serialize))]
-    #[cfg_attr(feature = "serde", serde(transparent))]
-    #[custom_slice(slice)]
-    #[custom_slice(derive(
-        AsRefSlice,
-        AsRefSliceInner,
-        DefaultRef,
-        PartialEqBulk,
-        PartialEqInnerBulk,
-        PartialOrdBulk,
-        PartialOrdInnerBulk,
-        IntoArc,
-        IntoBox,
-        IntoRc,
-        TryFromInner,
-    ))]
-    #[custom_slice(error(type = "Error"))]
-    #[custom_slice(new_unchecked = "
-            /// Creates a new `&RelativeIriStr` without validation.
-            pub(crate) unsafe fn new_always_unchecked
-        ")]
-    pub struct RelativeIriStr(str);
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::types::RelativeIriStr;
+    /// assert!(RelativeIriStr::new("foo").is_ok());
+    /// assert!(RelativeIriStr::new("foo/bar").is_ok());
+    /// assert!(RelativeIriStr::new("/foo").is_ok());
+    /// assert!(RelativeIriStr::new("//foo/bar").is_ok());
+    /// assert!(RelativeIriStr::new("?foo").is_ok());
+    /// assert!(RelativeIriStr::new("#foo").is_ok());
+    /// assert!(RelativeIriStr::new("foo/bar?baz#qux").is_ok());
+    ///
+    /// // Absolute IRI is not allowed.
+    /// assert!(RelativeIriStr::new("https://example.com/").is_err());
+    /// assert!(RelativeIriStr::new("foo:bar").is_err());
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(RelativeIriStr::new("<not allowed>").is_err());
+    /// ```
+    pub fn new(s: &str) -> Result<&Self, Error> {
+        TryFrom::try_from(s)
+    }
 
-    /// Validates the given string as a relative IRI.
-    #[custom_slice(validator)]
-    fn validate(s: &str) -> Result<(), Error> {
-        relative_ref(s)
+    /// Creates a new `&RelativeIriStr` maybe without validation.
+    ///
+    /// This does validation on debug build.
+    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
+        debug_assert_eq!(StrSpec::validate(s), Ok(()));
+        StrSpec::from_inner_unchecked(s)
+    }
+
+    /// Returns `&str`.
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
     }
 }
+
+/// An owned string of a relative IRI.
+///
+/// This corresponds to `irelative-ref` rule in [RFC 3987].
+/// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
+/// In other words, this is roughly `IriString` without scheme part.
+///
+/// See documentation for [`RelativeIriStr`].
+///
+/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [`RelativeIriStr`]: struct.RelativeIriStr.html
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
+pub struct RelativeIriString(String);
 
 impl RelativeIriString {
     /// Creates a new `RelativeIriString` maybe without validation.
     ///
     /// This does validation on debug build.
     pub(crate) unsafe fn new_unchecked(s: String) -> Self {
-        debug_assert_eq!(validate(&s), Ok(()));
-        Self::new_always_unchecked(s)
+        debug_assert_eq!(StrSpec::validate(&s), Ok(()));
+        StringSpec::from_inner_unchecked(s)
     }
 
     /// Sets the fragment part to the given string.
@@ -104,19 +104,18 @@ impl RelativeIriString {
     }
 }
 
-impl RelativeIriStr {
-    /// Creates a new `&RelativeIriStr` maybe without validation.
-    ///
-    /// This does validation on debug build.
-    pub(crate) unsafe fn new_unchecked(s: &str) -> &Self {
-        debug_assert_eq!(validate(s), Ok(()));
-        Self::new_always_unchecked(s)
-    }
-
-    /// Returns `&str`.
-    pub fn as_str(&self) -> &str {
-        self.as_ref()
-    }
+impl_basics! {
+    Slice {
+        spec: StrSpec,
+        custom: RelativeIriStr,
+        validator: relative_ref,
+        error: Error,
+    },
+    Owned {
+        spec: StringSpec,
+        custom: RelativeIriString,
+        error: IriCreationError<String>,
+    },
 }
 
 impl std::ops::Deref for RelativeIriStr {
@@ -127,31 +126,11 @@ impl std::ops::Deref for RelativeIriStr {
     }
 }
 
-impl fmt::Display for RelativeIriString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        AsRef::<RelativeIriStr>::as_ref(self).fmt(f)
-    }
-}
-
-impl fmt::Display for &RelativeIriStr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl std::str::FromStr for RelativeIriString {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        <&RelativeIriStr>::try_from(s).map(ToOwned::to_owned)
-    }
-}
-
-impl_std_traits! {
+impl_conv_and_cmp! {
     source: {
         owned: RelativeIriString,
         slice: RelativeIriStr,
-        creation_error: CreationError,
+        creation_error: IriCreationError,
         validation_error: Error,
     },
     target: [
@@ -162,73 +141,8 @@ impl_std_traits! {
     ],
 }
 
-/// `RelativeIriString` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct RelativeIriStringVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for RelativeIriStringVisitor {
-    type Value = RelativeIriString;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a relative IRI")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&RelativeIriStr>::try_from(v)
-            .map(ToOwned::to_owned)
-            .map_err(E::custom)
-    }
-
-    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        RelativeIriString::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for RelativeIriString {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(RelativeIriStringVisitor)
-    }
-}
-
-/// `RelativeIriStr` visitor.
-#[cfg(feature = "serde")]
-#[derive(Debug, Clone, Copy)]
-struct RelativeIriStrVisitor;
-
-#[cfg(feature = "serde")]
-impl<'de> Visitor<'de> for RelativeIriStrVisitor {
-    type Value = &'de RelativeIriStr;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("a relative IRI")
-    }
-
-    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        <&'de RelativeIriStr>::try_from(v).map_err(E::custom)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de: 'a, 'a> Deserialize<'de> for &'a RelativeIriStr {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_string(RelativeIriStrVisitor)
-    }
+impl_serde! {
+    expecting: "a relative IRI",
+    slice: RelativeIriStr,
+    owned: RelativeIriString,
 }

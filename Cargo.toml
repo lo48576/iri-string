@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -13,9 +13,9 @@ keywords = ["IRI", "URI"]
 all-features = true
 
 [dependencies]
-custom-slice-macros = "0.1.1"
-nom = "5"
+nom = { version = "5", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"], optional = true }
+validated-slice = "0.2.0"
 
 [badges]
 maintenance = { status = "experimental" }
