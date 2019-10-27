@@ -29,6 +29,7 @@ impl IriFragmentStr {
     ///
     /// ```
     /// # use iri_string::types::IriFragmentStr;
+    /// assert!(IriFragmentStr::new("").is_ok());
     /// assert!(IriFragmentStr::new("foo").is_ok());
     /// assert!(IriFragmentStr::new("foo/bar").is_ok());
     /// assert!(IriFragmentStr::new("/foo/bar").is_ok());
@@ -41,6 +42,31 @@ impl IriFragmentStr {
     /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
+    }
+
+    /// Creates a new `&IriFragmentStr` from the fragment part prefixed by `#`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriFragmentStr;
+    /// assert!(IriFragmentStr::from_prefixed("#").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#foo").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#foo/bar").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#/foo/bar").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#//foo/bar").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriFragmentStr::from_prefixed("#https://example.com/").is_ok());
+    ///
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(IriFragmentStr::from_prefixed("#<not allowed>").is_err());
+    /// // `#` prefix is expected.
+    /// assert!(IriFragmentStr::from_prefixed("").is_err());
+    /// assert!(IriFragmentStr::from_prefixed("foo").is_err());
+    /// ```
+    pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
+        if s.as_bytes().get(0) != Some(&b'#') {
+            return Err(Error::new());
+        }
+        TryFrom::try_from(&s[1..])
     }
 
     /// Creates a new `IriFragmentStr` maybe without validation.
