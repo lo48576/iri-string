@@ -122,44 +122,39 @@ impl IriReferenceStr {
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
-    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux#corge")?;
-    /// let fragment = <&IriFragmentStr>::try_from("corge")?;
+    /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#corge")?;
+    /// let fragment = IriFragmentStr::new("corge")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
-    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux#")?;
-    /// let fragment = <&IriFragmentStr>::try_from("")?;
+    /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#")?;
+    /// let fragment = IriFragmentStr::new("")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
-    /// let iri = <&IriReferenceStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
-    /// let iri = <&IriReferenceStr>::try_from("#foo")?;
-    /// let fragment = <&IriFragmentStr>::try_from("foo")?;
+    /// let iri = IriReferenceStr::new("#foo")?;
+    /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
-    /// let iri = <&IriReferenceStr>::try_from("")?;
+    /// let iri = IriReferenceStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
