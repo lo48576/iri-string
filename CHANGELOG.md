@@ -4,6 +4,8 @@
 
 * `*Str::new()` methods are added.
 * `IriFragmentStr::from_prefixed()` is added.
+* `types::CreationError` is renamed to `types::IriCreationError`.
+    + The old name will be kept until the next minor version bump to keep compatibility.
 * Reduced indirect dependencies
 
 ### Added
@@ -16,6 +18,8 @@
       For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
 
 ### Changed (non-breaking)
+* `types::CreationError` is renamed to `types::IriCreationError`.
+    + The old name will be kept until the next minor version bump to keep compatibility.
 * Disabled `lexical` feature of `nom` crate.
     + This reduces indirect dependencies.
 * Migrate code generator from proc-macro crate to non-proc-macro one.
