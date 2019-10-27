@@ -16,6 +16,15 @@ use crate::parser::{self, IriRule};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Error(());
 
+impl Error {
+    /// Creates a new `Error`.
+    ///
+    /// For internal use.
+    pub(crate) fn new() -> Self {
+        Error(())
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Invalid IRI")
