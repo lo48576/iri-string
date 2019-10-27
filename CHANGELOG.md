@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * `*Str::new()` methods are added.
+* `IriFragmentStr::from_prefixed()` is added.
 * Reduced indirect dependencies
 
 ### Added
@@ -13,6 +14,9 @@
       Now `FooStr::new(s)` can be used instead.
     + This panics if the given string is valid.
       Use `TryFrom::try_from` if you are not sure the string is valid.
+* `IriFragmentStr::from_prefixed()` is added.
+    * This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
+      For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
 
 ### Changed (non-breaking)
 * Disabled `lexical` feature of `nom` crate.
