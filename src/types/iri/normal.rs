@@ -16,7 +16,7 @@ use crate::{
     validate::iri::{iri, Error},
 };
 
-/// A borrowed slice of an IRI.
+/// A borrowed string of an absolute IRI possibly with fragment part.
 ///
 /// This corresponds to `IRI` rule in RFC 3987.
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
@@ -157,7 +157,7 @@ impl IriStr {
     }
 }
 
-/// An owned string of an IRI.
+/// An owned string of an absolute IRI possibly with fragment part.
 ///
 /// This corresponds to `IRI` rule in RFC 3987.
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
