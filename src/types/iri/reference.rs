@@ -32,6 +32,8 @@ pub struct IriReferenceStr(str);
 impl IriReferenceStr {
     /// Creates a new `&IriReferenceStr`.
     ///
+    /// # Examples
+    ///
     /// ```
     /// # use iri_string::types::IriReferenceStr;
     /// assert!(IriReferenceStr::new("https://user:pass@example.com:8080").is_ok());
