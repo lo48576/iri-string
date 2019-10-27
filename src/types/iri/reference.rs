@@ -29,6 +29,26 @@ pub struct IriReferenceStr(str);
 
 impl IriReferenceStr {
     /// Creates a new `&IriReferenceStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriReferenceStr;
+    /// assert!(IriReferenceStr::new("https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz").is_ok());
+    /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz#qux").is_ok());
+    /// assert!(IriReferenceStr::new("foo:bar").is_ok());
+    /// assert!(IriReferenceStr::new("foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("/foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("//foo/bar").is_ok());
+    /// assert!(IriReferenceStr::new("#foo").is_ok());
+    ///
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(IriReferenceStr::new("<not allowed>").is_err());
+    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
+    /// // >
+    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
+    /// assert!(IriReferenceStr::new("foo:////").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }

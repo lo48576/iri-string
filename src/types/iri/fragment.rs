@@ -24,6 +24,19 @@ pub struct IriFragmentStr(str);
 
 impl IriFragmentStr {
     /// Creates a new `&IriFragmentStr`.
+    ///
+    /// ```
+    /// # use iri_string::types::IriFragmentStr;
+    /// assert!(IriFragmentStr::new("foo").is_ok());
+    /// assert!(IriFragmentStr::new("foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("/foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("//foo/bar").is_ok());
+    /// assert!(IriFragmentStr::new("https://user:pass@example.com:8080").is_ok());
+    /// assert!(IriFragmentStr::new("https://example.com/").is_ok());
+    ///
+    /// // `<` and `>` cannot directly appear in an IRI.
+    /// assert!(IriFragmentStr::new("<not allowed>").is_err());
+    /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
     }
