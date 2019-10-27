@@ -65,6 +65,10 @@ impl AbsoluteIriStr {
 /// This corresponds to `absolute-IRI` rule in RFC 3987.
 /// This is `scheme ":" ihier-part [ "?" iquery ]`.
 /// In other words, this is `IriString` without fragment part.
+///
+/// See documentation for [`AbsoluteIriStr`].
+///
+/// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

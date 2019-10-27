@@ -179,6 +179,10 @@ impl IriReferenceStr {
 /// This corresponds to `IRI-reference` rule in RFC 3987.
 /// This is `IRI / irelative-ref`
 /// In other words, this is union of `IriString` and `RelativeIriString.
+///
+/// See documentation for [`IriReferenceStr`].
+///
+/// [`IriReferenceStr`]: struct.IriReferenceStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

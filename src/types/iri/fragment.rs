@@ -59,6 +59,10 @@ impl IriFragmentStr {
 ///
 /// This corresponds to `ifragment` rule in RFC 3987.
 /// This is `*( ipchar / "/" / "?" )`.
+///
+/// See documentation for [`IriFragmentStr`].
+///
+/// [`IriFragmentStr`]: struct.IriFragmentStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

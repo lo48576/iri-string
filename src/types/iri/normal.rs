@@ -162,6 +162,10 @@ impl IriStr {
 /// This corresponds to `IRI` rule in RFC 3987.
 /// This is `scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]`.
 /// In other words, this is `AbsoluteIriString` with fragment part allowed.
+///
+/// See documentation for [`IriStr`].
+///
+/// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]

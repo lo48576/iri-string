@@ -67,6 +67,10 @@ impl RelativeIriStr {
 /// This corresponds to `irelative-ref` rule in RFC 3987.
 /// This is `irelative-part [ "?" iquery ] [ "#" fragment ]`.
 /// In other words, this is roughly `IriString` without scheme part.
+///
+/// See documentation for [`RelativeIriStr`].
+///
+/// [`RelativeIriStr`]: struct.RelativeIriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
