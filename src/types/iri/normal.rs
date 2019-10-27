@@ -88,31 +88,28 @@ impl IriStr {
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
-    /// let fragment_expected = <&IriFragmentStr>::try_from("corge")?;
+    /// let fragment_expected = IriFragmentStr::new("corge")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#")?;
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
-    /// let fragment_expected = <&IriFragmentStr>::try_from("")?;
+    /// let fragment_expected = IriFragmentStr::new("")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, None);
@@ -139,17 +136,15 @@ impl IriStr {
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux#corge")?;
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
     /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// use std::convert::TryFrom;
     /// # use iri_string::{types::IriStr, validate::iri::Error};
-    /// let iri = <&IriStr>::try_from("foo://bar/baz?qux=quux")?;
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
     /// # Ok::<_, Error>(())
     /// ```
