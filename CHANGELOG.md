@@ -8,12 +8,9 @@
 
 ### Added
 * `*Str::new()` methods are added.
-    + Previously the string slices are created as `<&FooStr>::try_from(s).expect("...")`
-      (where `s: &str`), but this can be redundant when you know the string is valid (especially
-      when passing constant strings).
-      Now `FooStr::new(s)` can be used instead.
-    + This panics if the given string is valid.
-      Use `TryFrom::try_from` if you are not sure the string is valid.
+    + Previously the string slices are created as `<&FooStr>::try_from(s)` (where `s: &str`),
+      but this is redundant.
+      Now `FooStr::new(s)` can be used instead of `<&FooStr>::try_from(s)` for `s: &str`.
 * `IriFragmentStr::from_prefixed()` is added.
     * This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
       For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
