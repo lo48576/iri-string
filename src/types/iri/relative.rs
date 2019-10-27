@@ -30,6 +30,8 @@ pub struct RelativeIriStr(str);
 impl RelativeIriStr {
     /// Creates a new `&RelativeIriStr`.
     ///
+    /// # Examples
+    ///
     /// ```
     /// # use iri_string::types::RelativeIriStr;
     /// assert!(RelativeIriStr::new("foo").is_ok());

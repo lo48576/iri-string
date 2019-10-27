@@ -31,6 +31,8 @@ pub struct AbsoluteIriStr(str);
 impl AbsoluteIriStr {
     /// Creates a new `&AbsoluteIriStr`.
     ///
+    /// # Examples
+    ///
     /// ```
     /// # use iri_string::types::AbsoluteIriStr;
     /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz").is_ok());

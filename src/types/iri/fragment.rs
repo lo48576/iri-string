@@ -27,6 +27,8 @@ pub struct IriFragmentStr(str);
 impl IriFragmentStr {
     /// Creates a new `&IriFragmentStr`.
     ///
+    /// # Examples
+    ///
     /// ```
     /// # use iri_string::types::IriFragmentStr;
     /// assert!(IriFragmentStr::new("").is_ok());
@@ -45,6 +47,8 @@ impl IriFragmentStr {
     }
 
     /// Creates a new `&IriFragmentStr` from the fragment part prefixed by `#`.
+    ///
+    /// # Examples
     ///
     /// ```
     /// # use iri_string::types::IriFragmentStr;

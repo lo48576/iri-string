@@ -33,6 +33,8 @@ pub struct IriStr(str);
 impl IriStr {
     /// Creates a new `&IriStr`.
     ///
+    /// # Examples
+    ///
     /// ```
     /// # use iri_string::types::IriStr;
     /// assert!(IriStr::new("https://user:pass@example.com:8080").is_ok());
@@ -82,6 +84,8 @@ impl IriStr {
     /// Splits the IRI into absolute IRI part and fragment part.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
     ///
     /// ```
     /// use std::convert::TryFrom;
@@ -199,6 +203,8 @@ impl IriString {
     /// Splits the IRI into absolute IRI part and fragment part.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
     ///
     /// ```
     /// use std::convert::TryFrom;
