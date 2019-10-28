@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
-    combinator::{cut, map, map_opt, opt, recognize},
+    combinator::{cut, map, map_opt, not, opt, recognize},
     error::{context, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -27,26 +27,6 @@ where
         _ => Err(nom::Err::Error(E::from_error_kind(
             i,
             nom::error::ErrorKind::OneOf,
-        ))),
-    }
-}
-
-/// Function version of `nom::not!` combinator.
-fn not<I, O, F, E>(f: F) -> impl Fn(I) -> IResult<I, (), E>
-where
-    I: Clone,
-    F: Fn(I) -> IResult<I, O, E>,
-    E: ParseError<I>,
-{
-    use nom::Err;
-
-    move |i: I| match f(i.clone()) {
-        Err(Err::Failure(e)) => Err(Err::Failure(e)),
-        Err(Err::Error(_)) => Ok((i, ())),
-        Err(Err::Incomplete(e)) => Err(Err::Incomplete(e)),
-        Ok(_) => Err(Err::Error(E::from_error_kind(
-            i,
-            nom::error::ErrorKind::Not,
         ))),
     }
 }
