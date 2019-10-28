@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
-    combinator::{cut, map, map_opt, opt},
+    combinator::{cut, map, map_opt, opt, recognize},
     error::{context, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -62,22 +62,6 @@ where
     E: ParseError<I>,
 {
     fold_many_m_n(m, n, f, 0, |count, _| count + 1)
-}
-
-/// Parses with the given parser and return consumed slice of input.
-fn ret_raw<I, O, E, F>(f: F) -> impl Fn(I) -> IResult<I, I, E>
-where
-    F: Fn(I) -> IResult<I, O, E>,
-    I: Clone + nom::InputTake + nom::InputLength,
-    E: ParseError<I>,
-{
-    move |i: I| {
-        let i_len = i.input_len();
-        f(i.clone()).map(|(rest, _)| {
-            let rest_len = rest.input_len();
-            i.take_split(i_len - rest_len)
-        })
-    }
 }
 
 /// Parser rules different between URI and IRI.
@@ -171,8 +155,8 @@ fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
     context(
         "hier-part",
         alt((
-            ret_raw(pair(tag("//"), path_absolute::<E, R>)),
-            ret_raw(tuple((
+            recognize(pair(tag("//"), path_absolute::<E, R>)),
+            recognize(tuple((
                 tag("//"),
                 map_opt(
                     authority::<E, R>,
@@ -295,7 +279,7 @@ fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
     context(
         "relative-part",
         alt((
-            ret_raw(tuple((tag("//"), authority::<E, R>, path_abempty::<E, R>))),
+            recognize(tuple((tag("//"), authority::<E, R>, path_abempty::<E, R>))),
             path_absolute::<E, R>,
             path_noscheme::<E, R>,
             path_empty,
@@ -405,7 +389,7 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
         num_h16: usize,
     ) -> impl Fn(&'b str) -> IResult<&'b str, &'b str, E> {
         assert!(num_h16 >= 1);
-        ret_raw(terminated(
+        recognize(terminated(
             pair(
                 h16,
                 many_m_n_count(num_h16 - 1, num_h16 - 1, preceded(char_(':'), h16)),
@@ -419,7 +403,7 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
         num_max_h16: usize,
     ) -> impl Fn(&'b str) -> IResult<&'b str, &'b str, E> {
         assert!(num_max_h16 >= 2);
-        ret_raw(alt((
+        recognize(alt((
             pair(
                 many_m_n_count(0, num_max_h16 - 1, terminated(h16, char_(':'))),
                 terminated(h16, not(char_('.'))),
@@ -434,19 +418,19 @@ fn ipv6address<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a s
     context(
         "IPv6Address",
         alt((
-            ret_raw(tuple((tag("::"), after_double_colon(7)))),
-            ret_raw(pair(before_and_double_colon(1), after_double_colon(6))),
-            ret_raw(pair(before_and_double_colon(2), after_double_colon(5))),
-            ret_raw(pair(before_and_double_colon(3), after_double_colon(4))),
-            ret_raw(pair(before_and_double_colon(4), after_double_colon(3))),
-            ret_raw(pair(before_and_double_colon(5), after_double_colon(2))),
-            ret_raw(pair(before_and_double_colon(6), h16)),
+            recognize(tuple((tag("::"), after_double_colon(7)))),
+            recognize(pair(before_and_double_colon(1), after_double_colon(6))),
+            recognize(pair(before_and_double_colon(2), after_double_colon(5))),
+            recognize(pair(before_and_double_colon(3), after_double_colon(4))),
+            recognize(pair(before_and_double_colon(4), after_double_colon(3))),
+            recognize(pair(before_and_double_colon(5), after_double_colon(2))),
+            recognize(pair(before_and_double_colon(6), h16)),
             before_and_double_colon(7),
-            ret_raw(pair(
+            recognize(pair(
                 many_m_n_count(0, 7, terminated(h16, char_(':'))),
                 terminated(h16, not(char_('.'))),
             )),
-            ret_raw(pair(
+            recognize(pair(
                 many_m_n_count(0, 6, terminated(h16, char_(':'))),
                 ipv4address,
             )),
@@ -479,21 +463,21 @@ fn dec_octet<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
     context(
         "dec-octet",
         alt((
-            ret_raw(pair(tag("25"), one_of("012345"))),
-            ret_raw(tuple((
+            recognize(pair(tag("25"), one_of("012345"))),
+            recognize(tuple((
                 char_('2'),
                 one_of("01234"),
                 one_is(|c: char| c.is_ascii_digit()),
             ))),
-            ret_raw(pair(
+            recognize(pair(
                 char_('1'),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
             )),
-            ret_raw(pair(
+            recognize(pair(
                 one_is(|c: char| c.is_ascii_digit() || c != '0'),
                 one_is(|c: char| c.is_ascii_digit()),
             )),
-            ret_raw(one_is(|c: char| c.is_ascii_digit())),
+            recognize(one_is(|c: char| c.is_ascii_digit())),
         )),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
