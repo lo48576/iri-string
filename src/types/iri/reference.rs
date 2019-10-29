@@ -94,7 +94,7 @@ impl IriReferenceStr {
         }
     }
 
-    /// Returns resolved IRI using strict resolver.
+    /// Returns resolved IRI against the given base IRI, using strict resolver.
     ///
     /// About reference resolution output example, see [RFC 3986 section
     /// 5.4](https://tools.ietf.org/html/rfc3986#section-5.4).
@@ -111,6 +111,12 @@ impl IriReferenceStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
+        resolve_iri(self, base, true)
+    }
+
+    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    #[deprecated(since = "0.2.2", note = "Renamed to `resolve_against()`")]
     pub fn resolve(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
     }

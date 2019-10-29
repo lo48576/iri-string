@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+* `IriReferenceStr::resolve()` is renamed to `resolve_against()`.
+    + The old name will be kept until the next minor version bump to keep compatibility.
+
+### Changed (non-breaking)
+* `IriReferenceStr::resolve()` is renamed to `resolve_against()`.
+    + `resolve()` was an ambiguous name, and people cannot know which `foo.resolve(bar)` means:
+      "resolve foo against bar" or "foo resolves bar".
+    + The new name `resolve_against()` is more clear. `foo.resolve_against(bar)` can be natuarally
+      interpreted as "resolve foo against bar".
+    + The old name will be kept until the next minor version bump to keep compatibility.
+
 ## [0.2.1]
 
 * `*Str::new()` methods are added.
