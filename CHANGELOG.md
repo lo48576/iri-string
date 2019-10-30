@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.2]
+
 * `IriReferenceStr::resolve()` is renamed to `resolve_against()`.
     + The old name will be kept until the next minor version bump to keep compatibility.
 
@@ -84,7 +86,8 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.2...develop>
+[0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
 [0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>
 [0.2.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0>
 [0.2.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.1>
