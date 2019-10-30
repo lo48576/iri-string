@@ -8,7 +8,8 @@
     + The old name will be kept until the next minor version bump to keep compatibility.
 
 ### Changed (non-breaking)
-* `IriReferenceStr::resolve()` is renamed to `resolve_against()`.
+* `IriReferenceStr::resolve()` is renamed to `resolve_against()`
+  (4d64ee9884713644b69b8f227f32637d877a9d5f).
     + `resolve()` was an ambiguous name, and people cannot know which `foo.resolve(bar)` means:
       "resolve foo against bar" or "foo resolves bar".
     + The new name `resolve_against()` is more clear. `foo.resolve_against(bar)` can be natuarally
