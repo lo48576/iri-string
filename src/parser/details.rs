@@ -894,6 +894,28 @@ mod tests {
     }
 
     #[test]
+    fn test_invalid_chars() {
+        // Not allowed characters `<` and `>`.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/<foo>");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/<foo>");
+        // U+FFFD Replacement character: Invalid as URI, also invalid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{FFFD}");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/\u{FFFD}");
+        // U+3044: Hiragana letter I: Invalid as URI, valid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{3044}");
+        assert_validate!(uri::<Error<'_>, IriRule>, "foo://bar/\u{3044}");
+    }
+
+    #[test]
+    fn test_invalid_pct_encoded() {
+        // Invalid percent encoding.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%zz");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0/");
+    }
+
+    #[test]
     fn test_ipv6address() {
         assert_validate!(ipv6address::<Error<'_>>, "a:bB:cCc:dDdD:e:F:a:B");
         assert_validate!(ipv6address::<Error<'_>>, "1:1:1:1:1:1:1:1");
