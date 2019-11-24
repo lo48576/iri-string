@@ -6,7 +6,7 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
-    combinator::{cut, map, map_opt, not, opt, recognize},
+    combinator::{cut, map, not, opt, recognize},
     error::{context, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -59,7 +59,7 @@ pub(crate) enum UriRule {}
 
 impl Rule for UriRule {
     fn is_unreserved(c: char) -> bool {
-        c.is_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
     }
 
     fn is_private(_: char) -> bool {
@@ -128,22 +128,13 @@ fn decompose_uri<'a, E: ParseError<&'a str>, R: Rule>(
 
 /// Parses `hier-part` and `ihier-part` rules.
 fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    // > When authority is not present, the path cannot begin with two slash
-    // > characters ("//").
-    // >
-    // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
     context(
         "hier-part",
         alt((
-            recognize(pair(tag("//"), path_absolute::<E, R>)),
-            recognize(tuple((
+            recognize(preceded(
                 tag("//"),
-                map_opt(
-                    authority::<E, R>,
-                    |s| if s.is_empty() { None } else { Some(s) },
-                ),
-                path_abempty::<E, R>,
-            ))),
+                pair(authority::<E, R>, path_abempty::<E, R>),
+            )),
             path_absolute::<E, R>,
             path_rootless::<E, R>,
             path_empty::<E>,
@@ -156,25 +147,12 @@ fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
 fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
     i: &'a str,
 ) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
-    // > When authority is not present, the path cannot begin with two slash
-    // > characters ("//").
-    // >
-    // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
     context(
         "hier-part",
         alt((
-            map(preceded(tag("//"), path_absolute::<E, R>), |path| {
-                (None, path)
-            }),
-            pair(
-                preceded(
-                    tag("//"),
-                    map(
-                        authority::<E, R>,
-                        |s| if s.is_empty() { None } else { Some(s) },
-                    ),
-                ),
-                path_abempty::<E, R>,
+            preceded(
+                tag("//"),
+                pair(map(authority::<E, R>, Some), path_abempty::<E, R>),
             ),
             map(path_absolute::<E, R>, |path| (None, path)),
             map(path_rootless::<E, R>, |path| (None, path)),
@@ -274,9 +252,9 @@ fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Rule>(
     context(
         "relative-part",
         alt((
-            pair(
-                preceded(tag("//"), map(authority::<E, R>, Some)),
-                path_abempty::<E, R>,
+            preceded(
+                tag("//"),
+                pair(map(authority::<E, R>, Some), path_abempty::<E, R>),
             ),
             map(path_absolute::<E, R>, |path| (None, path)),
             map(path_noscheme::<E, R>, |path| (None, path)),
@@ -713,6 +691,7 @@ mod tests {
             })*
         }};
     }
+
     macro_rules! assert_validate_list {
         ($parser:expr, $($list:expr),* $(,)?) => {{
             $({
@@ -867,30 +846,34 @@ mod tests {
 
     #[test]
     fn test_uri() {
-        // > When authority is not present, the path cannot begin with two slash
-        // > characters ("//").
-        // >
-        // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
-        //
-        // > In this case, not the common case by any means, the zero-length
-        // > authority cannot be discerned from the zero-length path. Hence,
-        // > when the authority is zero-length, WE DO NOT HAVE A CHOICE, the
-        // > path MUST begin with a forward slash (more precisely, it must match
-        // > path-abempty) and discern the path from the authority; otherwise,
-        // > and I will say it again: the URI would be invalid.
-        // >
-        // > --- <https://stackoverflow.com/a/41403549/11131974>
-        assert_invalid!(uri::<Error<'_>, UriRule>, "scheme://");
-
         assert_validate_list!(uri::<Error<'_>, UriRule>, OK_URI_LIST);
     }
 
     #[test]
     fn test_iri() {
-        // See the test for URI.
-        assert_invalid!(uri::<Error<'_>, IriRule>, "scheme://");
-
         assert_validate_list!(uri::<Error<'_>, IriRule>, OK_URI_LIST, OK_IRI_LIST);
+    }
+
+    #[test]
+    fn test_invalid_chars() {
+        // Not allowed characters `<` and `>`.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/<foo>");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/<foo>");
+        // U+FFFD Replacement character: Invalid as URI, also invalid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{FFFD}");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/\u{FFFD}");
+        // U+3044: Hiragana letter I: Invalid as URI, valid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{3044}");
+        assert_validate!(uri::<Error<'_>, IriRule>, "foo://bar/\u{3044}");
+    }
+
+    #[test]
+    fn test_invalid_pct_encoded() {
+        // Invalid percent encoding.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%zz");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0/");
     }
 
     #[test]
@@ -922,5 +905,73 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_hier_part_only_slashes() {
+        assert_validate_list!(
+            hier_part::<Error<'_>, IriRule>,
+            &["", "/", "//", "///", "////", "/////"]
+        );
+    }
+
+    #[test]
+    fn test_decompose_hier_part_only_slashes() {
+        assert_complete!(decompose_hier_part::<Error<'_>, IriRule>, "", (None, ""));
+        assert_complete!(decompose_hier_part::<Error<'_>, IriRule>, "/", (None, "/"));
+        assert_complete!(
+            decompose_hier_part::<Error<'_>, IriRule>,
+            "//",
+            (Some(""), "")
+        );
+        assert_complete!(
+            decompose_hier_part::<Error<'_>, IriRule>,
+            "///",
+            (Some(""), "/")
+        );
+        assert_complete!(
+            decompose_hier_part::<Error<'_>, IriRule>,
+            "////",
+            (Some(""), "//")
+        );
+        assert_complete!(
+            decompose_hier_part::<Error<'_>, IriRule>,
+            "/////",
+            (Some(""), "///")
+        );
+    }
+
+    #[test]
+    fn test_decompose_relative_part_only_slashes() {
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "",
+            (None, "")
+        );
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "/",
+            (None, "/")
+        );
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "//",
+            (Some(""), "")
+        );
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "///",
+            (Some(""), "/")
+        );
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "////",
+            (Some(""), "//")
+        );
+        assert_complete!(
+            decompose_relative_part::<Error<'_>, IriRule>,
+            "/////",
+            (Some(""), "///")
+        );
     }
 }
