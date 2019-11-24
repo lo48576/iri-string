@@ -59,7 +59,7 @@ pub(crate) enum UriRule {}
 
 impl Rule for UriRule {
     fn is_unreserved(c: char) -> bool {
-        c.is_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
     }
 
     fn is_private(_: char) -> bool {
@@ -891,6 +891,28 @@ mod tests {
         assert_invalid!(uri::<Error<'_>, IriRule>, "scheme://");
 
         assert_validate_list!(uri::<Error<'_>, IriRule>, OK_URI_LIST, OK_IRI_LIST);
+    }
+
+    #[test]
+    fn test_invalid_chars() {
+        // Not allowed characters `<` and `>`.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/<foo>");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/<foo>");
+        // U+FFFD Replacement character: Invalid as URI, also invalid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{FFFD}");
+        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/\u{FFFD}");
+        // U+3044: Hiragana letter I: Invalid as URI, valid as IRI.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{3044}");
+        assert_validate!(uri::<Error<'_>, IriRule>, "foo://bar/\u{3044}");
+    }
+
+    #[test]
+    fn test_invalid_pct_encoded() {
+        // Invalid percent encoding.
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%zz");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0");
+        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0/");
     }
 
     #[test]

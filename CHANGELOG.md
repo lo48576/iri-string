@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+* Fixed a bug that URI validators wrongly accepts non-ASCII characters.
+    + Now they rejects non-ASCII characters correctly.
+
+### Fixes
+* Fixed a bug that URI validators wrongly accepts non-ASCII characters.
+    + Now they rejects non-ASCII characters correctly.
+
+### Improved
+* More tests are added to ensure invalid URIs/IRIs are rejected as expected.
+
 ## [0.2.2]
 
 * `IriReferenceStr::resolve()` is renamed to `resolve_against()`.
