@@ -14,7 +14,17 @@ all-features = true
 
 [dependencies]
 nom = { version = "5", default-features = false, features = ["std"] }
-serde = { version = "1", features = ["derive"], optional = true }
+serde = { version = "1.0.75", features = ["derive"], optional = true }
+# NOTE: This is a temporary workaround.
+# `serde_derive` with version `>= 1.0.103` would solve this, but it is not yet released.
+# See <https://github.com/serde-rs/serde/pull/1664> and
+# <https://github.com/serde-rs/serde/commit/4eb580790dd6c96089b92942a5f481b21df4feaf>.
+#
+# `serde_derive` <= 1.0.74 causes build failure.
+# This explicit `serde_derive` depndency is here to prevent build failure with minimal version deps.
+# Users SHOULD NOT specify `--features=serde_derive` or `features = ["serde"]` by themselves.
+# Enabling feature `serde` will automatically pull `serde_derive` as an indirect dependency.
+serde_derive = { version = "1.0.75", optional = true }
 validated-slice = "0.2.0"
 
 [badges]

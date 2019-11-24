@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+* Update some internal dependencies.
+    + This has no effect for usual users, and this does not introduce any API changes.
+    + By this change, the crate now successfully compiles with minimal dependency versions.
+
+### Fixes
+* Update some internal dependencies to make the crate buildable with minimal dependency versions.
+    + This has no effect for usual users, and this does not introduce any API changes.
+    + By this change, the crate now successfully compiles with minimal dependency versions.
+        - To test that, you can run
+          `cargo +nightly update -Z minimal-versions && cargo test --all-features`.
+
 ## [0.2.3]
 
 * Fixed a bug that URI validators wrongly accepts non-ASCII characters.
