@@ -2,20 +2,25 @@
 
 ## [Unreleased]
 
+## [0.2.3]
+
 * Fixed a bug that URI validators wrongly accepts non-ASCII characters.
     + Now they rejects non-ASCII characters correctly.
 * Fixed a bug that abnormal URIs (such as `foo://` or `foo:////`) are wrongly rejected.
     + Now they are accepted as valid IRIs.
 
 ### Fixes
-* Fixed a bug that URI validators wrongly accepts non-ASCII characters.
+* Fixed a bug that URI validators wrongly accepts non-ASCII characters
+  (9b8011f54dab3c2f8da78dc2251353453317d8af).
     + Now they rejects non-ASCII characters correctly.
-* Fixed a bug that abnormal URIs (such as `foo://` or `foo:////`) are wrongly rejected.
+* Fixed a bug that abnormal URIs (such as `foo://` or `foo:////`) are wrongly rejected
+  (7a40f4b72964d498970a356368dc320917d88e43).
     + Now they are accepted as valid IRIs.
     + Documents are added to explain why they are valid.
 
 ### Improved
-* More tests are added to ensure invalid URIs/IRIs are rejected as expected.
+* More tests are added to ensure invalid URIs/IRIs are rejected as expected
+  (9b8011f54dab3c2f8da78dc2251353453317d8af).
 
 ## [0.2.2]
 
@@ -102,8 +107,9 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.2...develop>
-[0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.3...develop>
+[0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.3>
+[0.2.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
 [0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>
 [0.2.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0>
 [0.2.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.0-beta.1>

@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -18,5 +18,5 @@ serde = { version = "1", features = ["derive"], optional = true }
 validated-slice = "0.2.0"
 
 [badges]
-maintenance = { status = "experimental" }
+maintenance = { status = "actively-developed" }
 travis-ci = { repository = "lo48576/iri-string" }
