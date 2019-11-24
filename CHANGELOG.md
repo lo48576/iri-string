@@ -4,10 +4,15 @@
 
 * Fixed a bug that URI validators wrongly accepts non-ASCII characters.
     + Now they rejects non-ASCII characters correctly.
+* Fixed a bug that abnormal URIs (such as `foo://` or `foo:////`) are wrongly rejected.
+    + Now they are accepted as valid IRIs.
 
 ### Fixes
 * Fixed a bug that URI validators wrongly accepts non-ASCII characters.
     + Now they rejects non-ASCII characters correctly.
+* Fixed a bug that abnormal URIs (such as `foo://` or `foo:////`) are wrongly rejected.
+    + Now they are accepted as valid IRIs.
+    + Documents are added to explain why they are valid.
 
 ### Improved
 * More tests are added to ensure invalid URIs/IRIs are rejected as expected.

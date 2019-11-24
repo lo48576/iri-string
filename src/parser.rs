@@ -18,6 +18,8 @@ pub(crate) struct IriReferenceComponents<'a> {
     /// Scheme.
     pub(crate) scheme: Option<&'a str>,
     /// Authority.
+    ///
+    /// Note that this can be `Some("")`.
     pub(crate) authority: Option<&'a str>,
     /// Path.
     pub(crate) path: &'a str,
