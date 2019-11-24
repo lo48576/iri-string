@@ -59,7 +59,7 @@ pub(crate) enum UriRule {}
 
 impl Rule for UriRule {
     fn is_unreserved(c: char) -> bool {
-        c.is_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
     }
 
     fn is_private(_: char) -> bool {
