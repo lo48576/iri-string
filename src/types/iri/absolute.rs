@@ -37,6 +37,13 @@ impl AbsoluteIriStr {
     /// # use iri_string::types::AbsoluteIriStr;
     /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz").is_ok());
     /// assert!(AbsoluteIriStr::new("foo:bar").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo:").is_ok());
+    /// // `foo://.../` below are all allowed. See the crate documentation for detail.
+    /// assert!(AbsoluteIriStr::new("foo:/").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo://").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo:///").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo:////").is_ok());
+    /// assert!(AbsoluteIriStr::new("foo://///").is_ok());
     ///
     /// // Relative IRI is not allowed.
     /// assert!(AbsoluteIriStr::new("foo/bar").is_err());
@@ -44,10 +51,6 @@ impl AbsoluteIriStr {
     /// assert!(AbsoluteIriStr::new("//foo/bar").is_err());
     /// // Fragment part is not allowed.
     /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz#qux").is_err());
-    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
-    /// // >
-    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
-    /// assert!(AbsoluteIriStr::new("foo:////").is_err());
     /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)

@@ -41,12 +41,23 @@ impl RelativeIriStr {
     /// assert!(RelativeIriStr::new("?foo").is_ok());
     /// assert!(RelativeIriStr::new("#foo").is_ok());
     /// assert!(RelativeIriStr::new("foo/bar?baz#qux").is_ok());
+    /// // The first path component can have colon if the path is absolute.
+    /// assert!(RelativeIriStr::new("/foo:bar/").is_ok());
+    /// // Second or following path components can have colon.
+    /// assert!(RelativeIriStr::new("foo/bar://baz/").is_ok());
     ///
     /// // Absolute IRI is not allowed.
     /// assert!(RelativeIriStr::new("https://example.com/").is_err());
     /// assert!(RelativeIriStr::new("foo:bar").is_err());
     /// // `<` and `>` cannot directly appear in an IRI.
     /// assert!(RelativeIriStr::new("<not allowed>").is_err());
+    /// // The first path component cannot have colon, if the path is not absolute.
+    /// assert!(RelativeIriStr::new("foo:").is_err());
+    /// assert!(RelativeIriStr::new("foo:/").is_err());
+    /// assert!(RelativeIriStr::new("foo://").is_err());
+    /// assert!(RelativeIriStr::new("foo:///").is_err());
+    /// assert!(RelativeIriStr::new("foo:////").is_err());
+    /// assert!(RelativeIriStr::new("foo://///").is_err());
     /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)

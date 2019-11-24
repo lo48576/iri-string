@@ -41,6 +41,13 @@ impl IriReferenceStr {
     /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz").is_ok());
     /// assert!(IriReferenceStr::new("https://example.com/foo?bar=baz#qux").is_ok());
     /// assert!(IriReferenceStr::new("foo:bar").is_ok());
+    /// assert!(IriReferenceStr::new("foo:").is_ok());
+    /// // `foo://.../` below are all allowed. See the crate documentation for detail.
+    /// assert!(IriReferenceStr::new("foo:/").is_ok());
+    /// assert!(IriReferenceStr::new("foo://").is_ok());
+    /// assert!(IriReferenceStr::new("foo:///").is_ok());
+    /// assert!(IriReferenceStr::new("foo:////").is_ok());
+    /// assert!(IriReferenceStr::new("foo://///").is_ok());
     /// assert!(IriReferenceStr::new("foo/bar").is_ok());
     /// assert!(IriReferenceStr::new("/foo/bar").is_ok());
     /// assert!(IriReferenceStr::new("//foo/bar").is_ok());
@@ -48,10 +55,6 @@ impl IriReferenceStr {
     ///
     /// // `<` and `>` cannot directly appear in an IRI.
     /// assert!(IriReferenceStr::new("<not allowed>").is_err());
-    /// // > When authority is not present, the path cannot begin with two slash characters ("//").
-    /// // >
-    /// // > --- [RFC 3986 section 3](https://tools.ietf.org/html/rfc3986#section-3)
-    /// assert!(IriReferenceStr::new("foo:////").is_err());
     /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
