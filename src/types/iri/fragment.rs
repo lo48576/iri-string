@@ -82,6 +82,7 @@ impl IriFragmentStr {
     }
 
     /// Returns `&str`.
+    #[inline]
     pub fn as_str(&self) -> &str {
         self.as_ref()
     }

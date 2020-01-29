@@ -67,6 +67,12 @@ impl IriStr {
         StrSpec::from_inner_unchecked(s)
     }
 
+    /// Returns `&str`.
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+
     /// Splits the IRI into absolute IRI part and fragment part.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
@@ -124,11 +130,6 @@ impl IriStr {
     /// ```
     pub fn to_absolute(&self) -> &AbsoluteIriStr {
         self.without_fragment()
-    }
-
-    /// Returns `&str`.
-    pub fn as_str(&self) -> &str {
-        self.as_ref()
     }
 }
 
