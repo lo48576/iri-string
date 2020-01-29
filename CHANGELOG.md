@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+* Minimum supported Rust version is now 1.41 or above.
 * Remove `Deref` impls for IRI string types.
 * Update some internal dependencies.
     + This has no effect for usual users, and this does not introduce any API changes.
