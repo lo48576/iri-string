@@ -83,7 +83,7 @@ impl IriReferenceStr {
             // `IRI-reference = IRI / irelative-ref`.
             // It says that if an IRI reference is not an IRI, then it is
             // a relative IRI.
-            RelativeIriStr::new_unchecked(self)
+            RelativeIriStr::new_unchecked(self.as_str())
         })
     }
 
@@ -279,7 +279,6 @@ validated_slice::impl_std_traits_for_slice! {
         inner: str,
         error: Error,
     };
-    { Deref<Target = {Inner}> };
 }
 
 impl_serde! {
