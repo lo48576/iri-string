@@ -137,12 +137,6 @@ impl IriReferenceStr {
         resolve_iri(self, base, true)
     }
 
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
-    #[deprecated(since = "0.2.2", note = "Renamed to `resolve_against()`")]
-    pub fn resolve(&self, base: &AbsoluteIriStr) -> IriString {
-        resolve_iri(self, base, true)
-    }
-
     /// Returns the fragment part if exists.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
