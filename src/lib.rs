@@ -63,6 +63,7 @@
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 
+pub(crate) mod manipulation;
 pub(crate) mod parser;
 pub mod resolve;
 pub mod types;

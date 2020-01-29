@@ -2,13 +2,12 @@
 
 use std::convert::TryFrom;
 
-use nom::combinator::complete;
 #[cfg(feature = "serde")]
 use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
-    parser::{self, IriRule},
+    manipulation::{CustomIriOwnedExt, CustomIriSliceExt},
     types::{
         iri::set_fragment, AbsoluteIriStr, AbsoluteIriString, IriCreationError, IriFragmentStr,
         IriFragmentString, IriReferenceStr, IriReferenceString,
@@ -68,22 +67,6 @@ impl IriStr {
         StrSpec::from_inner_unchecked(s)
     }
 
-    /// Returns the absolute IRI part and fragment part in raw string slices.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    fn split_fragment(&self) -> (&str, Option<&str>) {
-        match complete(parser::absolute_uri::<(), IriRule>)(&self.0) {
-            Ok(("", abs_iri)) => (abs_iri, None),
-            Ok((hash_frag, abs_iri)) => {
-                assert_eq!(hash_frag.as_bytes()[0], b'#');
-                (abs_iri, Some(&hash_frag[1..]))
-            }
-            Err(_) => unreachable!(
-                "Should never reach here: IRI should contain absolute IRI as its prefix"
-            ),
-        }
-    }
-
     /// Splits the IRI into absolute IRI part and fragment part.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
@@ -119,19 +102,7 @@ impl IriStr {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn to_absolute_and_fragment(&self) -> (&AbsoluteIriStr, Option<&IriFragmentStr>) {
-        let (abs_iri, fragment) = self.split_fragment();
-        let abs_iri = unsafe {
-            // This is safe because the `abs_uri` is parsable with
-            // `absolute_uri`.
-            // This is ensured by `split_fragment()`.
-            AbsoluteIriStr::new_unchecked(abs_iri)
-        };
-        let fragment = fragment.map(|fragment| unsafe {
-            // This is safe because the fragment part of the valid `IriString`
-            // is guaranteed to be a valid fragment.
-            IriFragmentStr::new_unchecked(fragment)
-        });
-        (abs_iri, fragment)
+        self.split_fragment()
     }
 
     /// Strips the fragment part if exists, and returns `&AbsoluteIriStr`.
@@ -152,7 +123,7 @@ impl IriStr {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn to_absolute(&self) -> &AbsoluteIriStr {
-        self.to_absolute_and_fragment().0
+        self.without_fragment()
     }
 
     /// Returns `&str`.
@@ -236,39 +207,7 @@ impl IriString {
     /// # Ok::<_, Box<std::error::Error>>(())
     /// ```
     pub fn into_absolute_and_fragment(self) -> (AbsoluteIriString, Option<IriFragmentString>) {
-        let (abs_iri, fragment) = self.split_fragment();
-        if fragment.is_none() {
-            let abs_iri = unsafe {
-                // This is safe because the `abs_uri` is parsable with
-                // `absolute_uri`.
-                // This is ensured by `split_fragment()`.
-                AbsoluteIriString::new_unchecked(self.into())
-            };
-            return (abs_iri, None);
-        }
-        let abs_len = abs_iri.len();
-
-        let mut s: String = self.into();
-        let fragment = s.split_off(abs_len + 1);
-        // Current `s` contains a trailing `#` character, which should be
-        // removed.
-        {
-            // Remove a trailing `#`.
-            let hash = s.pop();
-            assert_eq!(hash, Some('#'));
-        }
-        assert_eq!(s.len(), abs_len);
-        let abs_iri = unsafe {
-            // This is safe because `absolute_part_len()` guarantees that
-            // `&s[..abs_len]` is parsable with `absolute_uri`.
-            AbsoluteIriString::new_unchecked(s)
-        };
-        let fragment = unsafe {
-            // This is safe because the fragment part of the valid `IriString`
-            // is guaranteed to be a valid fragment.
-            IriFragmentString::new_unchecked(fragment)
-        };
-        (abs_iri, Some(fragment))
+        self.split_fragment()
     }
 
     /// Strips the fragment part if exists, and returns `AbsoluteIriString`.
@@ -289,15 +228,7 @@ impl IriString {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn into_absolute(self) -> AbsoluteIriString {
-        let (abs_iri, _fragment) = self.split_fragment();
-        let abs_len = abs_iri.len();
-        let mut s: String = self.into();
-        s.truncate(abs_len);
-        unsafe {
-            // This is safe because `absolute_part_len()` guarantees that
-            // `&s[..abs_len]` is parsable with `absolute_uri`.
-            AbsoluteIriString::new_unchecked(s)
-        }
+        self.without_fragment()
     }
 
     /// Sets the fragment part to the given string.
