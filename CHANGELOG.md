@@ -4,6 +4,8 @@
 
 * Minimum supported Rust version is now 1.41 or above.
 * Remove `Deref` impls for IRI string types.
+* Remove depraceted items.
+* Add methods for IRI string types.
 * Update some internal dependencies.
     + This has no effect for usual users, and this does not introduce any API changes.
     + By this change, the crate now successfully compiles with minimal dependency versions.
@@ -16,8 +18,17 @@
           `cargo +nightly update -Z minimal-versions && cargo test --all-features`.
 
 ### Changed (breaking)
+* Remove depraceted items.
+    + `IriReferenceStr::resolve()` is now removed.
+      Use `IriReferenceStr::resolve_against()` instead.
 * Remove `Deref` impls for IRI string types.
     + IRI string types should not implement `Deref`, because they are not smart pointer types.
+
+### Changed (non-breaking)
+* Add methods for IRI string types.
+    + `len()` and `is_empty()` methods are added to all IRI string slice types.
+    * `IriStr::fragment()` is added.
+    * `RelativeIriStr::resolve_against()` is added.
 
 ## [0.2.3]
 
