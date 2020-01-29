@@ -7,8 +7,11 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
+    manipulation::CustomIriSliceExt,
+    resolve::resolve_iri,
     types::{
-        iri::set_fragment, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+        iri::set_fragment, AbsoluteIriStr, IriCreationError, IriFragmentStr, IriReferenceStr,
+        IriReferenceString, IriString,
     },
     validate::iri::{relative_ref, Error},
 };
@@ -72,8 +75,74 @@ impl RelativeIriStr {
     }
 
     /// Returns `&str`.
+    #[inline]
     pub fn as_str(&self) -> &str {
         self.as_ref()
+    }
+
+    /// Returns the string length.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
+    /// Returns whether the string is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("?foo#bar")?;
+    /// let fragment = IriFragmentStr::new("bar")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("#foo")?;
+    /// let fragment = IriFragmentStr::new("foo")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::RelativeIriStr, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn fragment(&self) -> Option<&IriFragmentStr> {
+        CustomIriSliceExt::fragment(self)
+    }
+
+    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    ///
+    /// About reference resolution output example, see [RFC 3986 section
+    /// 5.4](https://tools.ietf.org/html/rfc3986#section-5.4).
+    ///
+    /// About resolver strictness, see [RFC 3986 section
+    /// 5.4.2](https://tools.ietf.org/html/rfc3986#section-5.4.2):
+    ///
+    /// > Some parsers allow the scheme name to be present in a relative
+    /// > reference if it is the same as the base URI scheme. This is considered
+    /// > to be a loophole in prior specifications of partial URI
+    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
+    /// avoided but is allowed for backward compatibility.
+    /// >
+    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+    ///
+    /// Usual users will want to use strict resolver.
+    pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
+        resolve_iri(self, base, true)
     }
 }
 

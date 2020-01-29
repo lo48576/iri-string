@@ -82,8 +82,21 @@ impl IriFragmentStr {
     }
 
     /// Returns `&str`.
+    #[inline]
     pub fn as_str(&self) -> &str {
         self.as_ref()
+    }
+
+    /// Returns the string length.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
+    /// Returns whether the string is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
     }
 }
 

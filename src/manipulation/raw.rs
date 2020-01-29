@@ -1,0 +1,39 @@
+//! Raw IRI strings manipulation.
+//!
+//! Note that functions in this module may operates on raw `&str` types.
+//! It is caller's responsilibility to guarantee that the given string satisfies the precondition.
+
+/// Splits the string into the prefix and the fragment part.
+///
+/// A leading `#` character is truncated if the fragment part exists.
+#[inline]
+pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
+    // It is completely OK to find the first `#` character from valid IRI to get fragment part,
+    // because the spec says that there are no `#` characters before the fragment part.
+    //
+    // > ```
+    // > scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+    // > ```
+    // >
+    // > --- [RFC 3986, section 3.1. Scheme](https://tools.ietf.org/html/rfc3986#section-3.1)
+    //
+    // > The authority component is preceded by a double slash ("//") and is terminated by the
+    // > next slash ("/"), question mark ("?"), or number sign ("#") character, or by the end
+    // > of the URI.
+    // >
+    // > --- [RFC 3986, section 3.2. Authority](https://tools.ietf.org/html/rfc3986#section-3.2)
+    //
+    // > The path is terminated by the first question mark ("?") or number sign ("#")
+    // > character, or by the end of the URI.
+    // >
+    // > --- [RFC 3986, section 3.3. Path](https://tools.ietf.org/html/rfc3986#section-3.3)
+    //
+    // > The query component is indicated by the first question mark ("?") character and
+    // > terminated by a number sign ("#") character or by the end of the URI.
+    // >
+    // > --- [RFC 3986, section 3.4. Query](https://tools.ietf.org/html/rfc3986#section-3.4)
+    match iri.find('#') {
+        Some(colon_pos) => (&iri[..colon_pos], Some(&iri[(colon_pos + 1)..])),
+        None => (iri, None),
+    }
+}

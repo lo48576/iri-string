@@ -7,6 +7,7 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
+    manipulation::CustomIriSliceExt,
     resolve::resolve_iri,
     types::{
         iri::set_fragment, AbsoluteIriStr, IriCreationError, IriFragmentStr, IriStr, IriString,
@@ -68,6 +69,24 @@ impl IriReferenceStr {
         StrSpec::from_inner_unchecked(s)
     }
 
+    /// Returns `&str`.
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+
+    /// Returns the string length.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
+    /// Returns whether the string is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+
     /// Returns the string as `&IriStr`, if it is valid as an IRI.
     ///
     /// If it is not an IRI, then `&RelativeIriStr` is returned as `Err(_)`.
@@ -118,12 +137,6 @@ impl IriReferenceStr {
         resolve_iri(self, base, true)
     }
 
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
-    #[deprecated(since = "0.2.2", note = "Renamed to `resolve_against()`")]
-    pub fn resolve(&self, base: &AbsoluteIriStr) -> IriString {
-        resolve_iri(self, base, true)
-    }
-
     /// Returns the fragment part if exists.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
@@ -168,17 +181,7 @@ impl IriReferenceStr {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn fragment(&self) -> Option<&IriFragmentStr> {
-        let s: &str = self.as_ref();
-        s.find('#').map(|colon_pos| unsafe {
-            // This is safe because the fragment part of the valid
-            // `IriReferenceStr` is guaranteed to be a valid fragment.
-            IriFragmentStr::new_unchecked(&s[(colon_pos + 1)..])
-        })
-    }
-
-    /// Returns `&str`.
-    pub fn as_str(&self) -> &str {
-        self.as_ref()
+        CustomIriSliceExt::fragment(self)
     }
 }
 
