@@ -1,6 +1,6 @@
 //! IRI reference.
 
-use std::convert::TryFrom;
+use std::{borrow::Cow, convert::TryFrom};
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -133,8 +133,11 @@ impl IriReferenceStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
-    pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
-        resolve_iri(self, base, true)
+    pub fn resolve_against(&self, base: &AbsoluteIriStr) -> Cow<'_, IriStr> {
+        match self.to_iri() {
+            Ok(iri) => Cow::Borrowed(iri),
+            Err(relative) => Cow::Owned(resolve_iri(relative, base, true)),
+        }
     }
 
     /// Returns the fragment part if exists.
