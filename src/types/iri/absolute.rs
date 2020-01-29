@@ -119,14 +119,6 @@ impl_basics! {
     },
 }
 
-impl std::ops::Deref for AbsoluteIriStr {
-    type Target = IriStr;
-
-    fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
-
 impl_conv_and_cmp! {
     source: {
         owned: AbsoluteIriString,

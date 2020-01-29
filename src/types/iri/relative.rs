@@ -129,14 +129,6 @@ impl_basics! {
     },
 }
 
-impl std::ops::Deref for RelativeIriStr {
-    type Target = IriReferenceStr;
-
-    fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
-
 impl_conv_and_cmp! {
     source: {
         owned: RelativeIriString,

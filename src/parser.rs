@@ -31,7 +31,7 @@ pub(crate) struct IriReferenceComponents<'a> {
 
 impl<'a> From<&'a IriReferenceStr> for IriReferenceComponents<'a> {
     fn from(s: &'a IriReferenceStr) -> Self {
-        all_consuming(decompose_uri_reference::<(), IriRule>)(s)
+        all_consuming(decompose_uri_reference::<(), IriRule>)(s.as_str())
             .map(|(_rest, components)| components)
             .expect("Should never fail: `IriReferenceStr` should be already validated")
     }
