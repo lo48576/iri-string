@@ -74,6 +74,18 @@ impl IriReferenceStr {
         self.as_ref()
     }
 
+    /// Returns the string length.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
+    /// Returns whether the string is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_str().is_empty()
+    }
+
     /// Returns the string as `&IriStr`, if it is valid as an IRI.
     ///
     /// If it is not an IRI, then `&RelativeIriStr` is returned as `Err(_)`.

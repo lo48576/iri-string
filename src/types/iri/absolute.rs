@@ -51,6 +51,8 @@ impl AbsoluteIriStr {
     /// assert!(AbsoluteIriStr::new("//foo/bar").is_err());
     /// // Fragment part is not allowed.
     /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz#qux").is_err());
+    /// // Empty string is not a valid absolute IRI.
+    /// assert!(AbsoluteIriStr::new("").is_err());
     /// ```
     pub fn new(s: &str) -> Result<&Self, Error> {
         TryFrom::try_from(s)
@@ -68,6 +70,23 @@ impl AbsoluteIriStr {
     #[inline]
     pub fn as_str(&self) -> &str {
         self.as_ref()
+    }
+
+    /// Returns the string length.
+    ///
+    /// Note that the length is always larger than 0, because all valid
+    /// absolute IRIs are not empty.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.as_str().len()
+    }
+
+    /// Returns whether the string is empty, i.e. always returns `false`.
+    ///
+    /// Note that all valid absolute IRIs are not empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        false
     }
 }
 
