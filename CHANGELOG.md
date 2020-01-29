@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+* Remove `Deref` impls for IRI string types.
 * Update some internal dependencies.
     + This has no effect for usual users, and this does not introduce any API changes.
     + By this change, the crate now successfully compiles with minimal dependency versions.
@@ -12,6 +13,10 @@
     + By this change, the crate now successfully compiles with minimal dependency versions.
         - To test that, you can run
           `cargo +nightly update -Z minimal-versions && cargo test --all-features`.
+
+### Changed (breaking)
+* Remove `Deref` impls for IRI string types.
+    + IRI string types should not implement `Deref`, because they are not smart pointer types.
 
 ## [0.2.3]
 
