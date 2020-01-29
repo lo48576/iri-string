@@ -75,6 +75,17 @@ pub(crate) trait CustomIriSliceExt: CustomSlice {
     /// A type for a fragment part.
     type FragmentSlice: ?Sized + CustomSlice;
 
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    fn fragment(&self) -> Option<&Self::FragmentSlice> {
+        raw::split_fragment(self.as_ref()).1.map(|fragment| unsafe {
+            // This should be safe because the fragment part of the valid
+            // IRI is guaranteed to be a valid fragment.
+            <Self::FragmentSlice>::new_unchecked(fragment)
+        })
+    }
+
     /// Splits the string into the prefix and the fragment part, and only returns the prefix part.
     ///
     /// Returns the same value as `.split_fragment().0`, but `.without_fragment()` is more

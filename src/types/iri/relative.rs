@@ -7,6 +7,7 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
+    manipulation::CustomIriSliceExt,
     types::{
         iri::set_fragment, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
     },
@@ -87,6 +88,38 @@ impl RelativeIriStr {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.as_str().is_empty()
+    }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("?foo#bar")?;
+    /// let fragment = IriFragmentStr::new("bar")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("#foo")?;
+    /// let fragment = IriFragmentStr::new("foo")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::RelativeIriStr, validate::iri::Error};
+    /// let iri = RelativeIriStr::new("")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn fragment(&self) -> Option<&IriFragmentStr> {
+        CustomIriSliceExt::fragment(self)
     }
 }
 

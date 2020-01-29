@@ -150,6 +150,38 @@ impl IriStr {
     pub fn to_absolute(&self) -> &AbsoluteIriStr {
         self.without_fragment()
     }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
+    /// let fragment = IriFragmentStr::new("corge")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
+    /// let fragment = IriFragmentStr::new("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn fragment(&self) -> Option<&IriFragmentStr> {
+        CustomIriSliceExt::fragment(self)
+    }
 }
 
 /// An owned string of an absolute IRI possibly with fragment part.

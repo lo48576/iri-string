@@ -7,6 +7,7 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
+    manipulation::CustomIriSliceExt,
     resolve::resolve_iri,
     types::{
         iri::set_fragment, AbsoluteIriStr, IriCreationError, IriFragmentStr, IriStr, IriString,
@@ -186,12 +187,7 @@ impl IriReferenceStr {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn fragment(&self) -> Option<&IriFragmentStr> {
-        let s: &str = self.as_ref();
-        s.find('#').map(|colon_pos| unsafe {
-            // This is safe because the fragment part of the valid
-            // `IriReferenceStr` is guaranteed to be a valid fragment.
-            IriFragmentStr::new_unchecked(&s[(colon_pos + 1)..])
-        })
+        CustomIriSliceExt::fragment(self)
     }
 }
 
