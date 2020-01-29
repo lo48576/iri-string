@@ -5,7 +5,7 @@
 * Minimum supported Rust version is now 1.41 or above.
 * Remove `Deref` impls for IRI string types.
 * Remove depraceted items.
-* Add methods for IRI string types.
+* Add and change methods for IRI string types.
 * Update some internal dependencies.
     + This has no effect for usual users, and this does not introduce any API changes.
     + By this change, the crate now successfully compiles with minimal dependency versions.
@@ -23,6 +23,8 @@
       Use `IriReferenceStr::resolve_against()` instead.
 * Remove `Deref` impls for IRI string types.
     + IRI string types should not implement `Deref`, because they are not smart pointer types.
+* Change methods types.
+    + `IriReferenceStr::resolve_against()` now returns `Cow<'_, IriStr>`, rather than `IriString`.
 
 ### Changed (non-breaking)
 * Add methods for IRI string types.
