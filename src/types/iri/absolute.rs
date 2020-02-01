@@ -105,8 +105,9 @@ impl AbsoluteIriStr {
 ///
 /// If you want to accept fragment part, use [`IriString`].
 ///
-///
 /// See documentation for [`IriString`].
+///
+/// Enabled by `alloc` or `std` feature.
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html

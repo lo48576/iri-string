@@ -15,6 +15,8 @@ use crate::{
 /// Resolves the IRI reference.
 ///
 /// See <https://tools.ietf.org/html/rfc3986#section-5.2>.
+///
+/// Enabled by `alloc` or `std` feature.
 pub fn resolve(
     reference: impl AsRef<IriReferenceStr>,
     base: impl AsRef<AbsoluteIriStr>,

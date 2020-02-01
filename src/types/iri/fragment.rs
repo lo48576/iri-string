@@ -111,6 +111,8 @@ impl IriFragmentStr {
 ///
 /// See documentation for [`IriFragmentStr`].
 ///
+/// Enabled by `alloc` or `std` feature.
+///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriFragmentStr`]: struct.IriFragmentStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

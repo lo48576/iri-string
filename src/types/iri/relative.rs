@@ -148,6 +148,8 @@ impl RelativeIriStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    ///
+    /// Enabled by `alloc` or `std` feature.
     #[cfg(feature = "alloc")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
@@ -161,6 +163,8 @@ impl RelativeIriStr {
 /// In other words, this is roughly `IriString` without scheme part.
 ///
 /// See documentation for [`RelativeIriStr`].
+///
+/// Enabled by `alloc` or `std` feature.
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`RelativeIriStr`]: struct.RelativeIriStr.html

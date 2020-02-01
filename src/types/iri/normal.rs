@@ -199,6 +199,8 @@ impl IriStr {
 ///
 /// See documentation for [`IriStr`].
 ///
+/// Enabled by `alloc` or `std` feature.
+///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

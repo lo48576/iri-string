@@ -144,6 +144,8 @@ impl IriReferenceStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    ///
+    /// Enabled by `alloc` or `std` feature.
     #[cfg(feature = "alloc")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> Cow<'_, IriStr> {
         match self.to_iri() {
@@ -207,6 +209,8 @@ impl IriReferenceStr {
 /// In other words, this is union of `IriString` and `RelativeIriString.
 ///
 /// See documentation for [`IriReferenceStr`].
+///
+/// Enabled by `alloc` or `std` feature.
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriReferenceStr`]: struct.IriReferenceStr.html
