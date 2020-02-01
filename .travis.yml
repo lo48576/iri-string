@@ -6,14 +6,18 @@ rust:
   - beta
 jobs:
   include:
-    - rust: 1.41.0
+    - name: "Minimal versions"
+      rust: 1.41.0
       env: TEST_MINIMAL_VERSIONS=1
-    - rust: 1.41.0
+    - name: "Lint"
+      rust: 1.41.0
       env: LINT=1
-    - rust: stable
+    - name: "stable, nostd"
+      rust: stable
       script:
         - cargo build --verbose --workspace --no-default-features && cargo test --verbose --workspace --no-default-features
-    - rust: stable
+    - name: "stable, alloc"
+      rust: stable
       script:
         - cargo build --verbose --workspace --no-default-features --features=alloc && cargo test --verbose --workspace --no-default-features --features=alloc
 before_install:
