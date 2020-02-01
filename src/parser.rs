@@ -9,6 +9,7 @@ pub(crate) use self::details::{
     absolute_uri, fragment, path, relative_ref, uri, uri_reference, IriRule, UriRule,
 };
 
+pub(crate) mod char;
 mod details;
 
 /// Components of an IRI reference.
