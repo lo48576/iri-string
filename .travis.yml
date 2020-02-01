@@ -6,23 +6,29 @@ rust:
   - beta
 jobs:
   include:
-    - rust: 1.41.0
+    - name: "Minimal versions"
+      rust: 1.41.0
       env: TEST_MINIMAL_VERSIONS=1
-    - rust: 1.41.0
-      env: LINT=1
-    - rust: stable
-      script:
-        - cargo build --verbose --workspace --no-default-features && cargo test --verbose --workspace --no-default-features
-    - rust: stable
-      script:
-        - cargo build --verbose --workspace --no-default-features --features=alloc && cargo test --verbose --workspace --no-default-features --features=alloc
-before_install:
-  - |
-    if [ "${LINT:-0}" -ne 0 ] ; then
+    - name: "Lint"
+      rust: 1.41.0
+      before_install: |
         rustup component add clippy rustfmt
         cargo clippy --version
         cargo fmt --version
-    fi
+      script:
+        # Fail if the code is correctly formatted.
+        - cargo fmt --all -- --check
+        # Fail if the code has warnings.
+        - cargo clippy --all-features -- --deny warnings
+    - name: "stable, nostd"
+      rust: stable
+      script:
+        - cargo build --verbose --workspace --no-default-features && cargo test --verbose --workspace --no-default-features
+    - name: "stable, alloc"
+      rust: stable
+      script:
+        - cargo build --verbose --workspace --no-default-features --features=alloc && cargo test --verbose --workspace --no-default-features --features=alloc
+before_install:
   - |
     if [ "${TEST_MINIMAL_VERSIONS:-0}" -ne 0 ] ; then
         rustup install nightly
@@ -34,10 +40,6 @@ before_script:
         cargo +nightly update -Z minimal-versions
     fi
 script:
-  - if [ "${LINT:-0}" -eq 0 ] ; then cargo build --verbose --workspace --all-features && cargo test --verbose --workspace --all-features ; fi
-  # Fail if the code is correctly formatted.
-  - if [ "${LINT:-0}" -ne 0 ] ; then cargo fmt --all -- --check ; fi
-  # Fail if the code has warnings.
-  - if [ "${LINT:-0}" -ne 0 ] ; then cargo clippy --all-features -- --deny warnings ; fi
+  - cargo build --verbose --workspace --all-features && cargo test --verbose --workspace --all-features
 notifications:
   email: false
