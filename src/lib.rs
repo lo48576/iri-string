@@ -8,6 +8,21 @@
 //!
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
 //!
+//! # `std` and `alloc` support
+//!
+//! This crate supports `no_std` usage.
+//!
+//! * `alloc` feature:
+//!     + Std library or `alloc` crate is required.
+//!     + This feature enables types and functions which require memory allocation,
+//!       e.g. `types::IriString` and `types::RelativeIriStr::resolve_against()`.
+//! * `std` feature (**enabled by default**):
+//!     + Std library is required.
+//!     + This automatically enables `alloc` feature.
+//!     + The feature let the crate utilize std-specific stuff, such as `std::error::Error` trait.
+//! * Without neither of them:
+//!     + The crate can be used in `no_std` environment.
+//!
 //! # Rationale
 //!
 //! ## `foo:`, `foo:/`, `foo://`, `foo:///`, `foo:////`, ... are valid IRIs
@@ -62,9 +77,14 @@
 //! as satisfying the condition "authority is **present**".
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 pub(crate) mod manipulation;
 pub(crate) mod parser;
+#[cfg(feature = "alloc")]
 pub mod resolve;
 pub mod types;
 pub mod validate;

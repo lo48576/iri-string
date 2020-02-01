@@ -1,10 +1,18 @@
 //! Error.
 
-use std::{error, fmt};
+use core::fmt;
+
+#[cfg(feature = "std")]
+use std::error;
 
 use crate::validate::iri::Error;
 
 /// Error on conversion into an IRI type.
+///
+/// Enabled by `alloc` or `std` feature.
+// This type itself does not require `alloc` or `std, but the type is used only when `alloc`
+// feature is enabled. To avoid exporting unused type, the type (and the `types::iri::error`
+// module) is available only when `alloc` feature is enabled.
 #[derive(Debug, Clone)]
 pub struct IriCreationError<T> {
     /// Soruce data.
@@ -36,4 +44,5 @@ impl<T> fmt::Display for IriCreationError<T> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: fmt::Debug> error::Error for IriCreationError<T> {}

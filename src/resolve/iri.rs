@@ -2,7 +2,10 @@
 //!
 //! See [RFC 3986 section 5](https://tools.ietf.org/html/rfc3986#section-5).
 
-use std::convert::TryFrom;
+#[cfg(feature = "alloc")]
+use alloc::{format, string::String};
+
+use core::convert::TryFrom;
 
 use crate::{
     parser::IriReferenceComponents,
@@ -12,6 +15,8 @@ use crate::{
 /// Resolves the IRI reference.
 ///
 /// See <https://tools.ietf.org/html/rfc3986#section-5.2>.
+///
+/// Enabled by `alloc` or `std` feature.
 pub fn resolve(
     reference: impl AsRef<IriReferenceStr>,
     base: impl AsRef<AbsoluteIriStr>,

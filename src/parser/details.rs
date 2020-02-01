@@ -16,7 +16,7 @@ use nom::{
 /// `one_of` with predicate (not characters list).
 fn one_is<I, F, E: ParseError<I>>(pred: F) -> impl Fn(I) -> IResult<I, char, E>
 where
-    I: nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter,
+    I: nom::Slice<core::ops::RangeFrom<usize>> + nom::InputIter,
     <I as nom::InputIter>::Item: nom::AsChar + Copy,
     F: Fn(<I as nom::InputIter>::Item) -> bool,
 {
@@ -665,6 +665,9 @@ fn hexdig<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, char, E> {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
+    use alloc::format;
+
     type Error<'a> = nom::error::VerboseError<&'a str>;
 
     macro_rules! assert_invalid {
@@ -877,6 +880,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn test_ipv6address() {
         assert_validate!(ipv6address::<Error<'_>>, "a:bB:cCc:dDdD:e:F:a:B");
         assert_validate!(ipv6address::<Error<'_>>, "1:1:1:1:1:1:1:1");

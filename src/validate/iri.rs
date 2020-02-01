@@ -4,7 +4,10 @@
 //!
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
 
-use std::{error, fmt};
+use core::fmt;
+
+#[cfg(feature = "std")]
+use std::error;
 
 use nom::combinator::all_consuming;
 
@@ -31,6 +34,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {}
 
 /// Converts the given result into a validation result.

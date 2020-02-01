@@ -1,18 +1,25 @@
 //! Relative IRI.
 
-use std::convert::TryFrom;
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
+use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use validated_slice::{OwnedSliceSpec, SliceSpec};
+#[cfg(feature = "alloc")]
+use validated_slice::OwnedSliceSpec;
+use validated_slice::SliceSpec;
 
+#[cfg(feature = "alloc")]
 use crate::{
-    manipulation::{raw::set_fragment, CustomIriSliceExt},
+    manipulation::raw::set_fragment,
     resolve::resolve_iri,
-    types::{
-        AbsoluteIriStr, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
-        IriString,
-    },
+    types::{AbsoluteIriStr, IriCreationError, IriReferenceString, IriString},
+};
+use crate::{
+    manipulation::CustomIriSliceExt,
+    types::{IriFragmentStr, IriReferenceStr},
     validate::iri::{relative_ref, Error},
 };
 
@@ -141,6 +148,9 @@ impl RelativeIriStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    #[cfg(feature = "alloc")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
     }
@@ -154,13 +164,17 @@ impl RelativeIriStr {
 ///
 /// See documentation for [`RelativeIriStr`].
 ///
+/// Enabled by `alloc` or `std` feature.
+///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`RelativeIriStr`]: struct.RelativeIriStr.html
+#[cfg(feature = "alloc")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct RelativeIriString(String);
 
+#[cfg(feature = "alloc")]
 impl RelativeIriString {
     /// Creates a new `RelativeIriString` maybe without validation.
     ///

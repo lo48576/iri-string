@@ -10,6 +10,12 @@ jobs:
       env: TEST_MINIMAL_VERSIONS=1
     - rust: 1.41.0
       env: LINT=1
+    - rust: stable
+      script:
+        - cargo build --verbose --workspace --no-default-features && cargo test --verbose --workspace --no-default-features
+    - rust: stable
+      script:
+        - cargo build --verbose --workspace --no-default-features --features=alloc && cargo test --verbose --workspace --no-default-features --features=alloc
 before_install:
   - |
     if [ "${LINT:-0}" -ne 0 ] ; then
