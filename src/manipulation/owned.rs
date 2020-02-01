@@ -74,9 +74,8 @@ pub(crate) trait CustomIriOwnedExt: CustomOwned {
     /// Returns the same value as `.split_fragment().0`, but `.without_fragment()` is more
     /// efficient.
     fn without_fragment(self) -> Self::WithoutFragmentOwned {
-        let prefix_len = raw::split_fragment(self.as_ref()).0.len();
         let mut s: String = self.into();
-        s.truncate(prefix_len);
+        raw::remove_fragment(&mut s);
         unsafe {
             // This should be safe because `self` with the fragment part should be valid as
             // `WithoutFragmentOwned`.

@@ -52,7 +52,7 @@ pub(crate) fn set_fragment(s: &mut String, fragment: Option<&str>) {
 
 /// Removes the prefix.
 #[inline]
-fn remove_fragment(s: &mut String) {
+pub(crate) fn remove_fragment(s: &mut String) {
     if let Some(colon_pos) = s.find('#') {
         s.truncate(colon_pos);
     }
