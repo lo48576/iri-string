@@ -13,12 +13,12 @@ macro_rules! impl_cmp {
             }
         }
         impl PartialOrd<$ty_rhs> for $ty_lhs {
-            fn partial_cmp(&self, o: &$ty_rhs) -> Option<std::cmp::Ordering> {
+            fn partial_cmp(&self, o: &$ty_rhs) -> Option<core::cmp::Ordering> {
                 <$ty_common as PartialOrd<$ty_common>>::partial_cmp(self.as_ref(), o.as_ref())
             }
         }
         impl PartialOrd<$ty_lhs> for $ty_rhs {
-            fn partial_cmp(&self, o: &$ty_lhs) -> Option<std::cmp::Ordering> {
+            fn partial_cmp(&self, o: &$ty_lhs) -> Option<core::cmp::Ordering> {
                 <$ty_common as PartialOrd<$ty_common>>::partial_cmp(self.as_ref(), o.as_ref())
             }
         }
@@ -44,6 +44,7 @@ macro_rules! impl_conv_and_cmp {
         ],
     ) => {
         $(
+            #[cfg(feature = "std")]
             impl From<$owned> for $target_owned {
                 fn from(s: $owned) -> $target_owned {
                     unsafe {
@@ -60,7 +61,8 @@ macro_rules! impl_conv_and_cmp {
                 }
             }
 
-            impl std::convert::TryFrom<$target_owned> for $owned {
+            #[cfg(feature = "std")]
+            impl core::convert::TryFrom<$target_owned> for $owned {
                 type Error = $ty_creation_error<String>;
 
                 fn try_from(v: $target_owned) -> Result<Self, Self::Error> {
@@ -68,7 +70,7 @@ macro_rules! impl_conv_and_cmp {
                 }
             }
 
-            impl<'a> std::convert::TryFrom<&'a $target_slice> for &'a $slice {
+            impl<'a> core::convert::TryFrom<&'a $target_slice> for &'a $slice {
                 type Error = $ty_validation_error;
 
                 fn try_from(v: &'a $target_slice) -> Result<Self, Self::Error> {
@@ -76,6 +78,7 @@ macro_rules! impl_conv_and_cmp {
                 }
             }
 
+            #[cfg(feature = "std")]
             impl AsRef<$target_slice> for $owned {
                 fn as_ref(&self) -> &$target_slice {
                     AsRef::<$slice>::as_ref(self).as_ref()
@@ -92,16 +95,23 @@ macro_rules! impl_conv_and_cmp {
                 }
             }
 
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, $owned, $target_slice);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, $owned, &$target_slice);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, $owned, std::borrow::Cow<'_, $target_slice>);
 
             impl_cmp!($target_slice, $slice, $target_slice);
             impl_cmp!($target_slice, $slice, &$target_slice);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, $slice, $target_owned);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, $slice, std::borrow::Cow<'_, $target_slice>);
             impl_cmp!($target_slice, &$slice, $target_slice);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, &$slice, $target_owned);
+            #[cfg(feature = "std")]
             impl_cmp!($target_slice, &$slice, std::borrow::Cow<'_, $target_slice>);
         )*
     };
@@ -156,6 +166,10 @@ macro_rules! impl_basics {
         }
 
         validated_slice::impl_std_traits_for_slice! {
+            Std {
+                core: core,
+                alloc: __wont_be_used,
+            };
             Spec {
                 spec: $slice_spec,
                 custom: $slice,
@@ -164,15 +178,33 @@ macro_rules! impl_basics {
             };
             { AsRef<str> };
             { AsRef<{Custom}> };
-            { From<&{Custom}> for Arc<{Custom}> };
-            { From<&{Custom}> for Box<{Custom}> };
-            { From<&{Custom}> for Rc<{Custom}> };
             { TryFrom<&{Inner}> for &{Custom} };
             { Default for &{Custom} };
             { Display };
         }
 
+        #[cfg(feature = "std")]
+        validated_slice::impl_std_traits_for_slice! {
+            Std {
+                core: core,
+                alloc: std,
+            };
+            Spec {
+                spec: $slice_spec,
+                custom: $slice,
+                inner: str,
+                error: $slice_error,
+            };
+            { From<&{Custom}> for Arc<{Custom}> };
+            { From<&{Custom}> for Box<{Custom}> };
+            { From<&{Custom}> for Rc<{Custom}> };
+        }
+
         validated_slice::impl_cmp_for_slice! {
+            Std {
+                core: core,
+                alloc: __wont_be_used,
+            };
             Spec {
                 spec: $slice_spec,
                 custom: $slice,
@@ -181,18 +213,36 @@ macro_rules! impl_basics {
             };
             Cmp { PartialEq, PartialOrd };
             { ({Custom}), (&{Custom}), rev };
-            { ({Custom}), (Cow<{Custom}>), rev };
 
             { ({Custom}), ({Inner}), rev };
             { ({Custom}), (&{Inner}), rev };
             { (&{Custom}), ({Inner}), rev };
+        }
+
+        #[cfg(feature = "std")]
+        validated_slice::impl_cmp_for_slice! {
+            Std {
+                core: core,
+                alloc: std,
+            };
+            Spec {
+                spec: $slice_spec,
+                custom: $slice,
+                inner: str,
+                base: Inner,
+            };
+            Cmp { PartialEq, PartialOrd };
+            { ({Custom}), (Cow<{Custom}>), rev };
+
             { ({Custom}), (Cow<{Inner}>), rev };
             { (&{Custom}), (Cow<{Inner}>), rev };
         }
 
         /// Spec of the owned custom slice.
+        #[cfg(feature = "std")]
         enum $owned_spec {}
 
+        #[cfg(feature = "std")]
         impl validated_slice::OwnedSliceSpec for $owned_spec {
             type Custom = $owned;
             type Inner = String;
@@ -233,6 +283,7 @@ macro_rules! impl_basics {
             }
         }
 
+        #[cfg(feature = "std")]
         validated_slice::impl_std_traits_for_owned_slice! {
             Spec {
                 spec: $owned_spec,
@@ -255,6 +306,7 @@ macro_rules! impl_basics {
             { FromStr };
         }
 
+        #[cfg(feature = "std")]
         validated_slice::impl_cmp_for_owned_slice! {
             Spec {
                 spec: $owned_spec,
@@ -289,7 +341,7 @@ macro_rules! impl_serde {
         mod __serde {
             use super::{$owned, $slice};
 
-            use std::{convert::TryFrom, fmt};
+            use core::{convert::TryFrom, fmt};
 
             use serde::{
                 de::{self, Visitor},

@@ -1,13 +1,17 @@
 //! Absolute IRI (without fragment part).
 
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use validated_slice::{OwnedSliceSpec, SliceSpec};
+#[cfg(feature = "std")]
+use validated_slice::OwnedSliceSpec;
+use validated_slice::SliceSpec;
 
+#[cfg(feature = "std")]
+use crate::types::{IriCreationError, IriReferenceString, IriString};
 use crate::{
-    types::{IriCreationError, IriReferenceStr, IriReferenceString, IriStr, IriString},
+    types::{IriReferenceStr, IriStr},
     validate::iri::{absolute_iri, Error},
 };
 
@@ -104,11 +108,13 @@ impl AbsoluteIriStr {
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html
 /// [`IriString`]: struct.IriString.html
+#[cfg(feature = "std")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct AbsoluteIriString(String);
 
+#[cfg(feature = "std")]
 impl AbsoluteIriString {
     /// Creates a new `AbsoluteIriString` maybe without validation.
     ///

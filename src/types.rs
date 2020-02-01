@@ -45,9 +45,11 @@
 //!
 //! Currently not implemented :-P.
 
+pub use self::iri::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr, IriStr, RelativeIriStr};
+#[cfg(feature = "std")]
 pub use self::iri::{
-    AbsoluteIriStr, AbsoluteIriString, IriCreationError, IriFragmentStr, IriFragmentString,
-    IriReferenceStr, IriReferenceString, IriStr, IriString, RelativeIriStr, RelativeIriString,
+    AbsoluteIriString, IriCreationError, IriFragmentString, IriReferenceString, IriString,
+    RelativeIriString,
 };
 
 #[macro_use]

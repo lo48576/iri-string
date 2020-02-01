@@ -1,19 +1,27 @@
 //! IRI reference.
 
-use std::{borrow::Cow, convert::TryFrom};
+use core::convert::TryFrom;
+
+#[cfg(feature = "std")]
+use std::borrow::Cow;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use validated_slice::{OwnedSliceSpec, SliceSpec};
+#[cfg(feature = "std")]
+use validated_slice::OwnedSliceSpec;
+use validated_slice::SliceSpec;
 
+#[cfg(feature = "std")]
 use crate::{
-    manipulation::{raw::set_fragment, CustomIriSliceExt},
+    manipulation::raw::set_fragment,
     resolve::resolve_iri,
-    types::{
-        AbsoluteIriStr, IriCreationError, IriFragmentStr, IriStr, IriString, RelativeIriStr,
-        RelativeIriString,
-    },
-    validate::iri::{iri as validate_iri, iri_reference, Error},
+    types::{AbsoluteIriStr, IriCreationError, IriString, RelativeIriString},
+    validate::iri::iri as validate_iri,
+};
+use crate::{
+    manipulation::CustomIriSliceExt,
+    types::{IriFragmentStr, IriStr, RelativeIriStr},
+    validate::iri::{iri_reference, Error},
 };
 
 /// A borrowed slice of an IRI reference.
@@ -133,6 +141,7 @@ impl IriReferenceStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    #[cfg(feature = "std")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> Cow<'_, IriStr> {
         match self.to_iri() {
             Ok(iri) => Cow::Borrowed(iri),
@@ -198,11 +207,13 @@ impl IriReferenceStr {
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriReferenceStr`]: struct.IriReferenceStr.html
+#[cfg(feature = "std")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriReferenceString(String);
 
+#[cfg(feature = "std")]
 impl IriReferenceString {
     /// Creates a new `IriReferenceString` maybe without validation.
     ///

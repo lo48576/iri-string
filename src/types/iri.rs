@@ -35,15 +35,18 @@
 //!     + Slice, owned, `Cow`, reference, etc...
 
 pub use self::{
-    absolute::{AbsoluteIriStr, AbsoluteIriString},
-    error::IriCreationError,
-    fragment::{IriFragmentStr, IriFragmentString},
-    normal::{IriStr, IriString},
-    reference::{IriReferenceStr, IriReferenceString},
-    relative::{RelativeIriStr, RelativeIriString},
+    absolute::AbsoluteIriStr, fragment::IriFragmentStr, normal::IriStr, reference::IriReferenceStr,
+    relative::RelativeIriStr,
+};
+
+#[cfg(feature = "std")]
+pub use self::{
+    absolute::AbsoluteIriString, error::IriCreationError, fragment::IriFragmentString,
+    normal::IriString, reference::IriReferenceString, relative::RelativeIriString,
 };
 
 mod absolute;
+#[cfg(feature = "std")]
 mod error;
 mod fragment;
 mod normal;

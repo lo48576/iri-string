@@ -1,18 +1,22 @@
 //! Relative IRI.
 
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use validated_slice::{OwnedSliceSpec, SliceSpec};
+#[cfg(feature = "std")]
+use validated_slice::OwnedSliceSpec;
+use validated_slice::SliceSpec;
 
+#[cfg(feature = "std")]
 use crate::{
-    manipulation::{raw::set_fragment, CustomIriSliceExt},
+    manipulation::raw::set_fragment,
     resolve::resolve_iri,
-    types::{
-        AbsoluteIriStr, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
-        IriString,
-    },
+    types::{AbsoluteIriStr, IriCreationError, IriReferenceString, IriString},
+};
+use crate::{
+    manipulation::CustomIriSliceExt,
+    types::{IriFragmentStr, IriReferenceStr},
     validate::iri::{relative_ref, Error},
 };
 
@@ -141,6 +145,7 @@ impl RelativeIriStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
+    #[cfg(feature = "std")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
     }
@@ -156,11 +161,13 @@ impl RelativeIriStr {
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`RelativeIriStr`]: struct.RelativeIriStr.html
+#[cfg(feature = "std")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct RelativeIriString(String);
 
+#[cfg(feature = "std")]
 impl RelativeIriString {
     /// Creates a new `RelativeIriString` maybe without validation.
     ///

@@ -1,18 +1,22 @@
 //! Usual absolute IRI (fragment part being allowed).
 
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use validated_slice::{OwnedSliceSpec, SliceSpec};
+#[cfg(feature = "std")]
+use validated_slice::OwnedSliceSpec;
+use validated_slice::SliceSpec;
 
 use crate::{
-    manipulation::{raw::set_fragment, CustomIriOwnedExt, CustomIriSliceExt},
-    types::{
-        AbsoluteIriStr, AbsoluteIriString, IriCreationError, IriFragmentStr, IriFragmentString,
-        IriReferenceStr, IriReferenceString,
-    },
+    manipulation::CustomIriSliceExt,
+    types::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr},
     validate::iri::{iri, Error},
+};
+#[cfg(feature = "std")]
+use crate::{
+    manipulation::{raw::set_fragment, CustomIriOwnedExt},
+    types::{AbsoluteIriString, IriCreationError, IriFragmentString, IriReferenceString},
 };
 
 /// A borrowed string of an absolute IRI possibly with fragment part.
@@ -195,10 +199,12 @@ impl IriStr {
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg(feature = "std")]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriString(String);
 
+#[cfg(feature = "std")]
 impl IriString {
     /// Creates a new `IriString` without validation.
     ///
