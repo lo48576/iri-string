@@ -11,7 +11,6 @@ use nom::{
     IResult,
 };
 
-pub(crate) use crate::spec::{IriSpec as IriRule, UriSpec as UriRule};
 use crate::{
     parser::{char::is_sub_delim, IriReferenceComponents},
     spec::{Spec, SpecInternal, UriSpec},
@@ -583,6 +582,8 @@ mod tests {
     #[cfg(feature = "alloc")]
     use alloc::format;
 
+    use crate::spec::IriSpec;
+
     type Error<'a> = nom::error::VerboseError<&'a str>;
 
     macro_rules! assert_invalid {
@@ -764,34 +765,34 @@ mod tests {
 
     #[test]
     fn test_uri() {
-        assert_validate_list!(uri::<Error<'_>, UriRule>, OK_URI_LIST);
+        assert_validate_list!(uri::<Error<'_>, UriSpec>, OK_URI_LIST);
     }
 
     #[test]
     fn test_iri() {
-        assert_validate_list!(uri::<Error<'_>, IriRule>, OK_URI_LIST, OK_IRI_LIST);
+        assert_validate_list!(uri::<Error<'_>, IriSpec>, OK_URI_LIST, OK_IRI_LIST);
     }
 
     #[test]
     fn test_invalid_chars() {
         // Not allowed characters `<` and `>`.
-        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/<foo>");
-        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/<foo>");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "foo://bar/<foo>");
+        assert_invalid!(uri::<Error<'_>, IriSpec>, "foo://bar/<foo>");
         // U+FFFD Replacement character: Invalid as URI, also invalid as IRI.
-        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{FFFD}");
-        assert_invalid!(uri::<Error<'_>, IriRule>, "foo://bar/\u{FFFD}");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "foo://bar/\u{FFFD}");
+        assert_invalid!(uri::<Error<'_>, IriSpec>, "foo://bar/\u{FFFD}");
         // U+3044: Hiragana letter I: Invalid as URI, valid as IRI.
-        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/\u{3044}");
-        assert_validate!(uri::<Error<'_>, IriRule>, "foo://bar/\u{3044}");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "foo://bar/\u{3044}");
+        assert_validate!(uri::<Error<'_>, IriSpec>, "foo://bar/\u{3044}");
     }
 
     #[test]
     fn test_invalid_pct_encoded() {
         // Invalid percent encoding.
-        assert_invalid!(uri::<Error<'_>, UriRule>, "%zz");
-        assert_invalid!(uri::<Error<'_>, UriRule>, "%0");
-        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0");
-        assert_invalid!(uri::<Error<'_>, UriRule>, "foo://bar/%0/");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "%zz");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "%0");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "foo://bar/%0");
+        assert_invalid!(uri::<Error<'_>, UriSpec>, "foo://bar/%0/");
     }
 
     #[test]
@@ -829,32 +830,32 @@ mod tests {
     #[test]
     fn test_hier_part_only_slashes() {
         assert_validate_list!(
-            hier_part::<Error<'_>, IriRule>,
+            hier_part::<Error<'_>, IriSpec>,
             &["", "/", "//", "///", "////", "/////"]
         );
     }
 
     #[test]
     fn test_decompose_hier_part_only_slashes() {
-        assert_complete!(decompose_hier_part::<Error<'_>, IriRule>, "", (None, ""));
-        assert_complete!(decompose_hier_part::<Error<'_>, IriRule>, "/", (None, "/"));
+        assert_complete!(decompose_hier_part::<Error<'_>, IriSpec>, "", (None, ""));
+        assert_complete!(decompose_hier_part::<Error<'_>, IriSpec>, "/", (None, "/"));
         assert_complete!(
-            decompose_hier_part::<Error<'_>, IriRule>,
+            decompose_hier_part::<Error<'_>, IriSpec>,
             "//",
             (Some(""), "")
         );
         assert_complete!(
-            decompose_hier_part::<Error<'_>, IriRule>,
+            decompose_hier_part::<Error<'_>, IriSpec>,
             "///",
             (Some(""), "/")
         );
         assert_complete!(
-            decompose_hier_part::<Error<'_>, IriRule>,
+            decompose_hier_part::<Error<'_>, IriSpec>,
             "////",
             (Some(""), "//")
         );
         assert_complete!(
-            decompose_hier_part::<Error<'_>, IriRule>,
+            decompose_hier_part::<Error<'_>, IriSpec>,
             "/////",
             (Some(""), "///")
         );
@@ -863,32 +864,32 @@ mod tests {
     #[test]
     fn test_decompose_relative_part_only_slashes() {
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "",
             (None, "")
         );
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "/",
             (None, "/")
         );
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "//",
             (Some(""), "")
         );
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "///",
             (Some(""), "/")
         );
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "////",
             (Some(""), "//")
         );
         assert_complete!(
-            decompose_relative_part::<Error<'_>, IriRule>,
+            decompose_relative_part::<Error<'_>, IriSpec>,
             "/////",
             (Some(""), "///")
         );

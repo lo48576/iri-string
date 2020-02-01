@@ -2,12 +2,10 @@
 
 use nom::combinator::all_consuming;
 
-use crate::types::IriReferenceStr;
+use crate::{spec::IriSpec, types::IriReferenceStr};
 
 use self::details::decompose_uri_reference;
-pub(crate) use self::details::{
-    absolute_uri, fragment, path, relative_ref, uri, uri_reference, IriRule, UriRule,
-};
+pub(crate) use self::details::{absolute_uri, fragment, path, relative_ref, uri, uri_reference};
 
 pub(crate) mod char;
 mod details;
@@ -33,7 +31,7 @@ pub(crate) struct IriReferenceComponents<'a> {
 
 impl<'a> From<&'a IriReferenceStr> for IriReferenceComponents<'a> {
     fn from(s: &'a IriReferenceStr) -> Self {
-        all_consuming(decompose_uri_reference::<(), IriRule>)(s.as_str())
+        all_consuming(decompose_uri_reference::<(), IriSpec>)(s.as_str())
             .map(|(_rest, components)| components)
             .expect("Should never fail: `IriReferenceStr` should be already validated")
     }
