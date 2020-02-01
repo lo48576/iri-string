@@ -1,10 +1,5 @@
 //! Parser implementatitons.
 
-use crate::parser::{
-    char::{is_sub_delim, is_ucschar},
-    IriReferenceComponents,
-};
-
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
@@ -14,6 +9,12 @@ use nom::{
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
+};
+
+pub(crate) use crate::spec::{IriSpec as IriRule, UriSpec as UriRule};
+use crate::{
+    parser::{char::is_sub_delim, IriReferenceComponents},
+    spec::{Spec, SpecInternal, UriSpec},
 };
 
 /// `one_of` with predicate (not characters list).
@@ -47,50 +48,8 @@ where
     fold_many_m_n(m, n, f, 0, |count, _| count + 1)
 }
 
-/// Parser rules different between URI and IRI.
-pub(crate) trait Rule {
-    /// Checks if the given character matches `unreserved` or `iunreserved`
-    /// rule.
-    fn is_unreserved(c: char) -> bool;
-    /// Checks if the given character matches `iprivate` rule.
-    fn is_private(c: char) -> bool;
-}
-
-/// URI rules.
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub(crate) enum UriRule {}
-
-impl Rule for UriRule {
-    fn is_unreserved(c: char) -> bool {
-        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
-    }
-
-    fn is_private(_: char) -> bool {
-        false
-    }
-}
-
-/// IRI rules.
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub(crate) enum IriRule {}
-
-impl Rule for IriRule {
-    fn is_unreserved(c: char) -> bool {
-        UriRule::is_unreserved(c) || is_ucschar(c)
-    }
-
-    fn is_private(c: char) -> bool {
-        match u32::from(c) {
-            0xE000..=0xF8FF => true,
-            0xF_0000..=0xF_FFFD => true,
-            0x10_0000..=0x10_FFFD => true,
-            _ => false,
-        }
-    }
-}
-
 /// Parses RFC 3986 / 3987 IRI.
-pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "uri",
         tuple((
@@ -105,7 +64,7 @@ pub(crate) fn uri<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'
 }
 
 /// Parses RFC 3986 / 3987 IRI and returns components.
-fn decompose_uri<'a, E: ParseError<&'a str>, R: Rule>(
+fn decompose_uri<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
     context(
@@ -130,7 +89,7 @@ fn decompose_uri<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses `hier-part` and `ihier-part` rules.
-fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn hier_part<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "hier-part",
         alt((
@@ -147,7 +106,7 @@ fn hier_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
 }
 
 /// Parses `hier-part` and `ihier-part` rules and returns authority and path.
-fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
+fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
     context(
@@ -165,14 +124,14 @@ fn decompose_hier_part<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses RFC 3986 / 3987 IRI reference.
-pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     context("uri_reference", alt((uri::<E, R>, relative_ref::<E, R>)))(i)
 }
 
 /// Parses RFC 3986 / 3987 IRI reference and returns components.
-pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
     context(
@@ -182,7 +141,7 @@ pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses RFC 3986 / 3987 absolute IRI.
-pub(crate) fn absolute_uri<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn absolute_uri<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     context(
@@ -198,7 +157,7 @@ pub(crate) fn absolute_uri<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses RFC 3986 / 3987 relative reference.
-pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     context(
@@ -213,7 +172,7 @@ pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses RFC 3986 / 3987 relative reference and returns components.
-fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
+fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
     context(
@@ -236,7 +195,7 @@ fn decompose_relative_ref<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses `relative_part` rule.
-fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn relative_part<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "relative-part",
         alt((
@@ -249,7 +208,7 @@ fn relative_part<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 }
 
 /// Parses `relative_part` rule and returns authority and path.
-fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Rule>(
+fn decompose_relative_part<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, (Option<&'a str>, &'a str), E> {
     context(
@@ -279,7 +238,7 @@ fn scheme<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E
 }
 
 /// Parses `authority` and `iauthority` rules.
-fn authority<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn authority<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "authority",
         tuple((
@@ -292,12 +251,12 @@ fn authority<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str
 }
 
 /// Parses `userinfo` and `iuserinfo` rules.
-fn userinfo<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn userinfo<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "userinfo",
         many0_count(alt((
             map(
-                take_while1(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == ':'),
+                take_while1(|c: char| R::is_char_unreserved(c) || is_sub_delim(c) || c == ':'),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
@@ -307,7 +266,7 @@ fn userinfo<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str,
 }
 
 /// Parses `host` and `ihost` rules.
-fn host<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn host<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context("host", alt((ip_literal, ipv4address, reg_name::<E, R>)))(i)
 }
 
@@ -336,7 +295,7 @@ fn ipvfuture<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
             alt((char_('v'), char_('V'))),
             take_while1(|c: char| c.is_ascii_hexdigit()),
             char_('.'),
-            take_while1(|c: char| UriRule::is_unreserved(c) || is_sub_delim(c) || c == ':'),
+            take_while1(|c: char| UriSpec::is_char_unreserved(c) || is_sub_delim(c) || c == ':'),
         )),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
@@ -445,12 +404,12 @@ fn dec_octet<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str
 }
 
 /// Parses `reg-name` and `ireg-name` rules.
-fn reg_name<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn reg_name<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "reg-name",
         many0_count(alt((
             map(
-                take_while1(|c: char| R::is_unreserved(c) || is_sub_delim(c)),
+                take_while1(|c: char| R::is_char_unreserved(c) || is_sub_delim(c)),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
@@ -460,7 +419,7 @@ fn reg_name<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str,
 }
 
 /// Parses `path` and `ipath` rules.
-pub(crate) fn path<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn path<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     // `path-abempty` rule here is ambiguous and can be removed.
@@ -476,7 +435,7 @@ pub(crate) fn path<'a, E: ParseError<&'a str>, R: Rule>(
 }
 
 /// Parses `path-abempty` and `ipath-abempty` rules.
-fn path_abempty<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn path_abempty<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "path-abempty",
         many0_count(preceded(char_('/'), segment::<E, R>)),
@@ -485,7 +444,7 @@ fn path_abempty<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a 
 }
 
 /// Parses `path-absolute` and `ipath-absolute` rules.
-fn path_absolute<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn path_absolute<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "path-absolute",
         preceded(
@@ -500,7 +459,7 @@ fn path_absolute<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 }
 
 /// Parses `path-noscheme` and `ipath-noscheme` rules.
-fn path_noscheme<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn path_noscheme<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "path-noscheme",
         pair(
@@ -512,7 +471,7 @@ fn path_noscheme<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 }
 
 /// Parses `path-rootless` and `ipath-rootless` rules.
-fn path_rootless<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn path_rootless<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "path-rootless",
         pair(
@@ -529,24 +488,24 @@ fn path_empty<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a st
 }
 
 /// Parses `segment` and `isegment` rules.
-fn segment<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn segment<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context("segment", many0_count(pchar::<E, R>))(i)
         .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `segment-nz` and `isegment-nz` rules.
-fn segment_nz<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn segment_nz<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context("segment-nz", many1_count(pchar::<E, R>))(i)
         .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses `segment-nz-nc` and `isegment-nz-nc` rules.
-fn segment_nz_nc<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn segment_nz_nc<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     context(
         "segment-nz-nc",
         many1_count(alt((
             map(
-                one_is(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == '@'),
+                one_is(|c: char| R::is_char_unreserved(c) || is_sub_delim(c) || c == '@'),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
@@ -556,10 +515,10 @@ fn segment_nz_nc<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a
 }
 
 /// Parses `pchar` and `ipchar` rules.
-fn pchar<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn pchar<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     alt((
         map(
-            one_is(|c: char| R::is_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
+            one_is(|c: char| R::is_char_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
             |_| (),
         ),
         map(pct_encoded, |_| ()),
@@ -568,7 +527,7 @@ fn pchar<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'
 }
 
 /// Parses `query` and `iquery` rules.
-fn query<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+fn query<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'?'`
     // exists before the `query`.
     context(
@@ -584,7 +543,7 @@ fn query<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'
 }
 
 /// Parses `fragment` and `ifragment` rules.
-pub(crate) fn fragment<'a, E: ParseError<&'a str>, R: Rule>(
+pub(crate) fn fragment<'a, E: ParseError<&'a str>, R: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     // Whole parsing should fail if this fail, because always leading `'#'`
@@ -608,8 +567,8 @@ fn pct_encoded<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, (char
 }
 
 /// Parses `iprivate` rules.
-fn private<'a, E: ParseError<&'a str>, R: Rule>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    one_is(R::is_private)(i).map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
+fn private<'a, E: ParseError<&'a str>, R: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+    one_is(R::is_char_private)(i).map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses hex digit.

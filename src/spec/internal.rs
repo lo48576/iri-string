@@ -6,7 +6,10 @@
 //! [sealed-trait]:
 //! https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
 
-use crate::spec::{IriSpec, UriSpec};
+use crate::{
+    parser::char::is_ucschar,
+    spec::{IriSpec, UriSpec},
+};
 
 /// A trait to prohibit user-defined types from implementing `Spec`.
 ///
@@ -19,8 +22,36 @@ impl Sealed for IriSpec {}
 impl Sealed for UriSpec {}
 
 /// Internal implementations for spec types.
-pub trait SpecInternal {}
+pub trait SpecInternal {
+    /// Checks if the given character matches `unreserved` or `iunreserved` rule.
+    fn is_char_unreserved(c: char) -> bool;
+    /// Checks if the given character matches `iprivate` rule.
+    fn is_char_private(c: char) -> bool;
+}
 
-impl SpecInternal for IriSpec {}
+impl SpecInternal for IriSpec {
+    #[inline]
+    fn is_char_unreserved(c: char) -> bool {
+        UriSpec::is_char_unreserved(c) || is_ucschar(c)
+    }
 
-impl SpecInternal for UriSpec {}
+    fn is_char_private(c: char) -> bool {
+        match u32::from(c) {
+            0xE000..=0xF8FF => true,
+            0xF_0000..=0xF_FFFD => true,
+            0x10_0000..=0x10_FFFD => true,
+            _ => false,
+        }
+    }
+}
+
+impl SpecInternal for UriSpec {
+    fn is_char_unreserved(c: char) -> bool {
+        c.is_ascii_alphanumeric() || c == '-' || c == '.' || c == '_' || c == '~'
+    }
+
+    #[inline]
+    fn is_char_private(_: char) -> bool {
+        false
+    }
+}
