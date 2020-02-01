@@ -21,6 +21,8 @@
 * Remove depraceted items.
     + `IriReferenceStr::resolve()` is now removed.
       Use `IriReferenceStr::resolve_against()` instead.
+    + `types::CreationError` is now removed.
+      Use `types::IriCreationError` instead.
 * Remove `Deref` impls for IRI string types.
     + IRI string types should not implement `Deref`, because they are not smart pointer types.
 * Change methods types.
