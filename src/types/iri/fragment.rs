@@ -1,14 +1,17 @@
 //! Fragment string.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use validated_slice::OwnedSliceSpec;
 use validated_slice::SliceSpec;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::types::IriCreationError;
 use crate::validate::iri::{fragment, Error};
 
@@ -111,12 +114,12 @@ impl IriFragmentStr {
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriFragmentStr`]: struct.IriFragmentStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriFragmentString(String);
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl IriFragmentString {
     /// Creates a new `IriFragmentString` maybe without validation.
     ///

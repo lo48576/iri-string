@@ -1,10 +1,13 @@
 //! Usual absolute IRI (fragment part being allowed).
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use validated_slice::OwnedSliceSpec;
 use validated_slice::SliceSpec;
 
@@ -13,7 +16,7 @@ use crate::{
     types::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr},
     validate::iri::{iri, Error},
 };
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::{
     manipulation::{raw::set_fragment, CustomIriOwnedExt},
     types::{AbsoluteIriString, IriCreationError, IriFragmentString, IriReferenceString},
@@ -199,12 +202,12 @@ impl IriStr {
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriStr`]: struct.IriStr.html
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriString(String);
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl IriString {
     /// Creates a new `IriString` without validation.
     ///
@@ -238,10 +241,12 @@ impl IriString {
     /// # use iri_string::types::{IriFragmentString, IriString};
     /// let iri = "foo://bar/baz?qux=quux#corge".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
-    /// let fragment_expected = IriFragmentString::try_from("corge".to_owned())?;
+    /// let fragment_expected = IriFragmentString::try_from("corge".to_owned())
+    ///     .map_err(|e| e.validation_error())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Box<std::error::Error>>(())
+    /// # Ok::<_, iri_string::validate::iri::Error>(())
+    ///
     /// ```
     ///
     /// ```
@@ -249,10 +254,11 @@ impl IriString {
     /// # use iri_string::types::{IriFragmentString, IriString};
     /// let iri = "foo://bar/baz?qux=quux#".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
-    /// let fragment_expected = IriFragmentString::try_from("".to_owned())?;
+    /// let fragment_expected = IriFragmentString::try_from("".to_owned())
+    ///     .map_err(|e| e.validation_error())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Box<std::error::Error>>(())
+    /// # Ok::<_, iri_string::validate::iri::Error>(())
     /// ```
     ///
     /// ```
@@ -262,7 +268,7 @@ impl IriString {
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, None);
-    /// # Ok::<_, Box<std::error::Error>>(())
+    /// # Ok::<_, iri_string::validate::iri::Error>(())
     /// ```
     pub fn into_absolute_and_fragment(self) -> (AbsoluteIriString, Option<IriFragmentString>) {
         self.split_fragment()

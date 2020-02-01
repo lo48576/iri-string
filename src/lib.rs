@@ -64,9 +64,12 @@
 #![warn(clippy::missing_docs_in_private_items)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub(crate) mod manipulation;
 pub(crate) mod parser;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub mod resolve;
 pub mod types;
 pub mod validate;

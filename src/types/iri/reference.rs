@@ -1,17 +1,20 @@
 //! IRI reference.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use core::convert::TryFrom;
 
-#[cfg(feature = "std")]
-use std::borrow::Cow;
+#[cfg(feature = "alloc")]
+use alloc::borrow::Cow;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use validated_slice::OwnedSliceSpec;
 use validated_slice::SliceSpec;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::{
     manipulation::raw::set_fragment,
     resolve::resolve_iri,
@@ -141,7 +144,7 @@ impl IriReferenceStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> Cow<'_, IriStr> {
         match self.to_iri() {
             Ok(iri) => Cow::Borrowed(iri),
@@ -207,13 +210,13 @@ impl IriReferenceStr {
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`IriReferenceStr`]: struct.IriReferenceStr.html
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct IriReferenceString(String);
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl IriReferenceString {
     /// Creates a new `IriReferenceString` maybe without validation.
     ///

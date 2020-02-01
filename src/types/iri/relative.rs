@@ -1,14 +1,17 @@
 //! Relative IRI.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use validated_slice::OwnedSliceSpec;
 use validated_slice::SliceSpec;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::{
     manipulation::raw::set_fragment,
     resolve::resolve_iri,
@@ -145,7 +148,7 @@ impl RelativeIriStr {
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
     /// Usual users will want to use strict resolver.
-    #[cfg(feature = "std")]
+    #[cfg(feature = "alloc")]
     pub fn resolve_against(&self, base: &AbsoluteIriStr) -> IriString {
         resolve_iri(self, base, true)
     }
@@ -161,13 +164,13 @@ impl RelativeIriStr {
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`RelativeIriStr`]: struct.RelativeIriStr.html
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct RelativeIriString(String);
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl RelativeIriString {
     /// Creates a new `RelativeIriString` maybe without validation.
     ///

@@ -1,14 +1,17 @@
 //! Absolute IRI (without fragment part).
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use validated_slice::OwnedSliceSpec;
 use validated_slice::SliceSpec;
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 use crate::types::{IriCreationError, IriReferenceString, IriString};
 use crate::{
     types::{IriReferenceStr, IriStr},
@@ -108,13 +111,13 @@ impl AbsoluteIriStr {
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [`AbsoluteIriStr`]: struct.AbsoluteIriStr.html
 /// [`IriString`]: struct.IriString.html
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct AbsoluteIriString(String);
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl AbsoluteIriString {
     /// Creates a new `AbsoluteIriString` maybe without validation.
     ///

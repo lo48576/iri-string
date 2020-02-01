@@ -1,6 +1,9 @@
 //! Error.
 
-use std::{error, fmt};
+use core::fmt;
+
+#[cfg(feature = "std")]
+use std::error;
 
 use crate::validate::iri::Error;
 
@@ -36,4 +39,5 @@ impl<T> fmt::Display for IriCreationError<T> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T: fmt::Debug> error::Error for IriCreationError<T> {}

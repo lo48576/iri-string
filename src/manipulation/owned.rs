@@ -1,5 +1,8 @@
 //! Extension traits implementation for custom owned string types.
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use crate::{
     manipulation::{raw, Void},
     types,

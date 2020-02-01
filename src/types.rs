@@ -46,7 +46,7 @@
 //! Currently not implemented :-P.
 
 pub use self::iri::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr, IriStr, RelativeIriStr};
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use self::iri::{
     AbsoluteIriString, IriCreationError, IriFragmentString, IriReferenceString, IriString,
     RelativeIriString,

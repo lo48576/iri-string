@@ -39,14 +39,14 @@ pub use self::{
     relative::RelativeIriStr,
 };
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 pub use self::{
     absolute::AbsoluteIriString, error::IriCreationError, fragment::IriFragmentString,
     normal::IriString, reference::IriReferenceString, relative::RelativeIriString,
 };
 
 mod absolute;
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 mod error;
 mod fragment;
 mod normal;
