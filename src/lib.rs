@@ -86,5 +86,6 @@ pub(crate) mod manipulation;
 pub(crate) mod parser;
 #[cfg(feature = "alloc")]
 pub mod resolve;
+pub mod spec;
 pub mod types;
 pub mod validate;
