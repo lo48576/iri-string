@@ -49,22 +49,3 @@ mod fragment;
 mod normal;
 mod reference;
 mod relative;
-
-/// Sets the fragment part to the given string.
-///
-/// Removes fragment part (and following `#` character) if `None` is given.
-fn set_fragment(s: &mut String, fragment: Option<&str>) {
-    remove_fragment(s);
-    if let Some(fragment) = fragment {
-        s.reserve(fragment.len() + 1);
-        s.push('#');
-        s.push_str(fragment);
-    }
-}
-
-/// Removes the prefix.
-fn remove_fragment(s: &mut String) {
-    if let Some(colon_pos) = s.find('#') {
-        s.truncate(colon_pos);
-    }
-}

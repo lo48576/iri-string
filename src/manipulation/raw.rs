@@ -37,3 +37,23 @@ pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
         None => (iri, None),
     }
 }
+
+/// Sets the fragment part to the given string.
+///
+/// Removes fragment part (and following `#` character) if `None` is given.
+pub(crate) fn set_fragment(s: &mut String, fragment: Option<&str>) {
+    remove_fragment(s);
+    if let Some(fragment) = fragment {
+        s.reserve(fragment.len() + 1);
+        s.push('#');
+        s.push_str(fragment);
+    }
+}
+
+/// Removes the prefix.
+#[inline]
+fn remove_fragment(s: &mut String) {
+    if let Some(colon_pos) = s.find('#') {
+        s.truncate(colon_pos);
+    }
+}
