@@ -54,7 +54,3 @@ pub use self::iri::{
 mod macros;
 
 mod iri;
-
-/// Error on conversion into an IRI type.
-#[deprecated(since = "0.2.1", note = "Renamed to `IriCreationError`")]
-pub type CreationError<T> = IriCreationError<T>;
