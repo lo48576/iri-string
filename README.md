@@ -5,7 +5,22 @@
 [![Documentation](https://docs.rs/iri-string/badge.svg)](https://docs.rs/iri-string)
 ![Minimum rustc version: 1.41](https://img.shields.io/badge/rustc-1.41+-lightgray.svg)
 
-String types for [IRI](https://tools.ietf.org/html/rfc3987).
+String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
+Identifiers).
+
+## Features
+
+* `no_std` support.
+* String types (both owned and borrowed) for IRIs.
+* IRI reference resolution algorithm.
+
+### Feature flags
+
+* `std` (enabled by default)
+    + Enables all `std` features (such as memory allocations and `std::error::Error` trait).
+* `alloc`
+    + Enables types and functions which require memory allocation.
+    + Requires `std` or `alloc` crate available.
 
 ## License
 
