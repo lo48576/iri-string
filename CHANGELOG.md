@@ -9,6 +9,9 @@
 * Update some internal dependencies.
     + This has no effect for usual users, and this does not introduce any API changes.
     + By this change, the crate now successfully compiles with minimal dependency versions.
+* Support `no_std` environment.
+    + `std` and `alloc` feature flags are added.
+    + `std` feature is enabled by default (and `std` enables `alloc` automatically).
 
 ### Fixes
 * Update some internal dependencies to make the crate buildable with minimal dependency versions.
@@ -29,6 +32,10 @@
     + `IriReferenceStr::resolve_against()` now returns `Cow<'_, IriStr>`, rather than `IriString`.
 
 ### Changed (non-breaking)
+* Support `no_std` environment.
+    + `std` and `alloc` feature flags are added.
+    + `std` feature is enabled by default (and `std` enables `alloc` automatically).
+    + In `no_std` environment with allocator support, you can enable `alloc` feature.
 * Add methods for IRI string types.
     + `len()` and `is_empty()` methods are added to all IRI string slice types.
     * `IriStr::fragment()` is added.
