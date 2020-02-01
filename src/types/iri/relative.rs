@@ -7,11 +7,11 @@ use serde::Serialize;
 use validated_slice::{OwnedSliceSpec, SliceSpec};
 
 use crate::{
-    manipulation::CustomIriSliceExt,
+    manipulation::{raw::set_fragment, CustomIriSliceExt},
     resolve::resolve_iri,
     types::{
-        iri::set_fragment, AbsoluteIriStr, IriCreationError, IriFragmentStr, IriReferenceStr,
-        IriReferenceString, IriString,
+        AbsoluteIriStr, IriCreationError, IriFragmentStr, IriReferenceStr, IriReferenceString,
+        IriString,
     },
     validate::iri::{relative_ref, Error},
 };
