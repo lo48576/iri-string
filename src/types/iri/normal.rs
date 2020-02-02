@@ -13,8 +13,9 @@ use validated_slice::SliceSpec;
 
 use crate::{
     manipulation::CustomIriSliceExt,
+    spec::IriSpec,
     types::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr},
-    validate::iri::{iri, Error},
+    validate::{iri, iri::Error},
 };
 #[cfg(feature = "alloc")]
 use crate::{
@@ -302,7 +303,7 @@ impl IriString {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
         set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
-        debug_assert!(iri(&self.0).is_ok());
+        debug_assert!(iri::<IriSpec>(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
@@ -315,7 +316,7 @@ impl_basics! {
     Slice {
         spec: StrSpec,
         custom: IriStr,
-        validator: iri,
+        validator: iri::<IriSpec>,
         error: Error,
     },
     Owned {

@@ -14,8 +14,9 @@ use validated_slice::SliceSpec;
 #[cfg(feature = "alloc")]
 use crate::types::{IriCreationError, IriReferenceString, IriString};
 use crate::{
+    spec::IriSpec,
     types::{IriReferenceStr, IriStr},
-    validate::iri::{absolute_iri, Error},
+    validate::{absolute_iri, iri::Error},
 };
 
 /// A borrowed slice of an absolute IRI without fragment part.
@@ -139,7 +140,7 @@ impl_basics! {
     Slice {
         spec: StrSpec,
         custom: AbsoluteIriStr,
-        validator: absolute_iri,
+        validator: absolute_iri::<IriSpec>,
         error: Error,
     },
     Owned {

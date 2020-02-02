@@ -32,7 +32,7 @@ macro_rules! impl_conv_and_cmp {
             owned: $owned:ty,
             slice: $slice:ty,
             creation_error: $ty_creation_error:ident,
-            validation_error: $ty_validation_error:ident,
+            validation_error: $ty_validation_error:ty,
         },
         target: [
         $(

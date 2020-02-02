@@ -18,13 +18,14 @@ use validated_slice::SliceSpec;
 use crate::{
     manipulation::raw::set_fragment,
     resolve::resolve_iri,
+    spec::IriSpec,
     types::{AbsoluteIriStr, IriCreationError, IriString, RelativeIriString},
-    validate::iri::iri as validate_iri,
+    validate::iri as validate_iri,
 };
 use crate::{
     manipulation::CustomIriSliceExt,
     types::{IriFragmentStr, IriStr, RelativeIriStr},
-    validate::iri::{iri_reference, Error},
+    validate::{iri::Error, iri_reference},
 };
 
 /// A borrowed slice of an IRI reference.
@@ -241,7 +242,7 @@ impl IriReferenceString {
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
         // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
-        if validate_iri(&s).is_ok() {
+        if validate_iri::<IriSpec>(&s).is_ok() {
             Ok(unsafe {
                 // This is safe because `s` is already validated by condition
                 // of `if`.
@@ -273,7 +274,7 @@ impl IriReferenceString {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
         set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
-        debug_assert!(iri_reference(&self.0).is_ok());
+        debug_assert!(iri_reference::<IriSpec>(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
@@ -286,7 +287,7 @@ impl_basics! {
     Slice {
         spec: StrSpec,
         custom: IriReferenceStr,
-        validator: iri_reference,
+        validator: iri_reference::<IriSpec>,
         error: Error,
     },
     Owned {

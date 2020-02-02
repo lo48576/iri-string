@@ -19,8 +19,9 @@ use crate::{
 };
 use crate::{
     manipulation::CustomIriSliceExt,
+    spec::IriSpec,
     types::{IriFragmentStr, IriReferenceStr},
-    validate::iri::{relative_ref, Error},
+    validate::{iri::Error, relative_ref},
 };
 
 /// A borrowed slice of a relative IRI.
@@ -189,7 +190,7 @@ impl RelativeIriString {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&IriFragmentStr>) {
         set_fragment(&mut self.0, fragment.map(AsRef::as_ref));
-        debug_assert!(relative_ref(&self.0).is_ok());
+        debug_assert!(relative_ref::<IriSpec>(&self.0).is_ok());
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
@@ -202,7 +203,7 @@ impl_basics! {
     Slice {
         spec: StrSpec,
         custom: RelativeIriStr,
-        validator: relative_ref,
+        validator: relative_ref::<IriSpec>,
         error: Error,
     },
     Owned {

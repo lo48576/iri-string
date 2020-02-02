@@ -13,7 +13,10 @@ use validated_slice::SliceSpec;
 
 #[cfg(feature = "alloc")]
 use crate::types::IriCreationError;
-use crate::validate::iri::{fragment, Error};
+use crate::{
+    spec::IriSpec,
+    validate::{fragment, iri::Error},
+};
 
 /// A borrowed slice of an IRI.
 ///
@@ -141,7 +144,7 @@ impl_basics! {
     Slice {
         spec: StrSpec,
         custom: IriFragmentStr,
-        validator: fragment,
+        validator: fragment::<IriSpec>,
         error: Error,
     },
     Owned {
