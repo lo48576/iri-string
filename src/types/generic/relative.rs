@@ -25,45 +25,45 @@ define_custom_string_slice! {
     /// This type can have a relative IRI reference.
     ///
     /// ```
-    /// # use iri_string::types::RelativeIriStr;
-    /// assert!(RelativeIriStr::new("foo").is_ok());
-    /// assert!(RelativeIriStr::new("foo/bar").is_ok());
-    /// assert!(RelativeIriStr::new("/foo").is_ok());
-    /// assert!(RelativeIriStr::new("//foo/bar").is_ok());
-    /// assert!(RelativeIriStr::new("?foo").is_ok());
-    /// assert!(RelativeIriStr::new("#foo").is_ok());
-    /// assert!(RelativeIriStr::new("foo/bar?baz#qux").is_ok());
+    /// # use iri_string::types::IriRelativeStr;
+    /// assert!(IriRelativeStr::new("foo").is_ok());
+    /// assert!(IriRelativeStr::new("foo/bar").is_ok());
+    /// assert!(IriRelativeStr::new("/foo").is_ok());
+    /// assert!(IriRelativeStr::new("//foo/bar").is_ok());
+    /// assert!(IriRelativeStr::new("?foo").is_ok());
+    /// assert!(IriRelativeStr::new("#foo").is_ok());
+    /// assert!(IriRelativeStr::new("foo/bar?baz#qux").is_ok());
     /// // The first path component can have colon if the path is absolute.
-    /// assert!(RelativeIriStr::new("/foo:bar/").is_ok());
+    /// assert!(IriRelativeStr::new("/foo:bar/").is_ok());
     /// // Second or following path components can have colon.
-    /// assert!(RelativeIriStr::new("foo/bar://baz/").is_ok());
-    /// assert!(RelativeIriStr::new("./foo://bar").is_ok());
+    /// assert!(IriRelativeStr::new("foo/bar://baz/").is_ok());
+    /// assert!(IriRelativeStr::new("./foo://bar").is_ok());
     /// ```
     ///
     /// Absolute form of a reference is not allowed.
     ///
     /// ```
-    /// # use iri_string::types::RelativeIriStr;
-    /// assert!(RelativeIriStr::new("https://example.com/").is_err());
+    /// # use iri_string::types::IriRelativeStr;
+    /// assert!(IriRelativeStr::new("https://example.com/").is_err());
     /// // The first path component cannot have colon, if the path is not absolute.
-    /// assert!(RelativeIriStr::new("foo:bar").is_err());
-    /// assert!(RelativeIriStr::new("foo:").is_err());
-    /// assert!(RelativeIriStr::new("foo:/").is_err());
-    /// assert!(RelativeIriStr::new("foo://").is_err());
-    /// assert!(RelativeIriStr::new("foo:///").is_err());
-    /// assert!(RelativeIriStr::new("foo:////").is_err());
-    /// assert!(RelativeIriStr::new("foo://///").is_err());
+    /// assert!(IriRelativeStr::new("foo:bar").is_err());
+    /// assert!(IriRelativeStr::new("foo:").is_err());
+    /// assert!(IriRelativeStr::new("foo:/").is_err());
+    /// assert!(IriRelativeStr::new("foo://").is_err());
+    /// assert!(IriRelativeStr::new("foo:///").is_err());
+    /// assert!(IriRelativeStr::new("foo:////").is_err());
+    /// assert!(IriRelativeStr::new("foo://///").is_err());
     /// ```
     ///
     /// Some characters and sequences cannot used in an IRI reference.
     ///
     /// ```
-    /// # use iri_string::types::RelativeIriStr;
+    /// # use iri_string::types::IriRelativeStr;
     /// // `<` and `>` cannot directly appear in a relative IRI reference.
-    /// assert!(RelativeIriStr::new("<not allowed>").is_err());
+    /// assert!(IriRelativeStr::new("<not allowed>").is_err());
     /// // Broken percent encoding cannot appear in a relative IRI reference.
-    /// assert!(RelativeIriStr::new("%").is_err());
-    /// assert!(RelativeIriStr::new("%GG").is_err());
+    /// assert!(IriRelativeStr::new("%").is_err());
+    /// assert!(IriRelativeStr::new("%GG").is_err());
     /// ```
     ///
     /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
@@ -108,24 +108,24 @@ impl<S: Spec> RiRelativeStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
-    /// let iri = RelativeIriStr::new("?foo#bar")?;
+    /// # use iri_string::{types::{IriFragmentStr, IriRelativeStr}, validate::iri::Error};
+    /// let iri = IriRelativeStr::new("?foo#bar")?;
     /// let fragment = IriFragmentStr::new("bar")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, RelativeIriStr}, validate::iri::Error};
-    /// let iri = RelativeIriStr::new("#foo")?;
+    /// # use iri_string::{types::{IriFragmentStr, IriRelativeStr}, validate::iri::Error};
+    /// let iri = IriRelativeStr::new("#foo")?;
     /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::RelativeIriStr, validate::iri::Error};
-    /// let iri = RelativeIriStr::new("")?;
+    /// # use iri_string::{types::IriRelativeStr, validate::iri::Error};
+    /// let iri = IriRelativeStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```

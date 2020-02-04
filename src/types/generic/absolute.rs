@@ -21,52 +21,52 @@ define_custom_string_slice! {
     /// This type can have an absolute IRI without fragment part.
     ///
     /// ```
-    /// # use iri_string::types::AbsoluteIriStr;
-    /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz").is_ok());
-    /// assert!(AbsoluteIriStr::new("foo:bar").is_ok());
+    /// # use iri_string::types::IriAbsoluteStr;
+    /// assert!(IriAbsoluteStr::new("https://example.com/foo?bar=baz").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo:bar").is_ok());
     /// // Scheme `foo` and empty path.
-    /// assert!(AbsoluteIriStr::new("foo:").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo:").is_ok());
     /// // `foo://.../` below are all allowed. See the crate documentation for detail.
-    /// assert!(AbsoluteIriStr::new("foo:/").is_ok());
-    /// assert!(AbsoluteIriStr::new("foo://").is_ok());
-    /// assert!(AbsoluteIriStr::new("foo:///").is_ok());
-    /// assert!(AbsoluteIriStr::new("foo:////").is_ok());
-    /// assert!(AbsoluteIriStr::new("foo://///").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo:/").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo://").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo:///").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo:////").is_ok());
+    /// assert!(IriAbsoluteStr::new("foo://///").is_ok());
     ///
     /// ```
     ///
     /// Relative IRI is not allowed.
     ///
     /// ```
-    /// # use iri_string::types::AbsoluteIriStr;
+    /// # use iri_string::types::IriAbsoluteStr;
     /// // This is relative path.
-    /// assert!(AbsoluteIriStr::new("foo/bar").is_err());
+    /// assert!(IriAbsoluteStr::new("foo/bar").is_err());
     /// // `/foo/bar` is an absolute path, but it is authority-relative.
-    /// assert!(AbsoluteIriStr::new("/foo/bar").is_err());
+    /// assert!(IriAbsoluteStr::new("/foo/bar").is_err());
     /// // `//foo/bar` is termed "network-path reference",
     /// // or usually called "protocol-relative reference".
-    /// assert!(AbsoluteIriStr::new("//foo/bar").is_err());
+    /// assert!(IriAbsoluteStr::new("//foo/bar").is_err());
     /// // Empty string is not a valid absolute IRI.
-    /// assert!(AbsoluteIriStr::new("").is_err());
+    /// assert!(IriAbsoluteStr::new("").is_err());
     /// ```
     ///
     /// Fragment part (such as trailing `#foo`) is not allowed.
     ///
     /// ```
-    /// # use iri_string::types::AbsoluteIriStr;
+    /// # use iri_string::types::IriAbsoluteStr;
     /// // Fragment part is not allowed.
-    /// assert!(AbsoluteIriStr::new("https://example.com/foo?bar=baz#qux").is_err());
+    /// assert!(IriAbsoluteStr::new("https://example.com/foo?bar=baz#qux").is_err());
     /// ```
     ///
     /// Some characters and sequences cannot used in an absolute IRI.
     ///
     /// ```
-    /// # use iri_string::types::AbsoluteIriStr;
+    /// # use iri_string::types::IriAbsoluteStr;
     /// // `<` and `>` cannot directly appear in an absolute IRI.
-    /// assert!(AbsoluteIriStr::new("<not allowed>").is_err());
+    /// assert!(IriAbsoluteStr::new("<not allowed>").is_err());
     /// // Broken percent encoding cannot appear in an absolute IRI.
-    /// assert!(AbsoluteIriStr::new("%").is_err());
-    /// assert!(AbsoluteIriStr::new("%GG").is_err());
+    /// assert!(IriAbsoluteStr::new("%").is_err());
+    /// assert!(IriAbsoluteStr::new("%GG").is_err());
     /// ```
     ///
     /// [RFC 3986]: https://tools.ietf.org/html/rfc3986

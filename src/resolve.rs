@@ -192,7 +192,7 @@ fn merge(base_path: &str, ref_path: &str, base_authority_defined: bool) -> Strin
 mod tests {
     use super::*;
 
-    use crate::types::{AbsoluteIriStr, IriReferenceStr};
+    use crate::types::{IriAbsoluteStr, IriReferenceStr};
 
     #[test]
     fn test_remove_dot_segments() {
@@ -298,7 +298,7 @@ mod tests {
 
         // Test for strict resolver.
         for (base, pairs) in STRICT_TEST_CASES {
-            let base = <&AbsoluteIriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
@@ -317,7 +317,7 @@ mod tests {
         // Test for loose resolver.
         {
             // RFC 3986, section 5.4.2.
-            let base = <&AbsoluteIriStr>::try_from("http://a/b/c/d;p?q")
+            let base = <&IriAbsoluteStr>::try_from("http://a/b/c/d;p?q")
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             let input = <&IriReferenceStr>::try_from("http:g")
                 .expect("Invalid testcase: `input` should be IRI reference");

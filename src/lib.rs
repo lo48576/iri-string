@@ -15,7 +15,7 @@
 //! * `alloc` feature:
 //!     + Std library or `alloc` crate is required.
 //!     + This feature enables types and functions which require memory allocation,
-//!       e.g. `types::IriString` and `types::RelativeIriStr::resolve_against()`.
+//!       e.g. `types::IriString` and `types::IriRelativeStr::resolve_against()`.
 //! * `std` feature (**enabled by default**):
 //!     + Std library is required.
 //!     + This automatically enables `alloc` feature.
