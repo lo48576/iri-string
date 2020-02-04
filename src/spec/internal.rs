@@ -22,7 +22,7 @@ impl Sealed for IriSpec {}
 impl Sealed for UriSpec {}
 
 /// Internal implementations for spec types.
-pub trait SpecInternal {
+pub trait SpecInternal: Sized {
     /// Checks if the given character matches `unreserved` or `iunreserved` rule.
     fn is_char_unreserved(c: char) -> bool;
     /// Checks if the given character matches `iprivate` rule.

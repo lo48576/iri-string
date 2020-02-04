@@ -45,14 +45,42 @@
 //!
 //! Currently not implemented :-P.
 
-pub use self::iri::{AbsoluteIriStr, IriFragmentStr, IriReferenceStr, IriStr, RelativeIriStr};
+use crate::spec::IriSpec;
+
 #[cfg(feature = "alloc")]
-pub use self::iri::{
-    AbsoluteIriString, IriCreationError, IriFragmentString, IriReferenceString, IriString,
-    RelativeIriString,
+pub use self::generic::{
+    CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
+    RiString,
 };
+pub use self::generic::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr};
 
-#[macro_use]
-mod macros;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+pub type AbsoluteIriStr = RiAbsoluteStr<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type AbsoluteIriString = RiAbsoluteString<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+pub type IriFragmentStr = RiFragmentStr<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type IriFragmentString = RiFragmentString<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+pub type IriStr = RiStr<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type IriString = RiString<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+pub type IriReferenceStr = RiReferenceStr<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type IriReferenceString = RiReferenceString<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+pub type RelativeIriStr = RiRelativeStr<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type RelativeIriString = RiRelativeString<IriSpec>;
+#[allow(missing_docs, clippy::missing_docs_in_private_items)]
+#[cfg(feature = "alloc")]
+pub type IriCreationError<T> = CreationError<IriSpec, T>;
 
-mod iri;
+pub(crate) mod generic;

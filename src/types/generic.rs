@@ -1,4 +1,4 @@
-//! IRI types.
+//! Generic resource identifier types.
 //!
 //! ```text
 //! IRI           = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
@@ -11,18 +11,18 @@
 //! Hierarchy:
 //!
 //! ```text
-//! IriReferenceStr
-//! |-- IriStr
-//! |   `-- AbsoluteIriStr
-//! `-- RelativeIriStr
+//! RiReferenceStr
+//! |-- RiStr
+//! |   `-- RiAbsoluteStr
+//! `-- RiRelativeStr
 //! ```
 //!
 //! Therefore, the conversions below are safe and cheap:
 //!
-//! * `IriStr -> IriReferenceStr`
-//! * `AbsoluteIriStr -> IriStr`
-//! * `AbsoluteIriStr -> IriReferenceStr`
-//! * `RelativeIriStr -> IriReferenceStr`
+//! * `RiStr -> RiReferenceStr`
+//! * `RiAbsoluteStr -> RiStr`
+//! * `RiAbsoluteStr -> RiReferenceStr`
+//! * `RiRelativeStr -> RiReferenceStr`
 //!
 //! For safely convertible types (consider `FooStr -> BarStr` is safe), traits
 //! below are implemented:
@@ -35,15 +35,17 @@
 //!     + Slice, owned, `Cow`, reference, etc...
 
 pub use self::{
-    absolute::AbsoluteIriStr, fragment::IriFragmentStr, normal::IriStr, reference::IriReferenceStr,
-    relative::RelativeIriStr,
+    absolute::RiAbsoluteStr, fragment::RiFragmentStr, normal::RiStr, reference::RiReferenceStr,
+    relative::RiRelativeStr,
 };
-
 #[cfg(feature = "alloc")]
 pub use self::{
-    absolute::AbsoluteIriString, error::IriCreationError, fragment::IriFragmentString,
-    normal::IriString, reference::IriReferenceString, relative::RelativeIriString,
+    absolute::RiAbsoluteString, error::CreationError, fragment::RiFragmentString, normal::RiString,
+    reference::RiReferenceString, relative::RiRelativeString,
 };
+
+#[macro_use]
+mod macros;
 
 mod absolute;
 #[cfg(feature = "alloc")]

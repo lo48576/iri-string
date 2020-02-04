@@ -1,19 +1,19 @@
 //! Helpers for characters.
 
+/*
 /// Checks if the given character matches `reserved` rule.
-#[allow(dead_code)] // TODO
 fn is_reserved(c: char) -> bool {
     is_gen_delim(c) || is_sub_delim(c)
 }
 
 /// Checks if the given character matches `gen-delim` rule.
-#[allow(dead_code)] // TODO
 fn is_gen_delim(c: char) -> bool {
     match c {
         ':' | '/' | '?' | '#' | '[' | ']' | '@' => true,
         _ => false,
     }
 }
+*/
 
 /// Checks if the given character matches `sub-delim` rule.
 pub(crate) fn is_sub_delim(c: char) -> bool {

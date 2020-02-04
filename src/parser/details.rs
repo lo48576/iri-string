@@ -1,5 +1,7 @@
 //! Parser implementatitons.
 
+use core::marker::PhantomData;
+
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
@@ -12,7 +14,7 @@ use nom::{
 };
 
 use crate::{
-    parser::{char::is_sub_delim, IriReferenceComponents},
+    parser::{char::is_sub_delim, RiReferenceComponents},
     spec::{Spec, SpecInternal, UriSpec},
 };
 
@@ -65,7 +67,7 @@ pub(crate) fn uri<'a, E: ParseError<&'a str>, S: Spec>(i: &'a str) -> IResult<&'
 /// Parses RFC 3986 / 3987 IRI and returns components.
 fn decompose_uri<'a, E: ParseError<&'a str>, S: Spec>(
     i: &'a str,
-) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+) -> IResult<&'a str, RiReferenceComponents<'a, S>, E> {
     context(
         "uri",
         map(
@@ -76,12 +78,13 @@ fn decompose_uri<'a, E: ParseError<&'a str>, S: Spec>(
                 opt(preceded(char_('?'), query::<E, S>)),
                 opt(preceded(char_('#'), fragment::<E, S>)),
             )),
-            |(scheme, _colon, (authority, path), query, fragment)| IriReferenceComponents {
+            |(scheme, _colon, (authority, path), query, fragment)| RiReferenceComponents {
                 scheme: Some(scheme),
                 authority,
                 path,
                 query,
                 fragment,
+                _spec: PhantomData,
             },
         ),
     )(i)
@@ -132,7 +135,7 @@ pub(crate) fn uri_reference<'a, E: ParseError<&'a str>, S: Spec>(
 /// Parses RFC 3986 / 3987 IRI reference and returns components.
 pub(crate) fn decompose_uri_reference<'a, E: ParseError<&'a str>, S: Spec>(
     i: &'a str,
-) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+) -> IResult<&'a str, RiReferenceComponents<'a, S>, E> {
     context(
         "uri_reference",
         alt((decompose_uri::<E, S>, decompose_relative_ref::<E, S>)),
@@ -173,7 +176,7 @@ pub(crate) fn relative_ref<'a, E: ParseError<&'a str>, S: Spec>(
 /// Parses RFC 3986 / 3987 relative reference and returns components.
 fn decompose_relative_ref<'a, E: ParseError<&'a str>, S: Spec>(
     i: &'a str,
-) -> IResult<&'a str, IriReferenceComponents<'a>, E> {
+) -> IResult<&'a str, RiReferenceComponents<'a, S>, E> {
     context(
         "relative_ref",
         map(
@@ -182,12 +185,13 @@ fn decompose_relative_ref<'a, E: ParseError<&'a str>, S: Spec>(
                 opt(preceded(char_('?'), query::<E, S>)),
                 opt(preceded(char_('#'), fragment::<E, S>)),
             )),
-            |((authority, path), query, fragment)| IriReferenceComponents {
+            |((authority, path), query, fragment)| RiReferenceComponents {
                 scheme: None,
                 authority,
                 path,
                 query,
                 fragment,
+                _spec: PhantomData,
             },
         ),
     )(i)

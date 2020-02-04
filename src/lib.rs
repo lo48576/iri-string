@@ -82,8 +82,8 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub(crate) mod manipulation;
 pub(crate) mod parser;
+pub(crate) mod raw;
 #[cfg(feature = "alloc")]
 pub mod resolve;
 pub mod spec;

@@ -1,8 +1,10 @@
 //! Parser.
 
+use core::marker::PhantomData;
+
 use nom::combinator::all_consuming;
 
-use crate::{spec::IriSpec, types::IriReferenceStr};
+use crate::{spec::Spec, types::RiReferenceStr};
 
 use self::details::decompose_uri_reference;
 pub(crate) use self::details::{absolute_uri, fragment, path, relative_ref, uri, uri_reference};
@@ -14,7 +16,7 @@ mod details;
 ///
 /// See <https://tools.ietf.org/html/rfc3986#section-5.2.2>.
 #[derive(Debug, Clone)]
-pub(crate) struct IriReferenceComponents<'a> {
+pub(crate) struct RiReferenceComponents<'a, S> {
     /// Scheme.
     pub(crate) scheme: Option<&'a str>,
     /// Authority.
@@ -27,12 +29,14 @@ pub(crate) struct IriReferenceComponents<'a> {
     pub(crate) query: Option<&'a str>,
     /// Fragment.
     pub(crate) fragment: Option<&'a str>,
+    /// Spec.
+    pub(crate) _spec: PhantomData<fn() -> S>,
 }
 
-impl<'a> From<&'a IriReferenceStr> for IriReferenceComponents<'a> {
-    fn from(s: &'a IriReferenceStr) -> Self {
-        all_consuming(decompose_uri_reference::<(), IriSpec>)(s.as_str())
+impl<'a, S: Spec> From<&'a RiReferenceStr<S>> for RiReferenceComponents<'a, S> {
+    fn from(s: &'a RiReferenceStr<S>) -> Self {
+        all_consuming(decompose_uri_reference::<(), S>)(s.as_str())
             .map(|(_rest, components)| components)
-            .expect("Should never fail: `IriReferenceStr` should be already validated")
+            .expect("Should never fail: `RiReferenceStr` should be already validated")
     }
 }

@@ -41,6 +41,14 @@ pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
     }
 }
 
+/// Returns the fragment part of the given IRI.
+///
+/// A leading `#` character of the fragment is truncated.
+#[inline]
+pub(crate) fn extract_fragment(iri: &str) -> Option<&str> {
+    split_fragment(iri).1
+}
+
 /// Sets the fragment part to the given string.
 ///
 /// Removes fragment part (and following `#` character) if `None` is given.
@@ -54,11 +62,36 @@ pub(crate) fn set_fragment(s: &mut String, fragment: Option<&str>) {
     }
 }
 
-/// Removes the prefix.
+/// Removes the fragment part from the string.
 #[cfg(feature = "alloc")]
 #[inline]
 pub(crate) fn remove_fragment(s: &mut String) {
     if let Some(colon_pos) = s.find('#') {
         s.truncate(colon_pos);
     }
+}
+
+/// Splits the string into the prefix and the fragment part.
+///
+/// A leading `#` character is truncated if the fragment part exists.
+#[cfg(feature = "alloc")]
+pub(crate) fn split_fragment_owned(mut s: String) -> (String, Option<String>) {
+    let (prefix, fragment) = split_fragment(&s);
+    if fragment.is_none() {
+        // The string has no fragment part.
+        return (s, None);
+    }
+    let prefix_len = prefix.len();
+
+    // `+ 1` is for leading `#` character.
+    let fragment = s.split_off(prefix_len + 1);
+    // Current `s` contains a trailing `#` character, which should be removed.
+    {
+        // Remove a trailing `#`.
+        let hash = s.pop();
+        assert_eq!(hash, Some('#'));
+    }
+    assert_eq!(s.len(), prefix_len);
+
+    (s, Some(fragment))
 }
