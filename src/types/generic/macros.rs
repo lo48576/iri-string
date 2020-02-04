@@ -111,6 +111,7 @@ macro_rules! impl_cmp_as_str {
 ///     + `From<&$ty>` for Rc<$ty>`
 ///     + `From<&$ty> for &str`
 ///     + `TryFrom<&str> for &$ty`
+///     + `AsRef<$ty<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented).
 ///     + `PartialEq<$ty> for $ty`
 ///     + `str` and `$ty`
@@ -302,6 +303,15 @@ macro_rules! define_custom_string_slice {
             }
         }
 
+        impl AsRef<$ty<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
+            fn as_ref(&self) -> &$ty<crate::spec::IriSpec> {
+                unsafe {
+                    // This is safe because URIs are subset of IRIs.
+                    <$ty<crate::spec::IriSpec>>::new_maybe_unchecked(self.as_str())
+                }
+            }
+        }
+
         /// Serde deserializer implementation.
         #[cfg(feature = "serde")]
         mod __serde_slice {
@@ -378,6 +388,7 @@ macro_rules! define_custom_string_slice {
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
+///     + `AsRef<$slice<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented.
 ///     + `PartialEq<$ty> for $ty`
 ///     + `$slice` and `str`
@@ -620,6 +631,12 @@ macro_rules! define_custom_string_owned {
             #[inline]
             fn deref(&self) -> &$slice<S> {
                 self.as_ref()
+            }
+        }
+
+        impl AsRef<$slice<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
+            fn as_ref(&self) -> &$slice<crate::spec::IriSpec> {
+                AsRef::<$slice<crate::spec::UriSpec>>::as_ref(self).as_ref()
             }
         }
 
