@@ -7,7 +7,7 @@ use nom::{
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
     combinator::{cut, map, not, opt, recognize},
-    error::{context, ParseError},
+    error::ParseError,
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -17,6 +17,20 @@ use crate::{
     parser::{char::is_sub_delim, RiReferenceComponents},
     spec::{Spec, SpecInternal, UriSpec},
 };
+
+/// Alternative to `nom::error::context()`.
+// TODO: This is temporary workaround, and currently no-op.
+// See <https://github.com/Geal/nom/pull/1111>.
+#[inline(always)]
+fn context<I: Clone, E: ParseError<I>, F, O>(
+    _context: &'static str,
+    f: F,
+) -> impl Fn(I) -> IResult<I, O, E>
+where
+    F: Fn(I) -> IResult<I, O, E>,
+{
+    f
+}
 
 /// `one_of` with predicate (not characters list).
 fn one_is<I, F, E: ParseError<I>>(pred: F) -> impl Fn(I) -> IResult<I, char, E>
@@ -588,7 +602,11 @@ mod tests {
 
     use crate::spec::IriSpec;
 
-    type Error<'a> = nom::error::VerboseError<&'a str>;
+    // `nom::error::VerboseError<&'a str>` is useful for debugging,
+    // but it requires `alloc` feature to be enabled on `nom`.
+    // Avoid using it in tests since `iri-string` itself currently does not
+    // require `alloc` feature of `nom`.
+    type Error<'a> = ();
 
     macro_rules! assert_invalid {
         ($parser:expr, $input:expr $(,)?) => {{
