@@ -170,41 +170,41 @@ impl<S: Spec> RiReferenceStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#corge")?;
     /// let fragment = IriFragmentStr::new("corge")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#")?;
     /// let fragment = IriFragmentStr::new("")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("#foo")?;
     /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
     /// let iri = IriReferenceStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
         raw::extract_fragment(self.as_str()).map(|fragment| unsafe {

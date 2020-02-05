@@ -9,13 +9,6 @@ use nom::combinator::all_consuming;
 
 use crate::{parser, spec::Spec};
 
-#[allow(missing_docs, clippy::missing_docs_in_private_items)]
-pub mod iri {
-    use crate::spec::IriSpec;
-
-    pub type Error = super::Error<IriSpec>;
-}
-
 /// [RFC 3987] IRI validation error.
 ///
 /// [RFC 3987]: https://tools.ietf.org/html/rfc3987

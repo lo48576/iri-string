@@ -110,32 +110,32 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
     /// let fragment_expected = IriFragmentStr::new("corge")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
     /// let fragment_expected = IriFragmentStr::new("")?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
     /// let (absolute, fragment) = iri.to_absolute_and_fragment();
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, None);
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     pub fn to_absolute_and_fragment(&self) -> (&RiAbsoluteStr<S>, Option<&RiFragmentStr<S>>) {
         let (prefix, fragment) = raw::split_fragment(self.as_str());
@@ -157,17 +157,17 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
     /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.to_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// [`RiAbsoluteStr`]: struct.RiAbsoluteStr.html
@@ -187,26 +187,26 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
     /// let fragment = IriFragmentStr::new("corge")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
     /// let fragment = IriFragmentStr::new("")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     #[inline]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
@@ -224,37 +224,37 @@ impl<S: Spec> RiString<S> {
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::types::{IriFragmentString, IriString};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentString, IriString}, validate::Error};
     /// let iri = "foo://bar/baz?qux=quux#corge".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
     /// let fragment_expected = IriFragmentString::try_from("corge".to_owned())
     ///     .map_err(|e| e.validation_error())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, iri_string::validate::iri::Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     ///
     /// ```
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::types::{IriFragmentString, IriString};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentString, IriString}, validate::Error};
     /// let iri = "foo://bar/baz?qux=quux#".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
     /// let fragment_expected = IriFragmentString::try_from("".to_owned())
     ///     .map_err(|e| e.validation_error())?;
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, Some(fragment_expected));
-    /// # Ok::<_, iri_string::validate::iri::Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
     /// use std::convert::TryFrom;
-    /// # use iri_string::types::IriString;
+    /// # use iri_string::{spec::IriSpec, types::IriString, validate::Error};
     /// let iri = "foo://bar/baz?qux=quux".parse::<IriString>()?;
     /// let (absolute, fragment) = iri.into_absolute_and_fragment();
     /// assert_eq!(absolute, "foo://bar/baz?qux=quux");
     /// assert_eq!(fragment, None);
-    /// # Ok::<_, iri_string::validate::iri::Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     pub fn into_absolute_and_fragment(self) -> (RiAbsoluteString<S>, Option<RiFragmentString<S>>) {
         let (prefix, fragment) = raw::split_fragment_owned(self.into());
@@ -276,17 +276,17 @@ impl<S: Spec> RiString<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::IriString, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriString, validate::Error};
     /// let iri = "foo://bar/baz?qux=quux#corge".parse::<IriString>()?;
     /// assert_eq!(iri.into_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriString, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriString, validate::Error};
     /// let iri = "foo://bar/baz?qux=quux".parse::<IriString>()?;
     /// assert_eq!(iri.into_absolute(), "foo://bar/baz?qux=quux");
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, Error<IriSpec>>(())
     /// ```
     ///
     /// [`RiAbsoluteString`]: struct.RiAbsoluteString.html
