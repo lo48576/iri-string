@@ -18,25 +18,10 @@ use crate::{
     spec::{Spec, SpecInternal, UriSpec},
 };
 
-/// Proxy to `nom::error::context()`.
-// This is temporary workaround. See <https://github.com/Geal/nom/pull/1111>.
-// About using `std` instead of `alloc`, see <https://github.com/Geal/nom/issues/1038>.
-#[cfg(feature = "std")]
-#[inline]
-fn context<I: Clone, E: ParseError<I>, F, O>(
-    context: &'static str,
-    f: F,
-) -> impl Fn(I) -> IResult<I, O, E>
-where
-    F: Fn(I) -> IResult<I, O, E>,
-{
-    nom::error::context(context, f)
-}
-
-/// Proxy to alterative of `nom::error::context()`.
-#[cfg(not(feature = "std"))]
-// This is temporary workaround. See <https://github.com/Geal/nom/pull/1111>.
-#[inline]
+/// Alternative to `nom::error::context()`.
+// TODO: This is temporary workaround, and currently no-op.
+// See <https://github.com/Geal/nom/pull/1111>.
+#[inline(always)]
 fn context<I: Clone, E: ParseError<I>, F, O>(
     _context: &'static str,
     f: F,
@@ -617,11 +602,10 @@ mod tests {
 
     use crate::spec::IriSpec;
 
-    // About using `std` instead of `alloc`, see <https://github.com/Geal/nom/issues/1038>.
-    #[cfg(feature = "std")]
-    type Error<'a> = nom::error::VerboseError<&'a str>;
-    // `(&'a str, nom::error::ErrorKind)` causes "reached the type-length limit" compilation error.
-    #[cfg(not(feature = "std"))]
+    // `nom::error::VerboseError<&'a str>` is useful for debugging,
+    // but it requires `alloc` feature to be enabled on `nom`.
+    // Avoid using it in tests since `iri-string` itself currently does not
+    // require `alloc` feature of `nom`.
     type Error<'a> = ();
 
     macro_rules! assert_invalid {

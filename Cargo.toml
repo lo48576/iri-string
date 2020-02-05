@@ -13,13 +13,15 @@ keywords = ["IRI", "URI"]
 all-features = true
 
 [features]
-default = ["std"]
+default = ["nom-std", "std"]
 
 alloc = ["serde/alloc"]
-# `iri-string` itself does not need `alloc` or `std` feature of `nom`.
+# `std` does not enable `nom/std`, because `iri-string` itself does not need
+# `alloc` or `std` feature of `nom` even when the `std` feature is enabled.
 # However, with `nom/std` enabled, `memchr` will use runtime CPU detection and
 # parsing will be faster.
-std = ["alloc", "nom/std", "serde/std"]
+nom-std=["std", "nom/std"]
+std = ["alloc", "serde/std"]
 
 [dependencies]
 nom = { version = "5", default-features = false }
