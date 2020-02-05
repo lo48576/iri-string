@@ -13,7 +13,7 @@ mod internal;
 ///
 /// This trait is not intended to be implemented by crate users.
 // Note that all types which implement `Spec` also implement `SpecInternal`.
-pub trait Spec: internal::Sealed + Copy + Clone + fmt::Debug {}
+pub trait Spec: internal::Sealed + Copy + fmt::Debug {}
 
 /// A type that represents specification of IRI.
 ///
