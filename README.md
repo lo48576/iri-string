@@ -6,7 +6,9 @@
 ![Minimum rustc version: 1.41](https://img.shields.io/badge/rustc-1.41+-lightgray.svg)
 
 String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
-Identifiers).
+Identifiers) and [URI](https://tools.ietf.org/html/rfc3986)s (Uniform Resource Identifiers).
+
+See the [documentation](https://docs.rs/iri-string) for detail.
 
 ## Features
 
@@ -16,11 +18,15 @@ Identifiers).
 
 ### Feature flags
 
-* `std` (enabled by default)
-    + Enables all `std` features (such as memory allocations and `std::error::Error` trait).
-* `alloc`
+* `alloc` (enabled by default)
     + Enables types and functions which require memory allocation.
     + Requires `std` or `alloc` crate available.
+* `std` (enabled by default)
+    + Enables all `std` features (such as memory allocations and `std::error::Error` trait).
+* `nom-std`
+    + Enable optimization for internal parsers, using std power.
+* `serde`
+    + Implements `Serialize` and `Deserialize` traits for string types.
 
 ## License
 
