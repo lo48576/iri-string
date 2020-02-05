@@ -169,6 +169,8 @@ impl<S: Spec> RiReferenceStr<S> {
     ///
     /// # Examples
     ///
+    /// If the IRI has a fragment part, `Some(_)` is returned.
+    ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#corge")?;
@@ -179,6 +181,16 @@ impl<S: Spec> RiReferenceStr<S> {
     ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
+    /// let iri = IriReferenceStr::new("#foo")?;
+    /// let fragment = IriFragmentStr::new("foo")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// When the fragment part exists but is empty string, `Some(_)` is returned.
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#")?;
     /// let fragment = IriFragmentStr::new("")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -186,17 +198,19 @@ impl<S: Spec> RiReferenceStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
-    /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux")?;
-    /// assert_eq!(iri.fragment(), None);
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
+    /// let iri = IriReferenceStr::new("#")?;
+    /// let fragment = IriFragmentStr::new("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
     ///
+    /// If the IRI has no fragment, `None` is returned.
+    ///
     /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
-    /// let iri = IriReferenceStr::new("#foo")?;
-    /// let fragment = IriFragmentStr::new("foo")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
+    /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
     ///

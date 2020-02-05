@@ -109,6 +109,8 @@ impl<S: Spec> RiStr<S> {
     ///
     /// # Examples
     ///
+    /// If the IRI has a fragment part, `Some(_)` is returned.
+    ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
@@ -119,6 +121,8 @@ impl<S: Spec> RiStr<S> {
     /// # Ok::<_, Error>(())
     /// ```
     ///
+    /// When the fragment part exists but is empty string, `Some(_)` is returned.
+    ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
     /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
@@ -128,6 +132,8 @@ impl<S: Spec> RiStr<S> {
     /// assert_eq!(fragment, Some(fragment_expected));
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// If the IRI has no fragment, `None` is returned.
     ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};

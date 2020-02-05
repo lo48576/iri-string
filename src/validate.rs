@@ -309,6 +309,8 @@ pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
 /// // Broken percent encoding cannot appear in an IRI reference.
 /// assert!(fragment::<UriSpec>("%").is_err());
 /// assert!(fragment::<UriSpec>("%GG").is_err());
+/// // Hash sign `#` cannot appear in an IRI fragment.
+/// assert!(fragment::<UriSpec>("#hash").is_err());
 /// ```
 ///
 /// [fragment]: https://tools.ietf.org/html/rfc3986#section-3.5

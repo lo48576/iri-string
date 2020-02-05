@@ -38,6 +38,8 @@ define_custom_string_slice! {
     /// // Broken percent encoding cannot appear in an IRI reference.
     /// assert!(IriFragmentStr::new("%").is_err());
     /// assert!(IriFragmentStr::new("%GG").is_err());
+    /// // Hash sign `#` cannot appear in an IRI fragment.
+    /// assert!(IriFragmentStr::new("#hash").is_err());
     /// ```
     ///
     /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
@@ -96,6 +98,8 @@ impl<S: Spec> RiFragmentStr<S> {
     /// // `#` prefix is expected.
     /// assert!(IriFragmentStr::from_prefixed("").is_err());
     /// assert!(IriFragmentStr::from_prefixed("foo").is_err());
+    /// // Hash sign `#` cannot appear in an IRI fragment.
+    /// assert!(IriFragmentStr::from_prefixed("##hash").is_err());
     /// ```
     pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
         if !s.starts_with('#') {
