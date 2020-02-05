@@ -19,7 +19,7 @@ pub struct CreationError<S, T> {
     /// Soruce data.
     source: T,
     /// Validation error.
-    error: Error<S>,
+    error: Error,
     /// Spec.
     _spec: PhantomData<fn() -> S>,
 }
@@ -31,12 +31,12 @@ impl<S: Spec, T> CreationError<S, T> {
     }
 
     /// Returns the validation error.
-    pub fn validation_error(&self) -> Error<S> {
+    pub fn validation_error(&self) -> Error {
         self.error
     }
 
     /// Creates a new `CreationError`.
-    pub(crate) fn new(error: Error<S>, source: T) -> Self {
+    pub(crate) fn new(error: Error, source: T) -> Self {
         Self {
             source,
             error,

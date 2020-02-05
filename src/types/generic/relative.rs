@@ -112,7 +112,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// let iri = IriRelativeStr::new("?foo#bar")?;
     /// let fragment = IriFragmentStr::new("bar")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error<IriSpec>>(())
+    /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
@@ -120,14 +120,14 @@ impl<S: Spec> RiRelativeStr<S> {
     /// let iri = IriRelativeStr::new("#foo")?;
     /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error<IriSpec>>(())
+    /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::IriRelativeStr, validate::Error};
     /// let iri = IriRelativeStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error<IriSpec>>(())
+    /// # Ok::<_, Error>(())
     /// ```
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
         AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
