@@ -55,28 +55,58 @@ macro_rules! impl_cmp {
     };
 }
 
-/// Implements `PartialEq` and `PartialOrd`.
-macro_rules! impl_cmp_as_str {
+/// Implements `PartialEq` and `PartialOrd` with two independent spec type parameter.
+macro_rules! impl_cmp2 {
+    ($ty_common:ty, $ty_lhs:ty, $ty_rhs:ty) => {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialEq<$ty_rhs> for $ty_lhs {
+            #[inline]
+            fn eq(&self, o: &$ty_rhs) -> bool {
+                <$ty_common as PartialEq<$ty_common>>::eq(self.as_ref(), o.as_ref())
+            }
+        }
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialEq<$ty_lhs> for $ty_rhs {
+            #[inline]
+            fn eq(&self, o: &$ty_lhs) -> bool {
+                <$ty_common as PartialEq<$ty_common>>::eq(self.as_ref(), o.as_ref())
+            }
+        }
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialOrd<$ty_rhs> for $ty_lhs {
+            #[inline]
+            fn partial_cmp(&self, o: &$ty_rhs) -> Option<core::cmp::Ordering> {
+                <$ty_common as PartialOrd<$ty_common>>::partial_cmp(self.as_ref(), o.as_ref())
+            }
+        }
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialOrd<$ty_lhs> for $ty_rhs {
+            #[inline]
+            fn partial_cmp(&self, o: &$ty_lhs) -> Option<core::cmp::Ordering> {
+                <$ty_common as PartialOrd<$ty_common>>::partial_cmp(self.as_ref(), o.as_ref())
+            }
+        }
+    };
+}
+
+/// Implements `PartialEq` and `PartialOrd` with two independent spec type parameter.
+macro_rules! impl_cmp2_as_str {
     ($ty_lhs:ty, $ty_rhs:ty) => {
-        impl<S: crate::spec::Spec> PartialEq<$ty_rhs> for $ty_lhs {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialEq<$ty_rhs> for $ty_lhs {
             #[inline]
             fn eq(&self, o: &$ty_rhs) -> bool {
                 PartialEq::eq(self.as_str(), o.as_str())
             }
         }
-        impl<S: crate::spec::Spec> PartialEq<$ty_lhs> for $ty_rhs {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialEq<$ty_lhs> for $ty_rhs {
             #[inline]
             fn eq(&self, o: &$ty_lhs) -> bool {
                 PartialEq::eq(self.as_str(), o.as_str())
             }
         }
-        impl<S: crate::spec::Spec> PartialOrd<$ty_rhs> for $ty_lhs {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialOrd<$ty_rhs> for $ty_lhs {
             #[inline]
             fn partial_cmp(&self, o: &$ty_rhs) -> Option<core::cmp::Ordering> {
                 PartialOrd::partial_cmp(self.as_str(), o.as_str())
             }
         }
-        impl<S: crate::spec::Spec> PartialOrd<$ty_lhs> for $ty_rhs {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialOrd<$ty_lhs> for $ty_rhs {
             #[inline]
             fn partial_cmp(&self, o: &$ty_lhs) -> Option<core::cmp::Ordering> {
                 PartialOrd::partial_cmp(self.as_str(), o.as_str())
@@ -294,7 +324,7 @@ macro_rules! define_custom_string_slice {
         impl_cmp!(str, str, $ty<S>);
         impl_cmp!(str, &str, $ty<S>);
         impl_cmp!(str, str, &$ty<S>);
-        impl_cmp!(str, &$ty<S>, $ty<S>);
+        impl_cmp2!(str, &$ty<S>, $ty<T>);
 
         impl<S: crate::spec::Spec> core::fmt::Display for $ty<S> {
             #[inline]
@@ -500,18 +530,18 @@ macro_rules! define_custom_string_owned {
             }
         }
 
-        impl<S: crate::spec::Spec> PartialEq for $ty<S> {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialEq<$ty<T>> for $ty<S> {
             #[inline]
-            fn eq(&self, other: &Self) -> bool {
+            fn eq(&self, other: &$ty<T>) -> bool {
                 self.inner == other.inner
             }
         }
 
         impl<S: crate::spec::Spec> Eq for $ty<S> {}
 
-        impl<S: crate::spec::Spec> PartialOrd for $ty<S> {
+        impl<S: crate::spec::Spec, T: crate::spec::Spec> PartialOrd<$ty<T>> for $ty<S> {
             #[inline]
-            fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+            fn partial_cmp(&self, other: &$ty<T>) -> Option<core::cmp::Ordering> {
                 self.inner.partial_cmp(&other.inner)
             }
         }
@@ -642,15 +672,15 @@ macro_rules! define_custom_string_owned {
 
         impl_cmp!(str, $slice<S>, alloc::borrow::Cow<'_, str>);
         impl_cmp!(str, &$slice<S>, alloc::borrow::Cow<'_, str>);
-        impl_cmp_as_str!(&$slice<S>, alloc::borrow::Cow<'_, $slice<S>>);
+        impl_cmp2_as_str!(&$slice<S>, alloc::borrow::Cow<'_, $slice<T>>);
 
         impl_cmp!(str, str, $ty<S>);
         impl_cmp!(str, &str, $ty<S>);
         impl_cmp!(str, alloc::borrow::Cow<'_, str>, $ty<S>);
         impl_cmp!(str, alloc::string::String, $ty<S>);
-        impl_cmp!(str, $slice<S>, $ty<S>);
-        impl_cmp!(str, &$slice<S>, $ty<S>);
-        impl_cmp_as_str!(alloc::borrow::Cow<'_, $slice<S>>, $ty<S>);
+        impl_cmp2!(str, $slice<S>, $ty<T>);
+        impl_cmp2!(str, &$slice<S>, $ty<T>);
+        impl_cmp2_as_str!(alloc::borrow::Cow<'_, $slice<S>>, $ty<T>);
 
         impl<S: crate::spec::Spec> core::fmt::Display for $ty<S> {
             #[inline]
@@ -833,32 +863,50 @@ macro_rules! impl_infallible_conv_between_iri {
             }
         }
 
-        impl_cmp_as_str!($from_slice<S>, $to_slice<S>);
-        impl_cmp_as_str!(&$from_slice<S>, $to_slice<S>);
-        impl_cmp_as_str!($from_slice<S>, &$to_slice<S>);
+        impl_cmp2_as_str!($from_slice<S>, $to_slice<T>);
+        impl_cmp2_as_str!(&$from_slice<S>, $to_slice<T>);
+        impl_cmp2_as_str!($from_slice<S>, &$to_slice<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_slice<S>, alloc::borrow::Cow<'_, $to_slice<S>>);
+        impl_cmp2_as_str!($from_slice<S>, alloc::borrow::Cow<'_, $to_slice<T>>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!(&$from_slice<S>, alloc::borrow::Cow<'_, $to_slice<S>>);
+        impl_cmp2_as_str!(&$from_slice<S>, alloc::borrow::Cow<'_, $to_slice<T>>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, $to_slice<S>);
+        impl_cmp2_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, $to_slice<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, &$to_slice<S>);
+        impl_cmp2_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, &$to_slice<T>);
 
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_slice<S>, $to_owned<S>);
+        impl_cmp2_as_str!($from_slice<S>, $to_owned<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!(&$from_slice<S>, $to_owned<S>);
+        impl_cmp2_as_str!(&$from_slice<S>, $to_owned<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, $to_owned<S>);
+        impl_cmp2_as_str!(alloc::borrow::Cow<'_, $from_slice<S>>, $to_owned<T>);
 
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_owned<S>, $to_slice<S>);
+        impl_cmp2_as_str!($from_owned<S>, $to_slice<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_owned<S>, &$to_slice<S>);
+        impl_cmp2_as_str!($from_owned<S>, &$to_slice<T>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_owned<S>, alloc::borrow::Cow<'_, $to_slice<S>>);
+        impl_cmp2_as_str!($from_owned<S>, alloc::borrow::Cow<'_, $to_slice<T>>);
         #[cfg(feature = "alloc")]
-        impl_cmp_as_str!($from_owned<S>, $to_owned<S>);
+        impl_cmp2_as_str!($from_owned<S>, $to_owned<T>);
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        spec::{IriSpec, UriSpec},
+        types::{RiAbsoluteStr, RiReferenceStr},
+    };
+
+    #[test]
+    fn compare_different_types()
+    where
+        RiAbsoluteStr<UriSpec>: PartialEq<RiReferenceStr<IriSpec>>,
+        RiReferenceStr<IriSpec>: PartialEq<RiAbsoluteStr<UriSpec>>,
+        RiAbsoluteStr<IriSpec>: PartialEq<RiReferenceStr<UriSpec>>,
+        RiReferenceStr<UriSpec>: PartialEq<RiAbsoluteStr<IriSpec>>,
+    {
+    }
 }
