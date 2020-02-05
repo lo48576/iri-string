@@ -1,12 +1,30 @@
-//! String types for [RFC 3987 IRI][RFC 3987].
+//! String types for [RFC 3987 Internationalized Resource Identifiers (IRIs)][RFC 3987] and
+//! [RFC 3986 Uniform Resource Identifiers (URIs)][RFC 3986].
 //!
 //! Note that this crate does not have any extra knowledge about protocols.
 //! Comparisons between IRI strings by `PartialEq` and `Eq` is implemented as [simple string
 //! comparison](https://tools.ietf.org/html/rfc3986#section-6.2.1).
 //! You should implement by yourself or use another crate to use such extra knowledge to compare
-//! IRIs.
+//! IRIs / URIs.
 //!
-//! [RFC 3987]: https://tools.ietf.org/html/rfc3987
+//! # Capability
+//!
+//! This crate provides three features: string types, resolvers, and validators.
+//!
+//! ## String types
+//!
+//! [`types` module][`types`] module provides various string types for IRIs and URIs.
+//!
+//! ## Resolvers
+//!
+//! [`resolve` module][`resolve`] provides IRI / URI references resolver.
+//! However, you are recommended to use methods of string types such as
+//! [`RiReferenceStr::resolve_against()`] or [`RiRelativeStr::resolve_against()`], rather than the
+//! freestanding resolver function.
+//!
+//! ## Validators
+//!
+//! Validator functions are provided from [`validate` module][`validate`].
 //!
 //! # Feature flags
 //!
@@ -86,6 +104,14 @@
 //! **contains** an authority component, which is unclear.
 //! However, based on the interpretation above, we should consider authority part with empty string
 //! as satisfying the condition "authority is **present**".
+//!
+//! [RFC 3986]: https://tools.ietf.org/html/rfc3986
+//! [RFC 3987]: https://tools.ietf.org/html/rfc3987
+//! [`resolve`]: resolve/index.html
+//! [`types`]: types/index.html
+//! [`validate`]: validate/index.html
+//! [`RiReferenceStr::resolve_against()`]: types/struct.RiReferenceStr.html#method.resolve_against
+//! [`RiRelativeStr::resolve_against()`]: types/struct.RiRelativeStr.html#method.resolve_against
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 #![cfg_attr(not(feature = "std"), no_std)]
