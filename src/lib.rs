@@ -8,7 +8,9 @@
 //!
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
 //!
-//! # `std` and `alloc` support
+//! # Feature flags
+//!
+//! ## `std` and `alloc` support
 //!
 //! This crate supports `no_std` usage.
 //!
@@ -22,6 +24,15 @@
 //!     + The feature let the crate utilize std-specific stuff, such as `std::error::Error` trait.
 //! * Without neither of them:
 //!     + The crate can be used in `no_std` environment.
+//!
+//! ## Other features
+//!
+//! * `serde`
+//!     + Enables serde support.
+//!     + Implement `Serailize` and `Deserialize` traits for IRI / URI types.
+//! * `nom-std`
+//!     + Enabled by default.
+//!     + Enables optimization for the internal parsers using std capability.
 //!
 //! # Rationale
 //!
