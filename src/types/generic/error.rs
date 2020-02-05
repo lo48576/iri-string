@@ -1,11 +1,11 @@
 //! Resource identifier creation error.
 
-use core::{fmt, marker::PhantomData};
+use core::fmt;
 
 #[cfg(feature = "std")]
 use std::error;
 
-use crate::{spec::Spec, validate::Error};
+use crate::validate::Error;
 
 /// Error on conversion into an IRI type.
 ///
@@ -15,16 +15,14 @@ use crate::{spec::Spec, validate::Error};
 // module) is available only when necessary.
 //
 // Note that all types which implement `Spec` also implement `SpecInternal`.
-pub struct CreationError<S, T> {
+pub struct CreationError<T> {
     /// Soruce data.
     source: T,
     /// Validation error.
     error: Error,
-    /// Spec.
-    _spec: PhantomData<fn() -> S>,
 }
 
-impl<S: Spec, T> CreationError<S, T> {
+impl<T> CreationError<T> {
     /// Returns the source data.
     pub fn into_source(self) -> T {
         self.source
@@ -37,15 +35,11 @@ impl<S: Spec, T> CreationError<S, T> {
 
     /// Creates a new `CreationError`.
     pub(crate) fn new(error: Error, source: T) -> Self {
-        Self {
-            source,
-            error,
-            _spec: PhantomData,
-        }
+        Self { source, error }
     }
 }
 
-impl<S: Spec, T: fmt::Debug> fmt::Debug for CreationError<S, T> {
+impl<T: fmt::Debug> fmt::Debug for CreationError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CreationError")
             .field("source", &self.source)
@@ -54,21 +48,20 @@ impl<S: Spec, T: fmt::Debug> fmt::Debug for CreationError<S, T> {
     }
 }
 
-impl<S: Spec, T: Clone> Clone for CreationError<S, T> {
+impl<T: Clone> Clone for CreationError<T> {
     fn clone(&self) -> Self {
         Self {
             source: self.source.clone(),
             error: self.error,
-            _spec: PhantomData,
         }
     }
 }
 
-impl<S: Spec, T> fmt::Display for CreationError<S, T> {
+impl<T> fmt::Display for CreationError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.error.fmt(f)
     }
 }
 
 #[cfg(feature = "std")]
-impl<S: Spec, T: fmt::Debug> error::Error for CreationError<S, T> {}
+impl<T: fmt::Debug> error::Error for CreationError<T> {}

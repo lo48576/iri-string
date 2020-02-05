@@ -598,7 +598,7 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> core::convert::TryFrom<alloc::string::String> for $ty<S> {
-            type Error = crate::types::CreationError<S, alloc::string::String>;
+            type Error = crate::types::CreationError<alloc::string::String>;
 
             #[inline]
             fn try_from(s: alloc::string::String) -> Result<Self, Self::Error> {
@@ -819,7 +819,7 @@ macro_rules! impl_infallible_conv_between_iri {
 
         #[cfg(feature = "alloc")]
         impl<S: crate::spec::Spec> core::convert::TryFrom<$to_owned<S>> for $from_owned<S> {
-            type Error = crate::types::CreationError<S, $to_owned<S>>;
+            type Error = crate::types::CreationError<$to_owned<S>>;
 
             fn try_from(s: $to_owned<S>) -> Result<Self, Self::Error> {
                 match <&$from_slice<S>>::try_from(s.as_str()) {
