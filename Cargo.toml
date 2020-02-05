@@ -15,12 +15,15 @@ all-features = true
 [features]
 default = ["std"]
 
-alloc = []
-std = ["alloc"]
+alloc = ["serde/alloc"]
+# `iri-string` itself does not need `alloc` or `std` feature of `nom`.
+# However, with `nom/std` enabled, `memchr` will use runtime CPU detection and
+# parsing will be faster.
+std = ["alloc", "nom/std", "serde/std"]
 
 [dependencies]
-nom = { version = "5", default-features = false, features = ["std"] }
-serde = { version = "1.0.103", features = ["derive"], optional = true }
+nom = { version = "5", default-features = false }
+serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [badges]
 maintenance = { status = "actively-developed" }

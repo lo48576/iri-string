@@ -7,7 +7,7 @@ use nom::{
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of},
     combinator::{cut, map, not, opt, recognize},
-    error::{context, ParseError},
+    error::ParseError,
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -17,6 +17,35 @@ use crate::{
     parser::{char::is_sub_delim, RiReferenceComponents},
     spec::{Spec, SpecInternal, UriSpec},
 };
+
+/// Proxy to `nom::error::context()`.
+// This is temporary workaround. See <https://github.com/Geal/nom/pull/1111>.
+// About using `std` instead of `alloc`, see <https://github.com/Geal/nom/issues/1038>.
+#[cfg(feature = "std")]
+#[inline]
+fn context<I: Clone, E: ParseError<I>, F, O>(
+    context: &'static str,
+    f: F,
+) -> impl Fn(I) -> IResult<I, O, E>
+where
+    F: Fn(I) -> IResult<I, O, E>,
+{
+    nom::error::context(context, f)
+}
+
+/// Proxy to alterative of `nom::error::context()`.
+#[cfg(not(feature = "std"))]
+// This is temporary workaround. See <https://github.com/Geal/nom/pull/1111>.
+#[inline]
+fn context<I: Clone, E: ParseError<I>, F, O>(
+    _context: &'static str,
+    f: F,
+) -> impl Fn(I) -> IResult<I, O, E>
+where
+    F: Fn(I) -> IResult<I, O, E>,
+{
+    f
+}
 
 /// `one_of` with predicate (not characters list).
 fn one_is<I, F, E: ParseError<I>>(pred: F) -> impl Fn(I) -> IResult<I, char, E>
@@ -588,7 +617,12 @@ mod tests {
 
     use crate::spec::IriSpec;
 
+    // About using `std` instead of `alloc`, see <https://github.com/Geal/nom/issues/1038>.
+    #[cfg(feature = "std")]
     type Error<'a> = nom::error::VerboseError<&'a str>;
+    // `(&'a str, nom::error::ErrorKind)` causes "reached the type-length limit" compilation error.
+    #[cfg(not(feature = "std"))]
+    type Error<'a> = ();
 
     macro_rules! assert_invalid {
         ($parser:expr, $input:expr $(,)?) => {{
