@@ -9,9 +9,7 @@ use nom::combinator::all_consuming;
 
 use crate::{parser, spec::Spec};
 
-/// [RFC 3987] IRI validation error.
-///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// Resource identifier validation error.
 // Implement traits manually to accept all `S: Spec` (without other trait bounds).
 pub struct Error<S>(PhantomData<fn() -> S>);
 
@@ -72,49 +70,43 @@ fn conv_err<T, E, S: Spec>(res: Result<T, E>) -> Result<(), Error<S>> {
     }
 }
 
-/// Validates [RFC 3987] [IRI][uri].
+/// Validates [IRI][uri].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [uri]: https://tools.ietf.org/html/rfc3986#section-3
 pub fn iri<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::uri::<(), S>)(s))
 }
 
-/// Validates [RFC 3987] [IRI reference][uri-reference].
+/// Validates [IRI reference][uri-reference].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [uri-reference]: https://tools.ietf.org/html/rfc3986#section-4.1
 pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::uri_reference::<(), S>)(s))
 }
 
-/// Validates [RFC 3987] [absolute IRI][absolute-uri].
+/// Validates [absolute IRI][absolute-uri].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [absolute-uri]: https://tools.ietf.org/html/rfc3986#section-4.3
 pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::absolute_uri::<(), S>)(s))
 }
 
-/// Validates [RFC 3987] [relative reference][relative-ref].
+/// Validates [relative reference][relative-ref].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [relative-ref]: https://tools.ietf.org/html/rfc3986#section-4.2
 pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::relative_ref::<(), S>)(s))
 }
 
-/// Validates [RFC 3987] [IRI path][path].
+/// Validates [IRI path][path].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [path]: https://tools.ietf.org/html/rfc3986#section-3.3
 pub fn path<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::path::<(), S>)(s))
 }
 
-/// Validates [RFC 3987] [IRI fragment][fragment].
+/// Validates [IRI fragment][fragment].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
 /// [fragment]: https://tools.ietf.org/html/rfc3986#section-3.5
 pub fn fragment<S: Spec>(s: &str) -> Result<(), Error<S>> {
     conv_err(all_consuming(parser::fragment::<(), S>)(s))
