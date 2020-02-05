@@ -36,11 +36,11 @@ Beleive rustdoc rather than this CHANGELOG.**
     + Type aliases for monomorphized types are also provided, but naming convertions are the same.
       They are named `{Iri,Uri}{..}Str{,ing}`.
         - For example, there is `IriAbsoluteStr` instead of legacy `AbsoluteIriStr`.
+    * `types::CreationError` is now revived.
+    * `types::IriCreationError` is now removed in favor of `types::CreationError`.
 * Remove depraceted items.
     + `IriReferenceStr::resolve()` is now removed.
       Use `IriReferenceStr::resolve_against()` instead.
-    + `types::CreationError` is now removed.
-      Use `types::IriCreationError` instead.
 * Remove `Deref` impls for IRI string types.
     + IRI string types should not implement `Deref`, because they are not smart pointer types.
 * Change methods types.

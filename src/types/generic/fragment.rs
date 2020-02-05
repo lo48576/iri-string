@@ -97,7 +97,7 @@ impl<S: Spec> RiFragmentStr<S> {
     /// assert!(IriFragmentStr::from_prefixed("").is_err());
     /// assert!(IriFragmentStr::from_prefixed("foo").is_err());
     /// ```
-    pub fn from_prefixed(s: &str) -> Result<&Self, Error<S>> {
+    pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
         if !s.starts_with('#') {
             return Err(Error::new());
         }

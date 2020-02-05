@@ -170,7 +170,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#corge")?;
     /// let fragment = IriFragmentStr::new("corge")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -178,7 +178,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux#")?;
     /// let fragment = IriFragmentStr::new("")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -186,14 +186,14 @@ impl<S: Spec> RiReferenceStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
     /// let iri = IriReferenceStr::new("foo://bar/baz?qux=quux")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriReferenceStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriReferenceStr}, validate::Error};
     /// let iri = IriReferenceStr::new("#foo")?;
     /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -201,7 +201,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriReferenceStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriReferenceStr, validate::Error};
     /// let iri = IriReferenceStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())

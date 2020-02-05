@@ -2,8 +2,7 @@
 
 #[cfg(feature = "alloc")]
 use crate::types::{
-    CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
-    RiString,
+    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
 };
 use crate::{
     spec::UriSpec,
@@ -44,7 +43,3 @@ pub type UriRelativeStr = RiRelativeStr<UriSpec>;
 /// An owned string type for a relative URI reference.
 #[cfg(feature = "alloc")]
 pub type UriRelativeString = RiRelativeString<UriSpec>;
-
-/// URI creation error.
-#[cfg(feature = "alloc")]
-pub type UriCreationError<T> = CreationError<UriSpec, T>;

@@ -153,7 +153,7 @@ macro_rules! define_custom_string_slice {
         impl<S: crate::spec::Spec> $ty<S> {
             /// Creates a new string.
             #[inline]
-            pub fn new(s: &str) -> Result<&Self, crate::validate::Error<S>> {
+            pub fn new(s: &str) -> Result<&Self, crate::validate::Error> {
                 core::convert::TryFrom::try_from(s)
             }
 
@@ -280,11 +280,11 @@ macro_rules! define_custom_string_slice {
         }
 
         impl<'a, S: crate::spec::Spec> core::convert::TryFrom<&'a str> for &'a $ty<S> {
-            type Error = crate::validate::Error<S>;
+            type Error = crate::validate::Error;
 
             #[inline]
             fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-                match $validate(s) {
+                match $validate::<S>(s) {
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
                     Err(e) => Err(e),
                 }
@@ -589,7 +589,7 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> core::convert::TryFrom<&'_ str> for $ty<S> {
-            type Error = crate::validate::Error<S>;
+            type Error = crate::validate::Error;
 
             #[inline]
             fn try_from(s: &str) -> Result<Self, Self::Error> {
@@ -598,7 +598,7 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> core::convert::TryFrom<alloc::string::String> for $ty<S> {
-            type Error = crate::types::CreationError<S, alloc::string::String>;
+            type Error = crate::types::CreationError<alloc::string::String>;
 
             #[inline]
             fn try_from(s: alloc::string::String) -> Result<Self, Self::Error> {
@@ -617,7 +617,7 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> alloc::str::FromStr for $ty<S> {
-            type Err = crate::validate::Error<S>;
+            type Err = crate::validate::Error;
 
             #[inline]
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -809,7 +809,7 @@ macro_rules! impl_infallible_conv_between_iri {
         impl<'a, S: crate::spec::Spec> core::convert::TryFrom<&'a $to_slice<S>>
             for &'a $from_slice<S>
         {
-            type Error = crate::validate::Error<S>;
+            type Error = crate::validate::Error;
 
             #[inline]
             fn try_from(s: &'a $to_slice<S>) -> Result<Self, Self::Error> {
@@ -819,7 +819,7 @@ macro_rules! impl_infallible_conv_between_iri {
 
         #[cfg(feature = "alloc")]
         impl<S: crate::spec::Spec> core::convert::TryFrom<$to_owned<S>> for $from_owned<S> {
-            type Error = crate::types::CreationError<S, $to_owned<S>>;
+            type Error = crate::types::CreationError<$to_owned<S>>;
 
             fn try_from(s: $to_owned<S>) -> Result<Self, Self::Error> {
                 match <&$from_slice<S>>::try_from(s.as_str()) {

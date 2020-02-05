@@ -2,8 +2,7 @@
 
 #[cfg(feature = "alloc")]
 use crate::types::{
-    CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
-    RiString,
+    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
 };
 use crate::{
     spec::IriSpec,
@@ -44,7 +43,3 @@ pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 /// An owned string type for a relative IRI reference.
 #[cfg(feature = "alloc")]
 pub type IriRelativeString = RiRelativeString<IriSpec>;
-
-/// IRI creation error.
-#[cfg(feature = "alloc")]
-pub type IriCreationError<T> = CreationError<IriSpec, T>;

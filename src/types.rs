@@ -143,14 +143,8 @@ pub use self::{
         CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
         RiString,
     },
-    iri::{
-        IriAbsoluteString, IriCreationError, IriFragmentString, IriReferenceString,
-        IriRelativeString, IriString,
-    },
-    uri::{
-        UriAbsoluteString, UriCreationError, UriFragmentString, UriReferenceString,
-        UriRelativeString, UriString,
-    },
+    iri::{IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString},
+    uri::{UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString},
 };
 pub use self::{
     generic::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr},

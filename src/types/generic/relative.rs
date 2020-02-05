@@ -108,7 +108,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriRelativeStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
     /// let iri = IriRelativeStr::new("?foo#bar")?;
     /// let fragment = IriFragmentStr::new("bar")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -116,7 +116,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::{IriFragmentStr, IriRelativeStr}, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
     /// let iri = IriRelativeStr::new("#foo")?;
     /// let fragment = IriFragmentStr::new("foo")?;
     /// assert_eq!(iri.fragment(), Some(fragment));
@@ -124,7 +124,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     ///
     /// ```
-    /// # use iri_string::{types::IriRelativeStr, validate::iri::Error};
+    /// # use iri_string::{spec::IriSpec, types::IriRelativeStr, validate::Error};
     /// let iri = IriRelativeStr::new("")?;
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
