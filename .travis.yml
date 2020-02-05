@@ -4,31 +4,41 @@ rust:
   - 1.41.0
   - stable
   - beta
+env:
+  - FEATURES=
+  - FEATURES="--all-features"
 jobs:
   include:
-    - name: "Minimal versions"
+    - name: "Format"
       rust: 1.41.0
-      env: TEST_MINIMAL_VERSIONS=1
-    - name: "Lint"
-      rust: 1.41.0
-      before_install: |
-        rustup component add clippy rustfmt
-        cargo clippy --version
-        cargo fmt --version
+      before_install:
+        - rustup component add rustfmt && cargo fmt --version
       script:
-        # Fail if the code is correctly formatted.
+        # Fail if the code is not correctly formatted.
         - cargo fmt --all -- --check
-        # Fail if the code has warnings.
-        - cargo clippy --all-features -- --deny warnings
-    - name: "stable, nostd"
+    - name: "minimal versions, all features"
+      rust: 1.41.0
+      env: TEST_MINIMAL_VERSIONS=1 FEATURES="--all-features"
+    - name: "stable, minimal features"
       rust: stable
-      script:
-        - cargo build --verbose --workspace --no-default-features && cargo test --verbose --workspace --no-default-features
+      env: FEATURES="--no-default-features"
     - name: "stable, alloc"
       rust: stable
-      script:
-        - cargo build --verbose --workspace --no-default-features --features=alloc && cargo test --verbose --workspace --no-default-features --features=alloc
+      env: FEATURES="--no-default-features --features=alloc"
+    - name: "stable, serde"
+      rust: stable
+      env: FEATURES="--no-default-features --features=serde"
+    - name: "stable, alloc+serde"
+      rust: stable
+      env: FEATURES="--no-default-features --features=alloc,serde"
+  exclude:
+    # To reduce bulids, omit beta with only default features.
+    - rust: beta
+      env: FEATURES=
 before_install:
+  # For lint.
+  - rustup component add clippy && cargo clippy --version
+  # For minimal versions test.
   - |
     if [ "${TEST_MINIMAL_VERSIONS:-0}" -ne 0 ] ; then
         rustup install nightly
@@ -40,6 +50,9 @@ before_script:
         cargo +nightly update -Z minimal-versions
     fi
 script:
-  - cargo build --verbose --workspace --all-features && cargo test --verbose --workspace --all-features
+  # Fail if the code has warnings.
+  - cargo clippy ${FEATURES:-} -- --deny warnings
+  # Compile and run tests.
+  - cargo build --verbose --workspace ${FEATURES:-} && cargo test --verbose --workspace ${FEATURES:-}
 notifications:
   email: false

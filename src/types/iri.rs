@@ -1,54 +1,50 @@
-//! IRI types.
-//!
-//! ```text
-//! IRI           = scheme ":" ihier-part [ "?" iquery ] [ "#" ifragment ]
-//! IRI-reference = IRI / irelative-ref
-//! absolute-IRI  = scheme ":" ihier-part [ "?" iquery ]
-//! irelative-ref = irelative-part [ "?" iquery ] [ "#" ifragment ]
-//!     (`irelative-part` is roughly same as `ihier-part`.)
-//! ```
-//!
-//! Hierarchy:
-//!
-//! ```text
-//! IriReferenceStr
-//! |-- IriStr
-//! |   `-- AbsoluteIriStr
-//! `-- RelativeIriStr
-//! ```
-//!
-//! Therefore, the conversions below are safe and cheap:
-//!
-//! * `IriStr -> IriReferenceStr`
-//! * `AbsoluteIriStr -> IriStr`
-//! * `AbsoluteIriStr -> IriReferenceStr`
-//! * `RelativeIriStr -> IriReferenceStr`
-//!
-//! For safely convertible types (consider `FooStr -> BarStr` is safe), traits
-//! below are implemented:
-//!
-//! * `AsRef<BarStr> for FooStr`
-//! * `AsRef<BarStr> for FooString`
-//! * `From<FooString> for BarString`
-//! * `PartialEq<FooStr> for BarStr` and lots of impls like that
-//!     + `PartialEq` and `ParitalOrd`.
-//!     + Slice, owned, `Cow`, reference, etc...
-
-pub use self::{
-    absolute::AbsoluteIriStr, fragment::IriFragmentStr, normal::IriStr, reference::IriReferenceStr,
-    relative::RelativeIriStr,
-};
+//! IRI-specific implementations.
 
 #[cfg(feature = "alloc")]
-pub use self::{
-    absolute::AbsoluteIriString, error::IriCreationError, fragment::IriFragmentString,
-    normal::IriString, reference::IriReferenceString, relative::RelativeIriString,
+use crate::types::{
+    CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
+    RiString,
+};
+use crate::{
+    spec::IriSpec,
+    types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr},
 };
 
-mod absolute;
+/// A borrowed string type for an absolute IRI.
+pub type IriAbsoluteStr = RiAbsoluteStr<IriSpec>;
+
+/// An owned string type for an absolute IRI.
 #[cfg(feature = "alloc")]
-mod error;
-mod fragment;
-mod normal;
-mod reference;
-mod relative;
+pub type IriAbsoluteString = RiAbsoluteString<IriSpec>;
+
+/// A borrowed string type for a fragment part of an IRI.
+pub type IriFragmentStr = RiFragmentStr<IriSpec>;
+
+/// An owned string type for a fragment part of an IRI.
+#[cfg(feature = "alloc")]
+pub type IriFragmentString = RiFragmentString<IriSpec>;
+
+/// A borrowed string type for an IRI.
+pub type IriStr = RiStr<IriSpec>;
+
+/// An owned string type for an IRI.
+#[cfg(feature = "alloc")]
+pub type IriString = RiString<IriSpec>;
+
+/// A borrowed string type for an IRI reference.
+pub type IriReferenceStr = RiReferenceStr<IriSpec>;
+
+/// An owned string type for an IRI reference.
+#[cfg(feature = "alloc")]
+pub type IriReferenceString = RiReferenceString<IriSpec>;
+
+/// A borrowed string type for a relative IRI reference.
+pub type IriRelativeStr = RiRelativeStr<IriSpec>;
+
+/// An owned string type for a relative IRI reference.
+#[cfg(feature = "alloc")]
+pub type IriRelativeString = RiRelativeString<IriSpec>;
+
+/// IRI creation error.
+#[cfg(feature = "alloc")]
+pub type IriCreationError<T> = CreationError<IriSpec, T>;

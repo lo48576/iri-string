@@ -11,7 +11,7 @@ use std::error;
 
 use nom::combinator::all_consuming;
 
-use crate::parser::{self, UriRule};
+use crate::{parser, spec::UriSpec};
 
 /// [RFC 3986] URI validation error.
 ///
@@ -43,7 +43,7 @@ fn conv_err<T, E>(res: Result<T, E>) -> Result<(), Error> {
 /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
 /// [uri]: https://tools.ietf.org/html/rfc3986#section-3
 pub fn uri(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::uri::<(), UriRule>)(s))
+    conv_err(all_consuming(parser::uri::<(), UriSpec>)(s))
 }
 
 /// Validates [RFC 3986] [URI reference][uri-reference].
@@ -51,7 +51,7 @@ pub fn uri(s: &str) -> Result<(), Error> {
 /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
 /// [uri-reference]: https://tools.ietf.org/html/rfc3986#section-4.1
 pub fn uri_reference(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::uri_reference::<(), UriRule>)(s))
+    conv_err(all_consuming(parser::uri_reference::<(), UriSpec>)(s))
 }
 
 /// Validates [RFC 3986] [absolute URI][absolute-uri].
@@ -59,7 +59,7 @@ pub fn uri_reference(s: &str) -> Result<(), Error> {
 /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
 /// [absolute-uri]: https://tools.ietf.org/html/rfc3986#section-4.3
 pub fn absolute_uri(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::absolute_uri::<(), UriRule>)(s))
+    conv_err(all_consuming(parser::absolute_uri::<(), UriSpec>)(s))
 }
 
 /// Validates [RFC 3986] [relative reference][relative-ref].
@@ -67,7 +67,7 @@ pub fn absolute_uri(s: &str) -> Result<(), Error> {
 /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
 /// [relative-ref]: https://tools.ietf.org/html/rfc3986#section-4.2
 pub fn relative_ref(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::relative_ref::<(), UriRule>)(s))
+    conv_err(all_consuming(parser::relative_ref::<(), UriSpec>)(s))
 }
 
 /// Validates [RFC 3986] [URI path][path].
@@ -75,5 +75,5 @@ pub fn relative_ref(s: &str) -> Result<(), Error> {
 /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
 /// [path]: https://tools.ietf.org/html/rfc3986#section-3.3
 pub fn path(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::path::<(), UriRule>)(s))
+    conv_err(all_consuming(parser::path::<(), UriSpec>)(s))
 }
