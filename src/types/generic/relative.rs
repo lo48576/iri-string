@@ -107,6 +107,8 @@ impl<S: Spec> RiRelativeStr<S> {
     ///
     /// # Examples
     ///
+    /// If the IRI has a fragment part, `Some(_)` is returned.
+    ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
     /// let iri = IriRelativeStr::new("?foo#bar")?;
@@ -122,6 +124,18 @@ impl<S: Spec> RiRelativeStr<S> {
     /// assert_eq!(iri.fragment(), Some(fragment));
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// When the fragment part exists but is empty string, `Some(_)` is returned.
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
+    /// let iri = IriRelativeStr::new("#")?;
+    /// let fragment = IriFragmentStr::new("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the IRI has no fragment, `None` is returned.
     ///
     /// ```
     /// # use iri_string::{spec::IriSpec, types::IriRelativeStr, validate::Error};

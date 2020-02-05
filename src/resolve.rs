@@ -14,6 +14,9 @@ use crate::{
 
 /// Resolves the IRI reference.
 ///
+/// It is recommended to use methods such as [`RiReferenceStr::resolve_against()`] and
+/// [`RiRelativeStr::resolve_against()`], rather than this freestanding function.
+///
 /// It is strongly recommended to pass `true` for `is_strict` parameter.
 /// If `is_strict` is false, the resolution is done in backward compat mode.
 /// However, its use should be avoided.
