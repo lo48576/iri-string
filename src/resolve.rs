@@ -14,9 +14,23 @@ use crate::{
 
 /// Resolves the IRI reference.
 ///
-/// See <https://tools.ietf.org/html/rfc3986#section-5.2>.
+/// It is strongly recommended to pass `true` for `is_strict` parameter.
+/// If `is_strict` is false, the resolution is done in backward compat mode.
+/// However, its use should be avoided.
+///
+/// > Some parsers allow the scheme name to be present in a relative reference
+/// > if it is the same as the base URI scheme. This is considered to be a
+/// > loophole in prior specifications of partial URI
+/// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be avoided
+/// > but is allowed for backward compatibility.
+/// >
+/// > --- [RFC 3986 section 5.2]
+///
+/// See [RFC 3986 section 5.2] for detail.
 ///
 /// Enabled by `alloc` or `std` feature.
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
@@ -27,6 +41,7 @@ pub fn resolve<S: Spec>(
 
 /// Internal implementation of `resolve`.
 ///
+/// It is strongly recommended to pass `true` for `is_strict` parameter.
 /// If `is_strict` is false, the resolution is done in backward compat mode.
 /// However, its use should be avoided.
 ///
@@ -36,7 +51,11 @@ pub fn resolve<S: Spec>(
 /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be avoided
 /// > but is allowed for backward compatibility.
 /// >
-/// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+/// > --- [RFC 3986 section 5.2]
+///
+/// See [RFC 3986 section 5.2] for detail.
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
 // > This section defines the process of resolving a URI reference within a
 // > context that allows relative references so that the result is a string
 // > matching the <URI> syntax rule of Section 3.
