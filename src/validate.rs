@@ -9,9 +9,6 @@ use nom::combinator::all_consuming;
 
 use crate::{parser, spec::Spec};
 
-//pub mod iri;
-//pub mod uri;
-
 #[allow(missing_docs, clippy::missing_docs_in_private_items)]
 pub mod iri {
     use crate::spec::IriSpec;
