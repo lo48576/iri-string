@@ -2,6 +2,65 @@
 
 ## [Unreleased]
 
+## [0.3.0]
+
+**This release contains huge changes, and CHANGELOG may be incomplete.
+Beleive rustdoc rather than this CHANGELOG.**
+
+* Minimum supported Rust version is now 1.41 or above.
+* Make IRI string types polymorphic, and rename some types.
+    + Now IRI types and URI types can share the same codebase.
+    + This makes it easy for users to implement functions for both IRI types and URI types.
+* Add URI types.
+* Remove `Deref` impls for IRI string types.
+* Remove depraceted items.
+* Add and change methods for IRI string types.
+* `resolve::resolve_iri` is now (more) polymorphic, and renamed to `resolve::resolve`.
+* Update some internal dependencies.
+    + This has no effect for usual users, and this does not introduce any API changes.
+    + By this change, the crate now successfully compiles with minimal dependency versions.
+* Support `no_std` environment.
+    + `std` and `alloc` feature flags are added.
+    + `std` feature is enabled by default (and `std` enables `alloc` automatically).
+
+### Fixes
+* Update some internal dependencies to make the crate buildable with minimal dependency versions.
+    + This has no effect for usual users, and this does not introduce any API changes.
+    + By this change, the crate now successfully compiles with minimal dependency versions.
+        - To test that, you can run
+          `cargo +nightly update -Z minimal-versions && cargo test --all-features`.
+
+### Changed (breaking)
+* Make IRI string types polymorphic, and rename some types.
+    + Now IRI types and URI types can share the same codebase.
+    + This makes it easy for users to implement functions for both IRI types and URI types.
+    + Polymorphic types are named `types::Ri{,Absolute,Fragment,Reference,Relative}Str{,ing}`.
+    + Type aliases for monomorphized types are also provided, but naming convertions are the same.
+      They are named `{Iri,Uri}{..}Str{,ing}`.
+        - For example, there is `IriAbsoluteStr` instead of legacy `AbsoluteIriStr`.
+    * `types::CreationError` is now revived.
+    * `types::IriCreationError` is now removed in favor of `types::CreationError`.
+* Remove depraceted items.
+    + `IriReferenceStr::resolve()` is now removed.
+      Use `IriReferenceStr::resolve_against()` instead.
+* Remove `Deref` impls for IRI string types.
+    + IRI string types should not implement `Deref`, because they are not smart pointer types.
+* Change methods types.
+    + `IriReferenceStr::resolve_against()` now returns `Cow<'_, IriStr>`, rather than `IriString`.
+* `resolve::resolve_iri` is now polymorphic, and renamed to `resolve::resolve`.
+    + Now it can be used for both IRI types and URI types.
+
+### Changed (non-breaking)
+* Support `no_std` environment.
+    + `std` and `alloc` feature flags are added.
+    + `std` feature is enabled by default (and `std` enables `alloc` automatically).
+    + In `no_std` environment with allocator support, you can enable `alloc` feature.
+* Add methods for IRI string types.
+    + `len()` and `is_empty()` methods are added to all IRI string slice types.
+    * `IriStr::fragment()` is added.
+    * `RelativeIriStr::resolve_against()` is added.
+* Add URI types.
+
 ## [0.2.3]
 
 * Fixed a bug that URI validators wrongly accepts non-ASCII characters.
@@ -107,7 +166,8 @@
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.3.0...develop>
+[0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
 [0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.3>
 [0.2.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
 [0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>

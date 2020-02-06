@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -12,10 +12,23 @@ keywords = ["IRI", "URI"]
 [package.metadata.docs.rs]
 all-features = true
 
+[features]
+default = ["nom-std", "std"]
+
+alloc = ["serde/alloc"]
+# `std` does not enable `nom/std`, because `iri-string` itself does not need
+# `alloc` or `std` feature of `nom` even when the `std` feature is enabled.
+# However, with `nom/std` enabled, `memchr` will use runtime CPU detection and
+# parsing will be faster.
+nom-std=["std", "nom/std"]
+std = ["alloc", "serde/std"]
+
 [dependencies]
-nom = { version = "5", default-features = false, features = ["std"] }
-serde = { version = "1", features = ["derive"], optional = true }
-validated-slice = "0.2.0"
+nom = { version = "5", default-features = false }
+serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_test = "1.0.104"
 
 [badges]
 maintenance = { status = "actively-developed" }
