@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0]
+
 **This release contains huge changes, and CHANGELOG may be incomplete.
 Beleive rustdoc rather than this CHANGELOG.**
 
@@ -164,7 +166,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.2.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.3.0...develop>
+[0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
 [0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.3>
 [0.2.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
 [0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>
