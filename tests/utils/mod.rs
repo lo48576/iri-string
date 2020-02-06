@@ -1,4 +1,5 @@
 //! Utilities.
+#![allow(dead_code)]
 
 use RawKind::*;
 
