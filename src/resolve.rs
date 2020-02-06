@@ -34,6 +34,8 @@ use crate::{
 /// Enabled by `alloc` or `std` feature.
 ///
 /// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
+/// [`RiReferenceStr::resolve_against()`]: ../types/struct.RiReferenceStr.html#method.resolve_against
+/// [`RiRelativeStr::resolve_against()`]: ../types/struct.RiRelativeStr.html#method.resolve_against
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
