@@ -8,7 +8,7 @@
 String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
 Identifiers) and [URI](https://tools.ietf.org/html/rfc3986)s (Uniform Resource Identifiers).
 
-See the [documentation](https://docs.rs/iri-string) for detail.
+See the [documentation](https://docs.rs/iri-string) for details.
 
 ## Features
 
