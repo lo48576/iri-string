@@ -820,6 +820,8 @@ mod tests {
     #[test]
     #[cfg(feature = "alloc")]
     fn test_ipv6address() {
+        use core::cmp::Ordering;
+
         assert_validate!(ipv6address::<Error<'_>>, "a:bB:cCc:dDdD:e:F:a:B");
         assert_validate!(ipv6address::<Error<'_>>, "1:1:1:1:1:1:1:1");
         assert_validate!(ipv6address::<Error<'_>>, "1:1:1:1:1:1:1.1.1.1");
@@ -837,13 +839,15 @@ mod tests {
                     ipv6address::<Error<'_>>,
                     &format!("{}::{}", prefix, make_sub(len_suf))
                 );
-                if len_suf > 2 {
-                    assert_validate!(
+                match len_suf.cmp(&2) {
+                    Ordering::Greater => assert_validate!(
                         ipv6address::<Error<'_>>,
                         &format!("{}::{}:1.1.1.1", prefix, make_sub(len_suf - 2))
-                    );
-                } else if len_suf == 2 {
-                    assert_validate!(ipv6address::<Error<'_>>, &format!("{}::1.1.1.1", prefix));
+                    ),
+                    Ordering::Equal => {
+                        assert_validate!(ipv6address::<Error<'_>>, &format!("{}::1.1.1.1", prefix))
+                    }
+                    Ordering::Less => {}
                 }
             }
         }
