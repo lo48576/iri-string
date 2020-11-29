@@ -25,29 +25,20 @@ enum RawKind {
 impl RawKind {
     fn spec_is(self, spec: Spec) -> bool {
         match spec {
-            Spec::Uri => match self {
-                Self::Uri | Self::UriAbsolute | Self::UriRelative => true,
-                _ => false,
-            },
+            Spec::Uri => matches!(self, Self::Uri | Self::UriAbsolute | Self::UriRelative),
             Spec::Iri => self != Self::Invalid,
         }
     }
 
     fn kind_is(self, kind: Kind) -> bool {
         match kind {
-            Kind::Absolute => match self {
-                Self::UriAbsolute | Self::IriAbsolute => true,
-                _ => false,
-            },
-            Kind::Normal => match self {
-                Self::UriAbsolute | Self::Uri | Self::IriAbsolute | Self::Iri => true,
-                _ => false,
-            },
+            Kind::Absolute => matches!(self, Self::UriAbsolute | Self::IriAbsolute),
+            Kind::Normal => matches!(
+                self,
+                Self::UriAbsolute | Self::Uri | Self::IriAbsolute | Self::Iri
+            ),
             Kind::Reference => self != Self::Invalid,
-            Kind::Relative => match self {
-                Self::UriRelative | Self::IriRelative => true,
-                _ => false,
-            },
+            Kind::Relative => matches!(self, Self::UriRelative | Self::IriRelative),
         }
     }
 
