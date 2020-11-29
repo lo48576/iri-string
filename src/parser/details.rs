@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
-    character::complete::{char as char_, one_of},
+    character::complete::{char as char_, one_of, satisfy},
     combinator::{cut, map, not, opt, recognize},
     error::{context, ContextError, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
@@ -17,24 +17,6 @@ use crate::{
     parser::{char::is_sub_delim, RiReferenceComponents},
     spec::{Spec, SpecInternal, UriSpec},
 };
-
-/// `one_of` with predicate (not characters list).
-fn one_is<I, F, E: ParseError<I>>(pred: F) -> impl Fn(I) -> IResult<I, char, E>
-where
-    I: nom::Slice<core::ops::RangeFrom<usize>> + nom::InputIter,
-    <I as nom::InputIter>::Item: nom::AsChar + Copy,
-    F: Fn(<I as nom::InputIter>::Item) -> bool,
-{
-    use nom::AsChar;
-
-    move |i: I| match i.iter_elements().next().map(|c| (c, pred(c))) {
-        Some((c, true)) => Ok((i.slice(c.len()..), c.as_char())),
-        _ => Err(nom::Err::Error(E::from_error_kind(
-            i,
-            nom::error::ErrorKind::OneOf,
-        ))),
-    }
-}
 
 /// Repeats the embedded parser `n` times or until it fails and returns the number of successful
 /// iteration.
@@ -245,7 +227,7 @@ fn scheme<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
     context(
         "scheme",
         pair(
-            one_is(|c: char| c.is_ascii_alphabetic()),
+            satisfy(|c: char| c.is_ascii_alphabetic()),
             take_while(|c: char| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.'),
         ),
     )(i)
@@ -422,17 +404,17 @@ fn dec_octet<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
             recognize(tuple((
                 char_('2'),
                 one_of("01234"),
-                one_is(|c: char| c.is_ascii_digit()),
+                satisfy(|c: char| c.is_ascii_digit()),
             ))),
             recognize(pair(
                 char_('1'),
                 take_while_m_n(2, 2, |c: char| c.is_ascii_digit()),
             )),
             recognize(pair(
-                one_is(|c: char| c.is_ascii_digit() || c != '0'),
-                one_is(|c: char| c.is_ascii_digit()),
+                satisfy(|c: char| c.is_ascii_digit() || c != '0'),
+                satisfy(|c: char| c.is_ascii_digit()),
             )),
-            recognize(one_is(|c: char| c.is_ascii_digit())),
+            recognize(satisfy(|c: char| c.is_ascii_digit())),
         )),
     )(i)
     .map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
@@ -556,7 +538,7 @@ fn segment_nz_nc<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
         "segment-nz-nc",
         many1_count(alt((
             map(
-                one_is(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == '@'),
+                satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == '@'),
                 |_| (),
             ),
             map(pct_encoded, |_| ()),
@@ -571,7 +553,7 @@ fn pchar<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
 ) -> IResult<&'a str, &'a str, E> {
     alt((
         map(
-            one_is(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
+            satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
             |_| (),
         ),
         map(pct_encoded, |_| ()),
@@ -625,12 +607,12 @@ fn pct_encoded<'a, E: ParseError<&'a str> + ContextError<&'a str>>(
 
 /// Parses `iprivate` rules.
 fn private<'a, E: ParseError<&'a str>, S: Spec>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    one_is(S::is_char_private)(i).map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
+    satisfy(S::is_char_private)(i).map(|(rest, _)| (rest, &i[..(i.len() - rest.len())]))
 }
 
 /// Parses hex digit.
 fn hexdig<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, char, E> {
-    one_is(|c: char| c.is_ascii_hexdigit())(i)
+    satisfy(|c: char| c.is_ascii_hexdigit())(i)
 }
 
 #[cfg(test)]
