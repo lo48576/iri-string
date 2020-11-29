@@ -6,11 +6,11 @@ use nom::{
     branch::alt,
     bytes::complete::{tag, take_while, take_while1, take_while_m_n},
     character::complete::{char as char_, one_of, satisfy},
-    combinator::{cut, map, not, opt, recognize},
+    combinator::{cut, not, opt, recognize},
     error::{context, ContextError, ParseError},
     multi::{fold_many_m_n, many0_count, many1_count},
     sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult,
+    IResult, Parser,
 };
 
 use crate::{
@@ -53,23 +53,23 @@ fn decompose_uri<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
 ) -> IResult<&'a str, RiReferenceComponents<'a, S>, E> {
     context(
         "uri",
-        map(
-            tuple((
-                scheme,
-                char_(':'),
-                decompose_hier_part::<E, S>,
-                opt(preceded(char_('?'), query::<E, S>)),
-                opt(preceded(char_('#'), fragment::<E, S>)),
-            )),
-            |(scheme, _colon, (authority, path), query, fragment)| RiReferenceComponents {
+        tuple((
+            scheme,
+            char_(':'),
+            decompose_hier_part::<E, S>,
+            opt(preceded(char_('?'), query::<E, S>)),
+            opt(preceded(char_('#'), fragment::<E, S>)),
+        ))
+        .map(|(scheme, _colon, (authority, path), query, fragment)| {
+            RiReferenceComponents {
                 scheme: Some(scheme),
                 authority,
                 path,
                 query,
                 fragment,
                 _spec: PhantomData,
-            },
-        ),
+            }
+        }),
     )(i)
 }
 
@@ -100,11 +100,11 @@ fn decompose_hier_part<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Sp
         alt((
             preceded(
                 tag("//"),
-                pair(map(authority::<E, S>, Some), path_abempty::<E, S>),
+                pair(authority::<E, S>.map(Some), path_abempty::<E, S>),
             ),
-            map(path_absolute::<E, S>, |path| (None, path)),
-            map(path_rootless::<E, S>, |path| (None, path)),
-            map(path_empty::<E>, |path| (None, path)),
+            path_absolute::<E, S>.map(|path| (None, path)),
+            path_rootless::<E, S>.map(|path| (None, path)),
+            path_empty::<E>.map(|path| (None, path)),
         )),
     )(i)
 }
@@ -165,12 +165,12 @@ fn decompose_relative_ref<'a, E: ParseError<&'a str> + ContextError<&'a str>, S:
 ) -> IResult<&'a str, RiReferenceComponents<'a, S>, E> {
     context(
         "relative_ref",
-        map(
-            tuple((
-                decompose_relative_part::<E, S>,
-                opt(preceded(char_('?'), query::<E, S>)),
-                opt(preceded(char_('#'), fragment::<E, S>)),
-            )),
+        tuple((
+            decompose_relative_part::<E, S>,
+            opt(preceded(char_('?'), query::<E, S>)),
+            opt(preceded(char_('#'), fragment::<E, S>)),
+        ))
+        .map(
             |((authority, path), query, fragment)| RiReferenceComponents {
                 scheme: None,
                 authority,
@@ -207,11 +207,11 @@ fn decompose_relative_part<'a, E: ParseError<&'a str> + ContextError<&'a str>, S
         alt((
             preceded(
                 tag("//"),
-                pair(map(authority::<E, S>, Some), path_abempty::<E, S>),
+                pair(authority::<E, S>.map(Some), path_abempty::<E, S>),
             ),
-            map(path_absolute::<E, S>, |path| (None, path)),
-            map(path_noscheme::<E, S>, |path| (None, path)),
-            map(path_empty, |path| (None, path)),
+            path_absolute::<E, S>.map(|path| (None, path)),
+            path_noscheme::<E, S>.map(|path| (None, path)),
+            path_empty.map(|path| (None, path)),
         )),
     )(i)
 }
@@ -250,11 +250,9 @@ fn userinfo<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
     context(
         "userinfo",
         recognize(many0_count(alt((
-            map(
-                take_while1(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':'),
-                |_| (),
-            ),
-            map(pct_encoded, |_| ()),
+            take_while1(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':')
+                .map(|_| ()),
+            pct_encoded.map(|_| ()),
         )))),
     )(i)
 }
@@ -419,11 +417,8 @@ fn reg_name<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
     context(
         "reg-name",
         recognize(many0_count(alt((
-            map(
-                take_while1(|c: char| S::is_char_unreserved(c) || is_sub_delim(c)),
-                |_| (),
-            ),
-            map(pct_encoded, |_| ()),
+            take_while1(|c: char| S::is_char_unreserved(c) || is_sub_delim(c)).map(|_| ()),
+            pct_encoded.map(|_| ()),
         )))),
     )(i)
 }
@@ -522,11 +517,8 @@ fn segment_nz_nc<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
     context(
         "segment-nz-nc",
         recognize(many1_count(alt((
-            map(
-                satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == '@'),
-                |_| (),
-            ),
-            map(pct_encoded, |_| ()),
+            satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == '@').map(|_| ()),
+            pct_encoded.map(|_| ()),
         )))),
     )(i)
 }
@@ -536,11 +528,9 @@ fn pchar<'a, E: ParseError<&'a str> + ContextError<&'a str>, S: Spec>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     recognize(alt((
-        map(
-            satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@'),
-            |_| (),
-        ),
-        map(pct_encoded, |_| ()),
+        satisfy(|c: char| S::is_char_unreserved(c) || is_sub_delim(c) || c == ':' || c == '@')
+            .map(|_| ()),
+        pct_encoded.map(|_| ()),
     )))(i)
 }
 
