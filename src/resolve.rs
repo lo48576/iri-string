@@ -157,9 +157,9 @@ fn remove_dot_segments(mut input: &str) -> String {
 
 /// A step in `remove_dot_segments`.
 fn remove_dot_segments_step<'a>(input: &'a str, output: &'_ mut String) -> &'a str {
-    if input.starts_with("../") {
+    if let Some(rest) = input.strip_prefix("../") {
         // 2.A.
-        &input[3..]
+        rest
     } else if input.starts_with("./") || input.starts_with("/./") {
         // 2.A, 2.B.
         &input[2..]
