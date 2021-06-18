@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.4.0]
+
+* MSRV is bumped to 1.48.0.
+* Internal dependencies are bumped.
+    + `nom` crate is bumped to 6.
+* `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
+* Feature flags are refactored.
+
+### Changed (breaking)
+* MSRV is bumped to 1.48.0.
+    + Rust 1.48.0 is released at 2020-11-19.
+* `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
+    + Strictly this is a breaking change, but this only forbids the meaningless trait impls,
+      so no real world use cases won't be affected by this change.
+* Feature flags are refactored.
+    + `serde-alloc` and `serde-std` flags are added to control serde's alloc and std support.
+    + Unintended dependency from `std` use flag to `serde` crate is now fixed.
+      Users who want to enable `serde` and `std` at the same time should also enable `serde-std`
+      feature. Same applies for `serde` and `alloc` pair.
+
 ## [0.3.0]
 
 **This release contains huge changes, and CHANGELOG may be incomplete.
@@ -166,8 +186,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.3.0...develop>
-[0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.4.0...develop>
+[0.4.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.0>
+[0.3.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
 [0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.3>
 [0.2.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.2>
 [0.2.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.1>

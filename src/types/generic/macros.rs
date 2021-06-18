@@ -171,6 +171,7 @@ macro_rules! define_custom_string_slice {
         // `#[derive(..)]` cannot be used here, because it adds `S: DerivedTrait` bounds automatically.
         #[repr(transparent)]
         #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+        #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
         #[cfg_attr(feature = "serde", serde(transparent))]
         pub struct $ty<S> {
             /// Spec.
@@ -467,6 +468,7 @@ macro_rules! define_custom_string_owned {
         // `#[derive(..)]` cannot be used here, because it adds `S: DerivedTrait` bounds automatically.
         #[cfg(feature = "alloc")]
         #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+        #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
         #[cfg_attr(feature = "serde", serde(transparent))]
         pub struct $ty<S> {
             /// Spec.

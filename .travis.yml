@@ -1,7 +1,7 @@
 language: rust
 cache: cargo
 rust:
-  - 1.41.0
+  - 1.48.0
   - stable
   - beta
 env:
@@ -10,14 +10,14 @@ env:
 jobs:
   include:
     - name: "Format"
-      rust: 1.41.0
+      rust: 1.48.0
       before_install:
         - rustup component add rustfmt && cargo fmt --version
       script:
         # Fail if the code is not correctly formatted.
         - cargo fmt --all -- --check
     - name: "minimal versions, all features"
-      rust: 1.41.0
+      rust: 1.48.0
       env: TEST_MINIMAL_VERSIONS=1 FEATURES="--all-features"
     - name: "stable, minimal features"
       rust: stable
@@ -30,7 +30,7 @@ jobs:
       env: FEATURES="--no-default-features --features=serde"
     - name: "stable, alloc+serde"
       rust: stable
-      env: FEATURES="--no-default-features --features=alloc,serde"
+      env: FEATURES="--no-default-features --features=serde-alloc"
   exclude:
     # To reduce bulids, omit beta with only default features.
     - rust: beta

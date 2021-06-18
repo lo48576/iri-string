@@ -36,12 +36,12 @@ impl SpecInternal for IriSpec {
     }
 
     fn is_char_private(c: char) -> bool {
-        match u32::from(c) {
-            0xE000..=0xF8FF => true,
-            0xF_0000..=0xF_FFFD => true,
-            0x10_0000..=0x10_FFFD => true,
-            _ => false,
-        }
+        matches!(
+            u32::from(c),
+            0xE000..=0xF8FF |
+            0xF_0000..=0xF_FFFD |
+            0x10_0000..=0x10_FFFD
+        )
     }
 }
 
