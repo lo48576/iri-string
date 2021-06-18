@@ -30,7 +30,7 @@ jobs:
       env: FEATURES="--no-default-features --features=serde"
     - name: "stable, alloc+serde"
       rust: stable
-      env: FEATURES="--no-default-features --features=alloc,serde"
+      env: FEATURES="--no-default-features --features=serde-alloc"
   exclude:
     # To reduce bulids, omit beta with only default features.
     - rust: beta
