@@ -18,15 +18,31 @@ See the [documentation](https://docs.rs/iri-string) for details.
 
 ### Feature flags
 
+#### Direct
 * `alloc` (enabled by default)
     + Enables types and functions which require memory allocation.
     + Requires `std` or `alloc` crate available.
 * `std` (enabled by default)
     + Enables all `std` features (such as memory allocations and `std::error::Error` trait).
-* `nom-std`
+    + Requires `std` crate available.
+    + This automatically enables `alloc` feature.
+
+#### nom
+* `nom-std` (enabled by default)
     + Enable optimization for internal parsers, using std power.
+    + This automatically enables `std` feature.
+
+#### serde
 * `serde`
     + Implements `Serialize` and `Deserialize` traits for string types.
+* `serde-alloc`
+    + Enables deriving serialization and deserialization impls which requires heap memory allocation.
+    + If you enable `alloc` and `serde` features at the same time, you should also enable `serde-alloc` feature.
+    + This automatically enables `alloc` feature.
+* `serde-std`
+    + Enables deriving serialization and deserialization impls which requires std stuff.
+    + If you enable `std` and `serde` features at the same time, you should also enable `serde-std` feature.
+    + This automatically enables `std` feature.
 
 ## License
 

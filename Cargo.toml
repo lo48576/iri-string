@@ -13,15 +13,35 @@ keywords = ["IRI", "URI"]
 all-features = true
 
 [features]
+# Default features.
+#
+# nom is mandatory dependency and `nom-std` should be enabled when `std` is enabled.
 default = ["nom-std", "std"]
 
-alloc = ["serde/alloc"]
+# Enable features that requires `alloc`.
+alloc = []
+# Enable features that requires `std`.
+std = ["alloc"]
+
+# Enable `std` feature for `nom` crate.
+#
 # `std` does not enable `nom/std`, because `iri-string` itself does not need
 # `alloc` or `std` feature of `nom` even when the `std` feature is enabled.
 # However, with `nom/std` enabled, `memchr` will use runtime CPU detection and
 # parsing will be faster.
-nom-std=["std", "nom/std"]
-std = ["alloc", "serde/std"]
+nom-std = ["std", "nom/std"]
+# Enable `alloc` feature for `serde` crate.
+#
+# If users want to enable `serde` and `alloc` at the same time, then they should
+# also enable `serde-alloc` feature.
+# Not doing so results in compile error.
+serde-alloc = ["alloc", "serde/alloc"]
+# Enable `std` feature for `serde` crate.
+#
+# If users want to enable `serde` and `std` at the same time, then they should
+# also enable `serde-std` feature.
+# Not doing so results in compile error.
+serde-std = ["std", "serde/std"]
 
 [dependencies]
 nom = { version = "6", default-features = false }
