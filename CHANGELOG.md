@@ -6,6 +6,7 @@
 * Internal dependencies are bumped.
     + `nom` crate is bumped to 6.
 * `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
+* Feature flags are refactored.
 
 ### Changed (breaking)
 * MSRV is bumped to 1.48.0.
@@ -13,6 +14,11 @@
 * `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
     + Strictly this is a breaking change, but this only forbids the meaningless trait impls,
       so no real world use cases won't be affected by this change.
+* Feature flags are refactored.
+    + `serde-alloc` and `serde-std` flags are added to control serde's alloc and std support.
+    + Unintended dependency from `std` use flag to `serde` crate is now fixed.
+      Users who want to enable `serde` and `std` at the same time should also enable `serde-std`
+      feature. Same applies for `serde` and `alloc` pair.
 
 ## [0.3.0]
 
