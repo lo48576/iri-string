@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+* MSRV is bumped to 1.48.0.
+* Internal dependencies are bumped.
+    + `nom` crate is bumped to 6.
+* `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
+
+### Changed (breaking)
+* MSRV is bumped to 1.48.0.
+    + Rust 1.48.0 is released at 2020-11-19.
+* `serde::{Serialize, Deserialize}` is now implemented only for types with valid spec types.
+    + Strictly this is a breaking change, but this only forbids the meaningless trait impls,
+      so no real world use cases won't be affected by this change.
+
 ## [0.3.0]
 
 **This release contains huge changes, and CHANGELOG may be incomplete.
