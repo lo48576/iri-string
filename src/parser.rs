@@ -16,6 +16,9 @@ mod details;
 ///
 /// See <https://tools.ietf.org/html/rfc3986#section-5.2.2>.
 #[derive(Debug, Clone)]
+// Fields of this type will be accessed only from URI resolutions, so suppress
+// warnings for unused fields when they are disabled (i.e. `alloc` feature is disabled).
+#[cfg_attr(not(feature = "alloc"), allow(dead_code))]
 pub(crate) struct RiReferenceComponents<'a, S> {
     /// Scheme.
     pub(crate) scheme: Option<&'a str>,
