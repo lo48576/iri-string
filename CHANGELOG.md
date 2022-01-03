@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+* Bump internal dependency.
+    * `nom` from v6 to v7.
+
+### Changed (non-breaking)
+* Bump internal dependency.
+    * `nom` from v6 to v7.
+
 ## [0.4.0]
 
 * MSRV is bumped to 1.48.0.
