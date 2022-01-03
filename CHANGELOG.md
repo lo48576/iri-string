@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.4.1]
+
+* Bump internal dependency.
+    * `nom` from v6 to v7.
+
+### Changed (non-breaking)
+* Bump internal dependency.
+    * `nom` from v6 to v7.
+
 ## [0.4.0]
 
 * MSRV is bumped to 1.48.0.
@@ -186,7 +195,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.4.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
+[0.4.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.1>
 [0.4.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.0>
 [0.3.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
 [0.2.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.2.3>

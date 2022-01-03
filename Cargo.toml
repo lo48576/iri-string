@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
@@ -44,7 +44,7 @@ serde-alloc = ["alloc", "serde/alloc"]
 serde-std = ["std", "serde/std"]
 
 [dependencies]
-nom = { version = "6", default-features = false }
+nom = { version = "7", default-features = false }
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
