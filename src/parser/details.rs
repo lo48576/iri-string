@@ -25,10 +25,10 @@ use crate::{
 fn many_m_n_count<I, O, E, F>(m: usize, n: usize, f: F) -> impl nom::Parser<I, usize, E>
 where
     F: nom::Parser<I, O, E>,
-    I: Clone + PartialEq,
+    I: Clone + PartialEq + nom::InputLength,
     E: ParseError<I>,
 {
-    fold_many_m_n(m, n, f, 0, |count, _| count + 1)
+    fold_many_m_n(m, n, f, || 0, |count, _| count + 1)
 }
 
 /// Parses RFC 3986 / 3987 IRI.
