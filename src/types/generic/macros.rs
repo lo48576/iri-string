@@ -141,6 +141,7 @@ macro_rules! impl_cmp2_as_str {
 ///     + `From<&$ty>` for Rc<$ty>`
 ///     + `From<&$ty> for &str`
 ///     + `TryFrom<&str> for &$ty`
+///     + `TryFrom<&[u8]> for &$ty`
 ///     + `AsRef<$ty<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented).
 ///     + `PartialEq<$ty> for $ty`
@@ -322,6 +323,19 @@ macro_rules! define_custom_string_slice {
             }
         }
 
+        impl<'a, S: crate::spec::Spec> core::convert::TryFrom<&'a [u8]> for &'a $ty<S> {
+            type Error = crate::validate::Error;
+
+            #[inline]
+            fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
+                match $validate::<S>(s) {
+                    Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
+                    Err(e) => Err(e),
+                }
+            }
+        }
+
         impl_cmp!(str, str, $ty<S>);
         impl_cmp!(str, &str, $ty<S>);
         impl_cmp!(str, str, &$ty<S>);
@@ -416,6 +430,7 @@ macro_rules! define_custom_string_slice {
 ///     + `From<&$slice> for $ty`
 ///     + `From<$ty> for String`
 ///     + `TryFrom<&str> for $ty`
+///     + `TryFrom<&[u8]> for $ty`
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
@@ -625,6 +640,16 @@ macro_rules! define_custom_string_owned {
 
             #[inline]
             fn try_from(s: &str) -> Result<Self, Self::Error> {
+                <&$slice<S>>::try_from(s).map(Into::into)
+            }
+        }
+
+        impl<S: crate::spec::Spec> core::convert::TryFrom<&'_ [u8]> for $ty<S> {
+            type Error = crate::validate::Error;
+
+            #[inline]
+            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
                 <&$slice<S>>::try_from(s).map(Into::into)
             }
         }
