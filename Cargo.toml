@@ -2,7 +2,8 @@
 name = "iri-string"
 version = "0.4.1"
 authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.57"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 description = "IRI as string types"
