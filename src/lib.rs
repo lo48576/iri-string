@@ -138,10 +138,13 @@ compile_error!(
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod buffer;
+mod normalize;
 pub(crate) mod parser;
 pub(crate) mod raw;
-#[cfg(feature = "alloc")]
 pub mod resolve;
 pub mod spec;
 pub mod types;
 pub mod validate;
+
+pub use self::buffer::BufferTooSmallError;

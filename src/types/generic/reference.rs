@@ -135,11 +135,14 @@ impl<S: Spec> RiReferenceStr<S> {
         }
     }
 
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    /// Returns resolved IRI against the given base IRI.
     ///
     /// About reference resolution output example, see [RFC 3986 section 5.4].
     ///
-    /// About resolver strictness, see [RFC 3986 section 5.4.2]:
+    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
+    /// always interpreted as a composition of the scheme `http` and the path
+    /// `g`), so backward compatible parsing and resolution are not provided.
+    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
     ///
     /// > Some parsers allow the scheme name to be present in a relative
     /// > reference if it is the same as the base URI scheme. This is considered
@@ -149,8 +152,6 @@ impl<S: Spec> RiReferenceStr<S> {
     /// >
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
-    /// Usual users will want to use strict resolver.
-    ///
     /// Enabled by `alloc` or `std` feature.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
@@ -159,7 +160,7 @@ impl<S: Spec> RiReferenceStr<S> {
     pub fn resolve_against<'a>(&'a self, base: &'_ RiAbsoluteStr<S>) -> Cow<'a, RiStr<S>> {
         match self.to_iri() {
             Ok(iri) => Cow::Borrowed(iri),
-            Err(relative) => Cow::Owned(resolve(relative, base, true)),
+            Err(relative) => Cow::Owned(resolve(relative, base)),
         }
     }
 
