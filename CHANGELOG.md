@@ -5,16 +5,26 @@
 * Bump MSRV to 1.57.0.
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
 * Add `capacity` method to allocated string types.
+* Remove `is_strict: bool` parameter from `resolve::resolve()`.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and
+  `BufferTooSmallError` types.
 
 ### Added
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
 * Add `capacity` method to allocated string types.
     + `shrink_to_fit()` and `len()` already exists, so this would be useful to determine
       when to do `shrink_to_fit`.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and
+  `BufferTooSmallError` types.
+    + They provide more efficient and controllable IRI resolution.
+    + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
 
 ### Changed (breaking)
 * Bump MSRV to 1.57.0.
     + Rust 1.57.0 is released at 2021-12-02.
+* Remove `is_strict: bool` parameter from `resolve::resolve()`.
+    * The IRI parsers provided by this crate is "strict", so resolution
+      algorithm should use an algorithm for the strict parser.
 
 ## [0.4.1]
 
