@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Add conversion from a byte slice (`&[u8]`) into IRI string types.
+
+### Added
+* Add conversion from a byte slice (`&[u8]`) into IRI string types.
+
 ## [0.4.1]
 
 * Bump internal dependency.
