@@ -3,9 +3,13 @@
 ## [Unreleased]
 
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
+* Add `capacity` method to allocated string types.
 
 ### Added
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
+* Add `capacity` method to allocated string types.
+    + `shrink_to_fit()` and `len()` already exists, so this would be useful to determine
+      when to do `shrink_to_fit`.
 
 ## [0.4.1]
 
