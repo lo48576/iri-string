@@ -528,6 +528,12 @@ macro_rules! define_custom_string_owned {
             pub fn shrink_to_fit(&mut self) {
                 self.inner.shrink_to_fit()
             }
+
+            /// Returns the internal buffer capacity in bytes.
+            #[inline]
+            pub fn capacity(&self) -> usize {
+                self.inner.capacity()
+            }
         }
 
         impl<S: crate::spec::Spec> core::fmt::Debug for $ty<S> {
