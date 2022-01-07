@@ -5,18 +5,18 @@ use core::convert::TryFrom;
 #[cfg(feature = "alloc")]
 use alloc::{borrow::Cow, string::String};
 
-use crate::{
-    raw,
-    spec::Spec,
-    types::{RiFragmentStr, RiRelativeStr, RiStr},
-    validate::iri_reference,
-};
+use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
-use crate::{
-    resolve::resolve,
-    types::{RiAbsoluteStr, RiRelativeString, RiString},
-    validate::iri,
-};
+use crate::raw;
+#[cfg(feature = "alloc")]
+use crate::resolve::resolve;
+use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
+use crate::types::{RiFragmentStr, RiRelativeStr, RiStr};
+#[cfg(feature = "alloc")]
+use crate::validate::iri;
+use crate::validate::iri_reference;
 
 define_custom_string_slice! {
     /// A borrowed string of an absolute IRI possibly with fragment part.
@@ -222,7 +222,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        raw::extract_fragment(self.as_str()).map(|fragment| unsafe {
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| unsafe {
             // This is safe because `extract_fragment` returns the fragment part of an IRI, and the
             // returned string is substring of the source IRI.
             RiFragmentStr::new_maybe_unchecked(fragment)

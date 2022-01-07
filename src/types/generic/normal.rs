@@ -3,14 +3,14 @@
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
+use crate::parser::trusted as trusted_parser;
+#[cfg(feature = "alloc")]
+use crate::raw;
+use crate::spec::Spec;
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};
-use crate::{
-    raw,
-    spec::Spec,
-    types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr},
-    validate::iri,
-};
+use crate::validate::iri;
 
 define_custom_string_slice! {
     /// A borrowed string of an absolute IRI possibly with fragment part.
@@ -144,7 +144,7 @@ impl<S: Spec> RiStr<S> {
     /// # Ok::<_, Error>(())
     /// ```
     pub fn to_absolute_and_fragment(&self) -> (&RiAbsoluteStr<S>, Option<&RiFragmentStr<S>>) {
-        let (prefix, fragment) = raw::split_fragment(self.as_str());
+        let (prefix, fragment) = trusted_parser::split_fragment(self.as_str());
         let prefix = unsafe {
             // This is safe because the an IRI without fragment part is also an absolute IRI.
             RiAbsoluteStr::new_maybe_unchecked(prefix)
@@ -178,7 +178,7 @@ impl<S: Spec> RiStr<S> {
     ///
     /// [`RiAbsoluteStr`]: struct.RiAbsoluteStr.html
     pub fn to_absolute(&self) -> &RiAbsoluteStr<S> {
-        let prefix_len = raw::split_fragment(self.as_str()).0.len();
+        let prefix_len = trusted_parser::split_fragment(self.as_str()).0.len();
         unsafe {
             // This is safe because an IRI without the fragment part (and a leading `#` character)
             // is also an absolute IRI.

@@ -139,6 +139,7 @@ compile_error!(
 extern crate alloc;
 
 mod buffer;
+mod components;
 mod normalize;
 pub(crate) mod parser;
 pub(crate) mod raw;
