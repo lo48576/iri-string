@@ -259,7 +259,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
-        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
+        debug_assert!(<&RiStr<S>>::try_from(s).is_ok(), "[consistency] the resolved IRI must be valid");
+        let s = core::str::from_utf8(s).expect("[consistency] the resolved IRI must be valid");
+        let s = unsafe { RiStr::<S>::new_maybe_unchecked(s) };
         Ok(s)
     }
 
