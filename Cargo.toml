@@ -51,6 +51,9 @@ serde = { version = "1.0.103", default-features = false, features = ["derive"], 
 [dev-dependencies]
 serde_test = "1.0.104"
 
+[profile.release]
+debug = true
+
 [badges]
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "lo48576/iri-string" }
