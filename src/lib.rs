@@ -115,6 +115,9 @@
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(test)]
+
+extern crate test;
 
 // Inform users that `serde-alloc` is required when `serde` and `alloc` is enabled.
 #[cfg(all(
@@ -143,6 +146,7 @@ mod normalize;
 pub(crate) mod parser;
 pub(crate) mod raw;
 pub mod resolve;
+pub mod resolve_old;
 pub mod spec;
 pub mod types;
 pub mod validate;

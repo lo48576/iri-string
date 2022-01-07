@@ -902,4 +902,30 @@ mod tests {
             .expect("`buf` should be long enough");
         assert_eq!(result, "http://example.com/foo/bar");
     }
+
+    #[bench]
+    fn bench_new_resolve(b: &mut test::Bencher) {
+        let base = IriStr::new("https://sub.example.com/foo1/foo2/foo3/foo4/foo5")
+            .expect("should be valid IRI");
+        let rel = IriReferenceStr::new("bar1/bar2/bar3/../bar4/../../bar5/../../../../../bar6/../../../bar7/././././././bar8/bar9")
+            .expect("should be valid IRI");
+        b.iter(|| {
+            let resolved = crate::resolve::resolve(rel, base);
+            resolved
+        });
+    }
+
+    #[bench]
+    fn bench_old_resolve(b: &mut test::Bencher) {
+        use crate::types::IriAbsoluteStr;
+
+        let base = IriAbsoluteStr::new("https://sub.example.com/foo1/foo2/foo3/foo4/foo5")
+            .expect("should be valid IRI");
+        let rel = IriReferenceStr::new("bar1/bar2/bar3/../bar4/../../bar5/../../../../../bar6/../../../bar7/././././././bar8/bar9")
+            .expect("should be valid IRI");
+        b.iter(|| {
+            let resolved = crate::resolve_old::resolve(rel, base, true);
+            resolved
+        });
+    }
 }
