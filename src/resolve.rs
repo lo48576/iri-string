@@ -976,7 +976,6 @@ mod tests {
             let t_authority: Option<&str>;
             let t_path: String;
             let t_query: Option<&str>;
-            let t_fragment: Option<&str>;
 
             if let Some(r_scheme) = r.scheme {
                 t_scheme = r_scheme;
@@ -1009,7 +1008,7 @@ mod tests {
                 }
                 t_scheme = b.scheme.expect("non-relative IRI must have a scheme");
             }
-            t_fragment = r.fragment;
+            let t_fragment: Option<&str> = r.fragment;
 
             let s = recompose(t_scheme, t_authority, &t_path, t_query, t_fragment);
             RiString::<S>::try_from(s).expect("resolution result must be a valid IRI")
@@ -1067,7 +1066,7 @@ mod tests {
                             .find('/')
                             .map_or_else(|| input.len(), |pos| pos + 1)
                     } else {
-                        input.find('/').unwrap_or_else(|| input.len())
+                        input.find('/').unwrap_or(input.len())
                     };
                     output.extend(input.drain(..first_seg_end));
                 }
