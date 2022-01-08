@@ -11,6 +11,8 @@
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
 * Make parsers faster.
 * Drop internal dependency to `nom`.
+* Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
+  without corresponding `serde-{std,alloc}` features.
 
 ### Added
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
@@ -35,6 +37,10 @@
     + Almost all usages are affected: type conversions, validations, and IRI resolutions.
 * Drop internal dependency to `nom`.
     + Parsers are rewritten without `nom`.
+* Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
+  without corresponding `serde-{std,alloc}` features.
+    + `serde` and `std`/`alloc` might be enabled independently from the different
+      indirect dependencies, so this situation should not be compilation error.
 
 ## [0.4.1]
 
