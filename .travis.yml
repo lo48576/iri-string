@@ -31,6 +31,9 @@ jobs:
     - name: "stable, alloc+serde"
       rust: stable
       env: FEATURES="--no-default-features --features=serde-alloc"
+    - name: "stable, memchr"
+      rust: stable
+      env: FEATURES="--no-default-features --features=memchr"
   exclude:
     # To reduce bulids, omit beta with only default features.
     - rust: beta

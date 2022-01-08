@@ -7,8 +7,8 @@ use core::marker::PhantomData;
 use alloc::string::String;
 
 use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
+use crate::components::RiReferenceComponents;
 use crate::normalize::RemoveDotSegPath;
-use crate::parser::RiReferenceComponents;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
@@ -958,7 +958,7 @@ mod tests {
         use alloc::format;
         use alloc::string::String;
 
-        use crate::parser::RiReferenceComponents;
+        use crate::components::RiReferenceComponents;
         use crate::spec::Spec;
         use crate::types::{RiReferenceStr, RiStr, RiString};
 
@@ -1066,7 +1066,7 @@ mod tests {
                             .find('/')
                             .map_or_else(|| input.len(), |pos| pos + 1)
                     } else {
-                        input.find('/').unwrap_or(input.len())
+                        input.find('/').unwrap_or_else(|| input.len())
                     };
                     output.extend(input.drain(..first_seg_end));
                 }

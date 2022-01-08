@@ -2,8 +2,6 @@
 
 use core::fmt;
 
-pub(crate) use self::internal::SpecInternal;
-
 // Note that this MUST be private module.
 // See <https://rust-lang.github.io/api-guidelines/future-proofing.html> about
 // sealed trait.

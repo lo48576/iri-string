@@ -9,6 +9,8 @@
 * Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and
   `BufferTooSmallError` types.
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
+* Make parsers faster.
+* Drop internal dependency to `nom`.
 
 ### Added
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
@@ -26,6 +28,13 @@
 * Remove `is_strict: bool` parameter from `resolve::resolve()`.
     * The IRI parsers provided by this crate is "strict", so resolution
       algorithm should use an algorithm for the strict parser.
+
+### Changed (non-breaking)
+* Make parsers faster.
+    + Parsers are rewritten, and they became very fast!
+    + Almost all usages are affected: type conversions, validations, and IRI resolutions.
+* Drop internal dependency to `nom`.
+    + Parsers are rewritten without `nom`.
 
 ## [0.4.1]
 

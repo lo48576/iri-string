@@ -151,8 +151,16 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
             Ordering::Equal => return,
             Ordering::Less => self.buf[new_len],
         };
-        let is_char_boundary = matches!(last_byte, 0x00..=0x7f | 0xc2..=0xff);
-        if !is_char_boundary {
+        // `0x80..=0xbf` (i.e. `0b_1000_0000..=0b_1011_1111`) is not the first byte,
+        // and `0xc0..=0xc1` (i.e. `0b_1100_0000..=0b_1100_0001` shouldn't appear
+        // anywhere in UTF-8 byte sequence.
+        // `0x80 as i8` is -128, and `0xc0 as i8` is -96.
+        //
+        // The first byte of the UTF-8 character is not `0b10xx_xxxx`, and
+        // the continue bytes is `0b10xx_xxxx`.
+        // `0b1011_1111 as i8` is -65, and `0b1000_0000 as i8` is -128.
+        let is_byte_continue = (last_byte as i8) < -64;
+        if is_byte_continue {
             panic!("[precondition] `new_len` should lie on a `char` boundary");
         }
 
