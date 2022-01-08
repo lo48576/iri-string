@@ -27,10 +27,14 @@ See the [documentation](https://docs.rs/iri-string) for details.
     + Requires `std` crate available.
     + This automatically enables `alloc` feature.
 
-#### nom
-* `nom-std` (enabled by default)
-    + Enable optimization for internal parsers, using std power.
-    + This automatically enables `std` feature.
+#### memchr
+* `memchr`
+    + Enable optimization for internal parsers, using [`memchr`] crate.
+* `memchr-std`
+    + Enable `std` feature for `memchr`.
+    + This may make the parsing even faster. For detail, see README of `memchr` crate.
+
+[`memchr`]: https://crates.io/crates/memchr
 
 #### serde
 * `serde`
