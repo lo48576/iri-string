@@ -116,25 +116,6 @@
 #![warn(clippy::missing_docs_in_private_items)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// Inform users that `serde-alloc` is required when `serde` and `alloc` is enabled.
-#[cfg(all(
-    feature = "serde",
-    feature = "alloc",
-    not(feature = "std"),
-    not(any(feature = "serde-alloc", feature = "serde-std"))
-))]
-compile_error!(
-    "When both of `serde` and `alloc` features are enabled, \
-     `serde-alloc` or `serde-std` should also be enabled."
-);
-
-// Inform users that `serde-std` is required when `serde` and `std` is enabled.
-#[cfg(all(feature = "serde", feature = "std", not(feature = "serde-std")))]
-compile_error!(
-    "When both of `serde` and `std` features are enabled, \
-     `serde-std` should also be enabled."
-);
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
