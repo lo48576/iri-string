@@ -6,6 +6,7 @@ use core::mem;
 
 use crate::buffer::Buffer;
 use crate::normalize::PathSegment;
+use crate::parser::str::{find_split, rfind};
 
 /// Path that needs merge and/or dot segment removal.
 ///
@@ -21,7 +22,7 @@ impl<'a> RemoveDotSegPath<'a> {
             return Self(None, reference);
         }
 
-        match base.rfind('/') {
+        match rfind(base.as_bytes(), b'/') {
             Some(last_slash_pos) => Self(Some(&base[..=last_slash_pos]), reference),
             None => Self(None, reference),
         }
@@ -116,9 +117,8 @@ impl<'a> RemoveDotSegPath<'a> {
             None => &mut self.1,
         };
 
-        let segment = match buf.find('/') {
-            Some(slash_pos) => {
-                let (segment, rest) = buf.split_at(slash_pos);
+        let segment = match find_split(buf, b'/') {
+            Some((segment, rest)) => {
                 *buf = rest;
                 segment
             }
@@ -274,10 +274,7 @@ fn pop_last_seg_and_preceding_slash<'b, B: Buffer<'b>>(
     }
 
     // Pop a segment from the buffer.
-    match buf.as_bytes()[path_start..]
-        .iter()
-        .rposition(|b| *b == b'/')
-    {
+    match rfind(&buf.as_bytes()[path_start..], b'/') {
         Some(slash_pos) => buf.truncate(path_start + slash_pos),
         None => buf.truncate(path_start),
     }
