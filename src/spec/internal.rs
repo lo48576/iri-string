@@ -22,8 +22,10 @@ impl Sealed for UriSpec {}
 /// Internal implementations for spec types.
 pub trait SpecInternal: Sized {
     /// Checks if the given non-ASCII character matches `unreserved` or `iunreserved` rule.
+    #[must_use]
     fn is_nonascii_char_unreserved(c: char) -> bool;
     /// Checks if the given character matches `iprivate` rule.
+    #[must_use]
     fn is_nonascii_char_private(c: char) -> bool;
 }
 
