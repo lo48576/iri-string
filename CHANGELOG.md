@@ -29,7 +29,7 @@
 * Bump MSRV to 1.57.0.
     + Rust 1.57.0 is released at 2021-12-02.
 * Remove `is_strict: bool` parameter from `resolve::resolve()`.
-    * The IRI parsers provided by this crate is "strict", so resolution
+    + The IRI parsers provided by this crate is "strict", so resolution
       algorithm should use an algorithm for the strict parser.
 * IRI with fragment part can be used as a base of IRI resolution.
     + Type of `base` parameter is changed for `resolve::resolve`,
@@ -50,11 +50,11 @@
 ## [0.4.1]
 
 * Bump internal dependency.
-    * `nom` from v6 to v7.
+    + `nom` from v6 to v7.
 
 ### Changed (non-breaking)
 * Bump internal dependency.
-    * `nom` from v6 to v7.
+    + `nom` from v6 to v7.
 
 ## [0.4.0]
 
@@ -112,8 +112,8 @@ Beleive rustdoc rather than this CHANGELOG.**
     + Type aliases for monomorphized types are also provided, but naming convertions are the same.
       They are named `{Iri,Uri}{..}Str{,ing}`.
         - For example, there is `IriAbsoluteStr` instead of legacy `AbsoluteIriStr`.
-    * `types::CreationError` is now revived.
-    * `types::IriCreationError` is now removed in favor of `types::CreationError`.
+    + `types::CreationError` is now revived.
+    + `types::IriCreationError` is now removed in favor of `types::CreationError`.
 * Remove depraceted items.
     + `IriReferenceStr::resolve()` is now removed.
       Use `IriReferenceStr::resolve_against()` instead.
@@ -131,8 +131,8 @@ Beleive rustdoc rather than this CHANGELOG.**
     + In `no_std` environment with allocator support, you can enable `alloc` feature.
 * Add methods for IRI string types.
     + `len()` and `is_empty()` methods are added to all IRI string slice types.
-    * `IriStr::fragment()` is added.
-    * `RelativeIriStr::resolve_against()` is added.
+    + `IriStr::fragment()` is added.
+    + `RelativeIriStr::resolve_against()` is added.
 * Add URI types.
 
 ## [0.2.3]
@@ -183,7 +183,7 @@ Beleive rustdoc rather than this CHANGELOG.**
       but this is redundant.
       Now `FooStr::new(s)` can be used instead of `<&FooStr>::try_from(s)` for `s: &str`.
 * `IriFragmentStr::from_prefixed()` is added (34cec2f422ba8046134668bdb662f69c9db7f52c).
-    * This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
+    + This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
       For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
 
 ### Changed (non-breaking)
