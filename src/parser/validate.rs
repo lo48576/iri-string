@@ -24,7 +24,7 @@ fn validate_scheme(i: &str) -> Result<(), Error> {
     if bytes[0].is_ascii_alphabetic()
         && bytes[1..]
             .iter()
-            .all(|&b| char::is_ascii_scheme_continue(b))
+            .all(|&b| b.is_ascii() && char::is_ascii_scheme_continue(b))
     {
         Ok(())
     } else {

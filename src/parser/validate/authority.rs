@@ -198,9 +198,10 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
                     return Err(Error::new());
                 }
                 // Validate address.
-                if maybe_addr
-                    .bytes()
-                    .all(char::is_ascii_userinfo_ipvfutureaddr)
+                if maybe_addr.is_ascii()
+                    && maybe_addr
+                        .bytes()
+                        .all(char::is_ascii_userinfo_ipvfutureaddr)
                 {
                     Ok(())
                 } else {
