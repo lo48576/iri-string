@@ -4,7 +4,7 @@
 use crate::{
     raw,
     resolve::resolve,
-    types::{RiAbsoluteStr, RiReferenceString, RiString},
+    types::{RiReferenceString, RiStr, RiString},
     validate::iri,
 };
 use crate::{
@@ -169,7 +169,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> RiString<S> {
+    pub fn resolve_against(&self, base: &RiStr<S>) -> RiString<S> {
         resolve(self, base)
     }
 }

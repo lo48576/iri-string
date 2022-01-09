@@ -11,9 +11,9 @@ use crate::raw;
 #[cfg(feature = "alloc")]
 use crate::resolve::resolve;
 use crate::spec::Spec;
-#[cfg(feature = "alloc")]
-use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
 use crate::types::{RiFragmentStr, RiRelativeStr, RiStr};
+#[cfg(feature = "alloc")]
+use crate::types::{RiRelativeString, RiString};
 #[cfg(feature = "alloc")]
 use crate::validate::iri;
 use crate::validate::iri_reference;
@@ -157,7 +157,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    pub fn resolve_against<'a>(&'a self, base: &'_ RiAbsoluteStr<S>) -> Cow<'a, RiStr<S>> {
+    pub fn resolve_against<'a>(&'a self, base: &'_ RiStr<S>) -> Cow<'a, RiStr<S>> {
         match self.to_iri() {
             Ok(iri) => Cow::Borrowed(iri),
             Err(relative) => Cow::Owned(resolve(relative, base)),
