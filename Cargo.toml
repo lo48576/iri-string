@@ -13,6 +13,9 @@ keywords = ["IRI", "URI"]
 [package.metadata.docs.rs]
 all-features = true
 
+[lib]
+bench = false
+
 [features]
 # Default features.
 default = ["std"]
@@ -45,8 +48,17 @@ memchr = { version = "2.4.1", default-features = false, optional = true }
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
+criterion = "0.3.5"
 serde_test = "1.0.104"
 
 [badges]
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "lo48576/iri-string" }
+
+[[bench]]
+name = "resolve"
+harness = false
+
+[[bench]]
+name = "validate"
+harness = false
