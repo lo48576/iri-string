@@ -31,6 +31,7 @@ pub(crate) trait Buffer<'a> {
     type ExtendError;
 
     /// Returns the content in a byte slice.
+    #[must_use]
     fn as_bytes(&self) -> &[u8];
     /// Returns the content in a byte slice.
     fn into_bytes(self) -> &'a [u8];

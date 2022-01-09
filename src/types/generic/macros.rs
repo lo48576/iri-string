@@ -196,6 +196,7 @@ macro_rules! define_custom_string_slice {
             /// # Safety
             ///
             /// The given string must be valid.
+            #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: &str) -> &Self {
                 debug_assert_eq!($validate::<S>(s), Ok(()));
                 // It is caller's responsibility to guarantee the given string is valid.
@@ -213,24 +214,28 @@ macro_rules! define_custom_string_slice {
             ///
             /// The given string must be valid.
             #[inline]
+            #[must_use]
             unsafe fn new_always_unchecked(s: &str) -> &Self {
                 &*(s as *const str as *const Self)
             }
 
             /// Returns `&str`.
             #[inline]
+            #[must_use]
             pub fn as_str(&self) -> &str {
                 self.as_ref()
             }
 
             /// Returns the string length.
             #[inline]
+            #[must_use]
             pub fn len(&self) -> usize {
                 self.as_str().len()
             }
 
             /// Returns whether the string is empty.
             #[inline]
+            #[must_use]
             pub fn is_empty(&self) -> bool {
                 self.as_str().is_empty()
             }
@@ -504,6 +509,7 @@ macro_rules! define_custom_string_owned {
             ///
             /// The given string must be valid.
             #[inline]
+            #[must_use]
             pub(crate) unsafe fn new_always_unchecked(s: alloc::string::String) -> Self {
                 Self {
                     _spec: core::marker::PhantomData,
@@ -518,6 +524,7 @@ macro_rules! define_custom_string_owned {
             /// # Safety
             ///
             /// The given string must be valid.
+            #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
                 debug_assert_eq!($validate::<S>(&s), Ok(()));
                 Self::new_always_unchecked(s)
@@ -531,6 +538,7 @@ macro_rules! define_custom_string_owned {
 
             /// Returns the internal buffer capacity in bytes.
             #[inline]
+            #[must_use]
             pub fn capacity(&self) -> usize {
                 self.inner.capacity()
             }

@@ -20,6 +20,7 @@ impl Error {
     ///
     /// For internal use.
     #[inline]
+    #[must_use]
     pub(crate) fn new() -> Self {
         Error(())
     }

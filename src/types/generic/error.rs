@@ -24,16 +24,19 @@ pub struct CreationError<T> {
 
 impl<T> CreationError<T> {
     /// Returns the source data.
+    #[must_use]
     pub fn into_source(self) -> T {
         self.source
     }
 
     /// Returns the validation error.
+    #[must_use]
     pub fn validation_error(&self) -> Error {
         self.error
     }
 
     /// Creates a new `CreationError`.
+    #[must_use]
     pub(crate) fn new(error: Error, source: T) -> Self {
         Self { source, error }
     }

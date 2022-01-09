@@ -12,6 +12,7 @@ use crate::types::RiReferenceStr;
 /// Eats a `scheme` and a following colon if available, and returns the rest and the scheme.
 ///
 /// This should be called at the head of an `IRI-reference` or similar.
+#[must_use]
 fn scheme_colon_opt(i: &str) -> (&str, Option<&str>) {
     match find_split4_hole(i, b':', b'/', b'?', b'#') {
         Some((scheme, b':', rest)) => (rest, Some(scheme)),
@@ -22,6 +23,7 @@ fn scheme_colon_opt(i: &str) -> (&str, Option<&str>) {
 /// Eats double slash and the following authority if available, and returns the authority.
 ///
 /// This should be called at the head of an `IRI-reference`, or at the result of `scheme_colon`.
+#[must_use]
 fn slash_slash_authority_opt(i: &str) -> (&str, Option<&str>) {
     let s = match i.strip_prefix("//") {
         Some(rest) => rest,
@@ -37,6 +39,7 @@ fn slash_slash_authority_opt(i: &str) -> (&str, Option<&str>) {
 }
 
 /// Eats a string until the query, and returns that part (excluding `?` for the query).
+#[must_use]
 fn until_query(i: &str) -> (&str, &str) {
     // `?` won't appear before the query part.
     match find_split2(i, b'?', b'#') {
@@ -48,6 +51,7 @@ fn until_query(i: &str) -> (&str, &str) {
 /// Decomposes query and fragment, if available.
 ///
 /// The string must starts with `?`, or `#`, or be empty.
+#[must_use]
 fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
     match i.as_bytes().get(0).copied() {
         None => (None, None),
@@ -66,6 +70,7 @@ fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
 }
 
 /// Decomposes the given valid `IRI-reference`.
+#[must_use]
 pub(crate) fn decompose_iri_reference<S: Spec>(
     i: &RiReferenceStr<S>,
 ) -> RiReferenceComponents<'_, S> {
@@ -93,6 +98,7 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
 ///
 /// A leading `#` character is truncated if the fragment part exists.
 #[inline]
+#[must_use]
 pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
     // It is completely OK to find the first `#` character from valid IRI to get fragment part,
     // because the spec says that there are no `#` characters before the fragment part.
@@ -128,6 +134,7 @@ pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
 ///
 /// A leading `#` character of the fragment is truncated.
 #[inline]
+#[must_use]
 pub(crate) fn extract_fragment(iri: &str) -> Option<&str> {
     split_fragment(iri).1
 }

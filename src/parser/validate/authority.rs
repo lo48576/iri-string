@@ -26,6 +26,7 @@ fn validate_userinfo<S: Spec>(i: &str) -> Result<(), Error> {
 /// Returns `true` if the string matches `dec-octet`.
 ///
 /// In other words, this tests whether the string is decimal "0" to "255".
+#[must_use]
 fn is_dec_octet(i: &str) -> bool {
     matches!(
         i.as_bytes(),

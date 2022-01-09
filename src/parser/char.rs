@@ -265,6 +265,7 @@ pub(crate) const fn is_ascii_pchar_slash(c: u8) -> bool {
 }
 
 /// Checks if the given character matches `ucschar` rule.
+#[must_use]
 pub(crate) fn is_ucschar(c: char) -> bool {
     matches!(
         u32::from(c),

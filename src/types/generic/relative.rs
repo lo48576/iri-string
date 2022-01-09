@@ -143,6 +143,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
         AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
@@ -169,6 +170,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn resolve_against(&self, base: &RiStr<S>) -> RiString<S> {
         resolve(self, base)
     }

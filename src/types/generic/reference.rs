@@ -157,6 +157,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn resolve_against<'a>(&'a self, base: &'_ RiStr<S>) -> Cow<'a, RiStr<S>> {
         match self.to_iri() {
             Ok(iri) => Cow::Borrowed(iri),
@@ -221,6 +222,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
         trusted_parser::extract_fragment(self.as_str()).map(|fragment| unsafe {
             // This is safe because `extract_fragment` returns the fragment part of an IRI, and the

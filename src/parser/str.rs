@@ -1,6 +1,7 @@
 //! Functions for common string operations.
 
 /// Returns the inner string if wrapped.
+#[must_use]
 pub(crate) fn get_wrapped_inner(s: &str, open: u8, close: u8) -> Option<&str> {
     let (prefix, suffix) = match s.as_bytes() {
         [prefix, suffix] | [prefix, .., suffix] => (*prefix, *suffix),
@@ -16,6 +17,7 @@ pub(crate) fn get_wrapped_inner(s: &str, open: u8, close: u8) -> Option<&str> {
 /// (Possibly) faster version of `haystack.rfind(needle)` when `needle` is an ASCII character.
 #[cfg(not(feature = "memchr"))]
 #[inline]
+#[must_use]
 pub(crate) fn rfind(haystack: &[u8], needle: u8) -> Option<usize> {
     haystack.iter().rposition(|&b| b == needle)
 }
@@ -23,6 +25,7 @@ pub(crate) fn rfind(haystack: &[u8], needle: u8) -> Option<usize> {
 /// (Possibly) faster version of `haystack.rfind(needle)` when `needle` is an ASCII character.
 #[cfg(feature = "memchr")]
 #[inline]
+#[must_use]
 pub(crate) fn rfind(haystack: &[u8], needle: u8) -> Option<usize> {
     memchr::memrchr(needle, haystack)
 }
@@ -31,6 +34,7 @@ pub(crate) fn rfind(haystack: &[u8], needle: u8) -> Option<usize> {
 ///
 /// If `needle` is not found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
     haystack
         .bytes()
@@ -42,6 +46,7 @@ pub(crate) fn find_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
 ///
 /// If `needle` is not found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
     memchr::memchr(needle, haystack.as_bytes()).map(|pos| haystack.split_at(pos))
 }
@@ -50,6 +55,7 @@ pub(crate) fn find_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
 ///
 /// If no needles are found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split2(haystack: &str, needle1: u8, needle2: u8) -> Option<(&str, &str)> {
     haystack
         .bytes()
@@ -61,6 +67,7 @@ pub(crate) fn find_split2(haystack: &str, needle1: u8, needle2: u8) -> Option<(&
 ///
 /// If no needles are found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split2(haystack: &str, needle1: u8, needle2: u8) -> Option<(&str, &str)> {
     memchr::memchr2(needle1, needle2, haystack.as_bytes()).map(|pos| haystack.split_at(pos))
 }
@@ -69,6 +76,7 @@ pub(crate) fn find_split2(haystack: &str, needle1: u8, needle2: u8) -> Option<(&
 ///
 /// If no needles are found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split3(
     haystack: &str,
     needle1: u8,
@@ -85,6 +93,7 @@ pub(crate) fn find_split3(
 ///
 /// If no needles are found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split3(
     haystack: &str,
     needle1: u8,
@@ -99,6 +108,7 @@ pub(crate) fn find_split3(
 ///
 /// If `needle` is not found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
     haystack
         .bytes()
@@ -110,6 +120,7 @@ pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)
 ///
 /// If `needle` is not found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
     memchr::memchr(needle, haystack.as_bytes())
         .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
@@ -119,6 +130,7 @@ pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)
 ///
 /// If no needles are found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split2_hole(
     haystack: &str,
     needle1: u8,
@@ -140,6 +152,7 @@ pub(crate) fn find_split2_hole(
 ///
 /// If no needles are found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split2_hole(
     haystack: &str,
     needle1: u8,
@@ -158,6 +171,7 @@ pub(crate) fn find_split2_hole(
 ///
 /// If no needles are found, returns `None`.
 #[cfg(not(feature = "memchr"))]
+#[must_use]
 pub(crate) fn find_split4_hole(
     haystack: &str,
     needle1: u8,
@@ -181,6 +195,7 @@ pub(crate) fn find_split4_hole(
 ///
 /// If no needles are found, returns `None`.
 #[cfg(feature = "memchr")]
+#[must_use]
 pub(crate) fn find_split4_hole(
     haystack: &str,
     needle1: u8,
@@ -203,6 +218,7 @@ pub(crate) fn find_split4_hole(
 }
 
 /// Returns `true` if the string only contains the allowed characters.
+#[must_use]
 fn satisfy_chars<F, G>(mut s: &str, pred_ascii: F, pred_nonascii: G) -> bool
 where
     F: Copy + Fn(u8) -> bool,
@@ -241,6 +257,7 @@ where
 }
 
 /// Returns `true` if the string only contains the allowed characters and percent-encoded char.
+#[must_use]
 pub(crate) fn satisfy_chars_with_pct_encoded<F, G>(
     mut s: &str,
     pred_ascii: F,
@@ -272,6 +289,7 @@ where
 }
 
 /// Returns `true` if the given string starts with two hexadecimal digits.
+#[must_use]
 fn starts_with_double_hexdigits(s: &[u8]) -> bool {
     match s {
         [x, y] | [x, y, ..] => x.is_ascii_hexdigit() && y.is_ascii_hexdigit(),
@@ -284,6 +302,7 @@ fn starts_with_double_hexdigits(s: &[u8]) -> bool {
 /// # Precondition
 ///
 /// The given ASCII character (`prefix`) should be an ASCII character.
+#[must_use]
 pub(crate) fn strip_ascii_char_prefix(s: &str, prefix: u8) -> Option<&str> {
     debug_assert!(prefix.is_ascii());
     if s.as_bytes().get(0).copied() == Some(prefix) {

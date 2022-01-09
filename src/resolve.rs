@@ -55,6 +55,7 @@ use crate::types::{RiReferenceStr, RiStr};
 /// [`RiReferenceStr::resolve_against()`]: `RiReferenceStr::resolve_against`
 /// [`RiRelativeStr::resolve_against()`]: `crate::types::RiRelativeStr::resolve_against`
 #[cfg(feature = "alloc")]
+#[must_use]
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiStr<S>>,
@@ -92,6 +93,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn new(base: &'a RiStr<S>) -> Self {
         Self {
             base_components: RiReferenceComponents::from(base.as_ref()),
@@ -121,6 +123,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn resolve(&self, reference: &RiReferenceStr<S>) -> RiString<S> {
         let mut buf = String::new();
         self.create_task(reference)
@@ -160,6 +163,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> ResolutionTask<'a, S> {
         let b = self.base_components;
         let b_scheme = b
@@ -283,6 +287,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn allocate_and_write(&self) -> RiString<S> {
         let mut s = String::new();
         self.write_to_buf(&mut s).expect("not enough memory");
@@ -409,6 +414,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn write_to_iri_string(&self, dest: RiString<S>) -> RiString<S> {
         let mut buf: String = dest.into();
         buf.clear();
@@ -462,7 +468,6 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[must_use]
     pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> &'b RiStr<S> {
         self.try_append_to_std_string(buf)
             .expect("not enough memory")
@@ -536,6 +541,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn estimate_max_buf_size_for_resolution(&self) -> usize {
         let known_exact = self.common.scheme.len()
             + self.common.authority.map_or(0, |s| s.len() + 2)
@@ -615,6 +621,7 @@ impl Path<'_> {
     /// buffer than this function estimates, but it is not guaranteed.
     ///
     /// Note that this is `O(N)` operation (where N is input length).
+    #[must_use]
     fn estimate_max_buf_size_for_resolution(&self) -> usize {
         match self {
             Self::Done(s) => s.len(),

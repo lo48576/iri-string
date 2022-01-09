@@ -238,6 +238,7 @@ impl<'a> RemoveDotSegPath<'a> {
     ///
     /// Note that this is `O(N)` operation (where N is input length).
     #[inline]
+    #[must_use]
     pub(crate) fn estimate_max_buf_size_for_resolution(&self) -> usize {
         /// Segments to be ignored.
         const IGNORE: &[&str] = &[".", ".."];
