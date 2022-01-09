@@ -269,10 +269,8 @@ where
 {
     while let Some((prefix, suffix)) = find_split_hole(s, b'%') {
         // Verify strings before the percent-encoded char.
-        if !prefix.is_empty() {
-            if !satisfy_chars(prefix, pred_ascii, pred_nonascii) {
-                return false;
-            }
+        if !prefix.is_empty() && !satisfy_chars(prefix, pred_ascii, pred_nonascii) {
+            return false;
         }
 
         // Verify the percent-encoded char.
