@@ -55,6 +55,14 @@ serde_test = "1.0.104"
 maintenance = { status = "actively-developed" }
 travis-ci = { repository = "lo48576/iri-string" }
 
+[[example]]
+name = "parse"
+required-features = ["std"]
+
+[[example]]
+name = "resolve"
+required-features = ["std"]
+
 [[bench]]
 name = "resolve"
 harness = false
