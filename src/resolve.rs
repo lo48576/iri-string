@@ -14,7 +14,7 @@ use crate::normalize::RemoveDotSegPath;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
-use crate::types::{RiReferenceStr, RiStr};
+use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 
 /// IRI resolution error.
 ///
@@ -153,9 +153,9 @@ pub enum ErrorKind {
 /// # impl From<iri_string::resolve::Error> for Error {
 /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
 /// use iri_string::resolve::{resolve, FixedBaseResolver};
-/// use iri_string::types::{IriReferenceStr, IriStr};
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
-/// let base = IriStr::new("http://example.com/base/")?;
+/// let base = IriAbsoluteStr::new("http://example.com/base/")?;
 /// let reference = IriReferenceStr::new("../there")?;
 ///
 /// // Resolve `reference` against `base`.
@@ -181,7 +181,7 @@ pub enum ErrorKind {
 #[cfg(feature = "alloc")]
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
-    base: impl AsRef<RiStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, Error> {
     FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
 }
@@ -206,12 +206,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
     /// # // `FixedBaseResolver::resolve()` is available only when
     /// # // `alloc` feature is enabled.
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -222,7 +222,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
-    pub fn new(base: &'a RiStr<S>) -> Self {
+    pub fn new(base: &'a RiAbsoluteStr<S>) -> Self {
         Self {
             base_components: RiReferenceComponents::from(base.as_ref()),
         }
@@ -254,9 +254,9 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -292,12 +292,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
     /// # // `ResolutionTask::allocate_and_write()` is available only when
     /// # // `alloc` feature is enabled.
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -437,9 +437,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -480,9 +480,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -510,9 +510,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::{ErrorKind, FixedBaseResolver};
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("a/b/c/d/e/../../../../../f")?;
@@ -570,9 +570,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr, IriString};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr, IriString};
     ///
-    /// let base = IriStr::new("http://example.com/base-dir/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base-dir/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -636,9 +636,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base-dir/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base-dir/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -694,9 +694,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// ```
     /// use iri_string::resolve::{Error, FixedBaseResolver};
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base-dir/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base-dir/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -738,9 +738,9 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # impl From<iri_string::resolve::Error> for Error {
     /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
-    /// use iri_string::types::{IriReferenceStr, IriStr};
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
-    /// let base = IriStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
@@ -855,7 +855,7 @@ impl Path<'_> {
 mod tests {
     use super::*;
 
-    use crate::types::{IriReferenceStr, IriStr};
+    use crate::types::{IriAbsoluteStr, IriReferenceStr};
 
     #[cfg(feature = "alloc")]
     use self::refimpl::resolve as resolve_refimpl;
@@ -1046,7 +1046,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     fn test_resolve_standalone() {
         for (base, pairs) in TEST_CASES {
-            let base = <&IriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
@@ -1067,7 +1067,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     fn test_resolve_standalone_same_result_as_reference_impl() {
         for (base, pairs) in TEST_CASES {
-            let base = <&IriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
@@ -1091,7 +1091,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     fn test_fixed_base_resolver() {
         for (base, pairs) in TEST_CASES {
-            let base = <&IriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             let resolver = FixedBaseResolver::new(base);
             for (input, expected) in *pairs {
@@ -1115,7 +1115,7 @@ mod tests {
     fn test_fixed_base_resolver_to_byte_slice() {
         let mut buf = [0_u8; 128];
         for (base, pairs) in TEST_CASES {
-            let base = <&IriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             let resolver = FixedBaseResolver::new(base);
             for (input, expected) in *pairs {
@@ -1142,7 +1142,7 @@ mod tests {
         let mut buf_empty = [];
 
         for (base, pairs) in TEST_CASES {
-            let base = <&IriStr>::try_from(*base)
+            let base = <&IriAbsoluteStr>::try_from(*base)
                 .expect("Invalid testcase: base IRI should be absolute IRI");
             let resolver = FixedBaseResolver::new(base);
             for (input, _) in *pairs {
@@ -1167,7 +1167,7 @@ mod tests {
     fn test_task_live_longer_than_fixed_base_resolver() {
         let mut buf = [0_u8; 128];
 
-        let base = <&IriStr>::try_from("http://example.com/")
+        let base = <&IriAbsoluteStr>::try_from("http://example.com/")
             .expect("Invalid testcase: base IRI should be a valid IRI");
         let reference = <&IriReferenceStr>::try_from("foo/bar")
             .expect("Invalid testcase: reference IRI should be a valid IRI-reference");
@@ -1190,14 +1190,14 @@ mod tests {
 
         use crate::components::RiReferenceComponents;
         use crate::spec::Spec;
-        use crate::types::{RiReferenceStr, RiStr, RiString};
+        use crate::types::{RiAbsoluteStr, RiReferenceStr, RiString};
 
         /// Resolves the relative IRI.
         ///
         /// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2>.
         pub(super) fn resolve<S: Spec>(
             reference: &RiReferenceStr<S>,
-            base: &RiStr<S>,
+            base: &RiAbsoluteStr<S>,
         ) -> RiString<S> {
             let r = RiReferenceComponents::from(reference);
             let b = RiReferenceComponents::from(base.as_ref());

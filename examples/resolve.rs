@@ -1,6 +1,6 @@
 //! An example to parse IRI from the CLI argument.
 
-use iri_string::types::{RiReferenceStr, RiStr};
+use iri_string::types::{RiAbsoluteStr, RiReferenceStr};
 
 const USAGE: &str = "\
 USAGE:
@@ -120,10 +120,10 @@ fn main() {
 fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
     let base_raw = &opt.base.as_str();
     let reference_raw = &opt.reference.as_str();
-    let base = match RiStr::<S>::new(base_raw) {
+    let base = match RiAbsoluteStr::<S>::new(base_raw) {
         Ok(v) => v,
         Err(e) => die(format_args!(
-            "Failed to parse {:?} as an IRI: {}",
+            "Failed to parse {:?} as an IRI (without fragment): {}",
             reference_raw, e
         )),
     };

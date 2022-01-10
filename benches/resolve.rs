@@ -1,10 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use iri_string::resolve::FixedBaseResolver;
-use iri_string::types::{IriReferenceStr, IriStr};
+use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
-    let base = IriStr::new("https://sub.example.com/foo1/foo2/foo3/foo4/foo5")
+    let base = IriAbsoluteStr::new("https://sub.example.com/foo1/foo2/foo3/foo4/foo5")
         .expect("should be valid IRI");
     let rel = IriReferenceStr::new(concat!(
         "bar1/bar2/bar3/../bar4/../../bar5/bar6/bar7/../../../../..",
