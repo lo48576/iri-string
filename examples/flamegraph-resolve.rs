@@ -1,3 +1,4 @@
+#![cfg(feature = "alloc")]
 use iri_string::resolve::resolve;
 use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 

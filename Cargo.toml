@@ -56,6 +56,10 @@ maintenance = { status = "actively-developed" }
 travis-ci = { repository = "lo48576/iri-string" }
 
 [[example]]
+name = "flamegraph-resolve"
+required-features = ["alloc"]
+
+[[example]]
 name = "parse"
 required-features = ["std"]
 

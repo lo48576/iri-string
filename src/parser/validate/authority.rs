@@ -229,10 +229,10 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
 }
 
 #[cfg(test)]
+#[cfg(feature = "alloc")]
 mod tests {
     use super::*;
 
-    #[cfg(feature = "alloc")]
     use alloc::format;
 
     macro_rules! assert_validate {
@@ -246,7 +246,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn test_ipv6address() {
         use core::cmp::Ordering;
 
