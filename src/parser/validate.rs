@@ -120,7 +120,15 @@ fn validate_uri_reference_common<S: Spec>(
         }
         Some(("", _)) => return Err(Error::new()),
         Some((maybe_scheme, rest)) => {
-            validate_scheme(maybe_scheme)?;
+            if validate_scheme(maybe_scheme).is_err() {
+                // The string before the first colon is not a scheme.
+                // Falling back to `relative-ref` parsing.
+                if ref_rule.is_relative_allowed() {
+                    return validate_relative_ref::<S>(i);
+                } else {
+                    return Err(Error::new());
+                }
+            }
             (rest, maybe_scheme)
         }
     };
