@@ -1,5 +1,8 @@
 //! Validators.
 
+#[cfg(test)]
+mod tests;
+
 use core::fmt;
 
 #[cfg(feature = "std")]
