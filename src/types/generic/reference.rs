@@ -137,7 +137,11 @@ impl<S: Spec> RiReferenceStr<S> {
 
     /// Returns resolved IRI against the given base IRI.
     ///
-    /// About reference resolution output example, see [RFC 3986 section 5.4].
+    /// For reference resolution output examples, see [RFC 3986 section 5.4].
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Strictness
     ///
     /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
     /// always interpreted as a composition of the scheme `http` and the path
@@ -152,7 +156,15 @@ impl<S: Spec> RiReferenceStr<S> {
     /// >
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
-    /// Enabled by `alloc` or `std` feature.
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2

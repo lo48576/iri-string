@@ -133,6 +133,16 @@ pub enum ErrorKind {
 ///
 /// Enabled by `alloc` or `std` feature.
 ///
+/// # Failures
+///
+/// This fails if
+///
+/// * memory allocation failed, or
+/// * the IRI referernce is unresolvable against the base.
+///
+/// To see examples of unresolvable IRIs, visit the documentation
+/// for [`resolve::Error`][`Error`].
+///
 /// # Examples
 ///
 /// ```
@@ -223,6 +233,16 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// Resolves the given reference against the fixed base.
     ///
     /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
     ///
     /// # Examples
     ///
@@ -397,6 +417,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
 
     /// Resolves the IRI, and writes it to the newly allocated buffer.
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
@@ -429,6 +459,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// To estimate how much memory is required (at most), use
     /// [`estimate_max_buf_size_for_resolution`].
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * buffer was not long enough, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
     ///
     /// # Examples
     ///
@@ -510,6 +550,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// the non-allocating default values. In order to make the function
     /// exception-safe, this cannot write to the `&mut RiString<S>` directly.
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
@@ -566,6 +616,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
 
     /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
@@ -619,6 +679,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
     }
 
     /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
     ///
     /// # Examples
     ///
