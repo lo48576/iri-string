@@ -135,6 +135,11 @@ fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
         )),
     };
 
-    let resolved = reference.resolve_against(base);
-    println!("{}", resolved);
+    match reference.resolve_against(base) {
+        Ok(resolved) => println!("{}", resolved),
+        Err(e) => die(format_args!(
+            "Failed to resolve {:?} against {:?}: {}",
+            reference_raw, base_raw, e
+        )),
+    }
 }

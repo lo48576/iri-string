@@ -1,8 +1,10 @@
 //! URI and IRI resolvers.
 
-use core::convert::TryFrom;
+use core::fmt;
 use core::marker::PhantomData;
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
@@ -14,6 +16,113 @@ use crate::spec::Spec;
 use crate::types::RiString;
 use crate::types::{RiReferenceStr, RiStr};
 
+/// IRI resolution error.
+///
+/// Though this is not explicitly stated in RFC 3986, IRI resolution can fail.
+/// Below are examples:
+///
+/// * base=`scheme:foo`, ref=`.///bar`.
+///   Resulting IRI should have scheme `scheme` and path `//bar`, but does not
+///   have authority.
+/// * base=`scheme:foo/bar`, ref=`..//baz`.
+///   Resulting IRI should have scheme `scheme` and path `//bar`, but does not
+///   have authority.
+///
+/// IRI without authority (note that this is different from "with empty authority")
+/// cannot have a path starting with `//`, since it is ambiguous and can be
+/// interpreted as an IRI with authority. For the above example, `scheme://bar`
+/// is not valid output, as `bar` in `scheme://bar` should be interpreted as an
+/// authority, not a path.
+///
+/// Thus, IRI resolution can fail for some abnormal cases.
+#[derive(Debug, Clone)]
+pub struct Error {
+    /// Inner error representation.
+    repr: ErrorRepr,
+}
+
+impl Error {
+    /// Returns the error kind.
+    #[must_use]
+    pub fn kind(&self) -> ErrorKind {
+        match &self.repr {
+            #[cfg(feature = "alloc")]
+            ErrorRepr::Alloc(_) => ErrorKind::OutOfMemory,
+            ErrorRepr::BufferFull(_) => ErrorKind::OutOfMemory,
+            ErrorRepr::Unresolvable => ErrorKind::Unresolvable,
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.repr {
+            #[cfg(feature = "alloc")]
+            ErrorRepr::Alloc(_) => f.write_str("IRI resolution failed: allocation failed"),
+            ErrorRepr::BufferFull(_) => f.write_str("IRI resolution failed: buffer full"),
+            ErrorRepr::Unresolvable => {
+                f.write_str("IRI resolution failed: unresolvable base and IRI pair")
+            }
+        }
+    }
+}
+
+impl From<ErrorRepr> for Error {
+    #[inline]
+    fn from(repr: ErrorRepr) -> Self {
+        Self { repr }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match &self.repr {
+            #[cfg(feature = "alloc")]
+            ErrorRepr::Alloc(e) => Some(e),
+            ErrorRepr::BufferFull(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+/// Internal representation of `ResolutionError`.
+#[derive(Debug, Clone)]
+pub(crate) enum ErrorRepr {
+    /// Memory allocation error for `alloc` stuff.
+    #[cfg(feature = "alloc")]
+    Alloc(TryReserveError),
+    /// Memory allocation error for fixed-size buffer.
+    BufferFull(BufferTooSmallError),
+    /// Unresolvable base and reference.
+    Unresolvable,
+}
+
+impl From<BufferTooSmallError> for ErrorRepr {
+    #[inline]
+    fn from(e: BufferTooSmallError) -> Self {
+        Self::BufferFull(e)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl From<TryReserveError> for ErrorRepr {
+    #[inline]
+    fn from(e: TryReserveError) -> Self {
+        Self::Alloc(e)
+    }
+}
+
+/// Resolution error kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ErrorKind {
+    /// Unresolvable base and reference.
+    Unresolvable,
+    /// Out of memory.
+    OutOfMemory,
+}
+
 /// Resolves the IRI reference.
 ///
 /// It is recommended to use methods such as [`RiReferenceStr::resolve_against()`] and
@@ -24,10 +133,25 @@ use crate::types::{RiReferenceStr, RiStr};
 ///
 /// Enabled by `alloc` or `std` feature.
 ///
+/// # Failures
+///
+/// This fails if
+///
+/// * memory allocation failed, or
+/// * the IRI referernce is unresolvable against the base.
+///
+/// To see examples of unresolvable IRIs, visit the documentation
+/// for [`resolve::Error`][`Error`].
+///
 /// # Examples
 ///
 /// ```
-/// # use iri_string::validate::Error;
+/// # #[derive(Debug)]
+/// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+/// # impl From<iri_string::validate::Error> for Error {
+/// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+/// # impl From<iri_string::resolve::Error> for Error {
+/// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
 /// use iri_string::resolve::{resolve, FixedBaseResolver};
 /// use iri_string::types::{IriReferenceStr, IriStr};
 ///
@@ -35,16 +159,16 @@ use crate::types::{RiReferenceStr, RiStr};
 /// let reference = IriReferenceStr::new("../there")?;
 ///
 /// // Resolve `reference` against `base`.
-/// let resolved = resolve(reference, base);
+/// let resolved = resolve(reference, base)?;
 /// assert_eq!(resolved, "http://example.com/there");
 ///
 /// // These two produces the same result with the same type.
 /// assert_eq!(
-///     FixedBaseResolver::new(base).resolve(reference),
+///     FixedBaseResolver::new(base).resolve(reference)?,
 ///     "http://example.com/there"
 /// );
 /// assert_eq!(
-///     FixedBaseResolver::new(base).create_task(reference).allocate_and_write(),
+///     FixedBaseResolver::new(base).create_task(reference).allocate_and_write()?,
 ///     "http://example.com/there"
 /// );
 ///
@@ -55,11 +179,10 @@ use crate::types::{RiReferenceStr, RiStr};
 /// [`RiReferenceStr::resolve_against()`]: `RiReferenceStr::resolve_against`
 /// [`RiRelativeStr::resolve_against()`]: `crate::types::RiRelativeStr::resolve_against`
 #[cfg(feature = "alloc")]
-#[must_use]
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiStr<S>>,
-) -> RiString<S> {
+) -> Result<RiString<S>, Error> {
     FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
 }
 
@@ -76,7 +199,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -87,7 +215,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
-    /// let resolved = resolver.resolve(reference);
+    /// let resolved = resolver.resolve(reference)?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # }
@@ -106,10 +234,25 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -117,22 +260,19 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
-    /// let resolved = resolver.resolve(reference);
+    /// let resolved = resolver.resolve(reference)?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[must_use]
-    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> RiString<S> {
+    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
         let mut buf = String::new();
-        self.create_task(reference)
-            .write_to_buf(&mut buf)
-            .expect("IRI resolution failed due to out of memory");
+        self.create_task(reference).write_to_buf(&mut buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
-        RiString::try_from(buf).expect("the resolved IRI must be valid")
+        Ok(RiString::try_from(buf).expect("the resolved IRI must be valid"))
     }
 
     /// Creates a resolution task.
@@ -145,7 +285,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -158,7 +303,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// let reference = IriReferenceStr::new("../there")?;
     /// let task = resolver.create_task(reference);
     ///
-    /// let resolved = task.allocate_and_write();
+    /// let resolved = task.allocate_and_write()?;
     /// assert_eq!(resolved, "http://example.com/there");
     /// # }
     /// # Ok::<_, Error>(())
@@ -263,17 +408,34 @@ pub struct ResolutionTask<'a, S> {
 
 impl<S: Spec> ResolutionTask<'_, S> {
     /// Resolves the IRI, and writes it to the buffer.
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], B::ExtendError> {
-        let s = self.common.write_to_buf(buf)?;
-        Ok(s)
+    fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], Error>
+    where
+        ErrorRepr: From<B::ExtendError>,
+    {
+        self.common.write_to_buf(buf).map_err(Into::into)
     }
 
     /// Resolves the IRI, and writes it to the newly allocated buffer.
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -283,15 +445,14 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// let reference = IriReferenceStr::new("../there")?;
     /// let task = resolver.create_task(reference);
     ///
-    /// assert_eq!(task.allocate_and_write(), "http://example.com/there");
+    /// assert_eq!(task.allocate_and_write()?, "http://example.com/there");
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[must_use]
-    pub fn allocate_and_write(&self) -> RiString<S> {
+    pub fn allocate_and_write(&self) -> Result<RiString<S>, Error> {
         let mut s = String::new();
-        self.write_to_buf(&mut s).expect("not enough memory");
-        RiString::try_from(s).expect("[consistency] the resolved IRI must be valid")
+        self.write_to_buf(&mut s)?;
+        Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
     }
 
     /// Resolves the IRI, and writes it to the given byte slice.
@@ -299,11 +460,25 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// To estimate how much memory is required (at most), use
     /// [`estimate_max_buf_size_for_resolution`].
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * buffer was not long enough, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -315,8 +490,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..])
-    ///     .expect("This should succeed since the buffer is long enough!");
+    /// let resolved = task.write_to_byte_slice(&mut buf[..])?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
@@ -329,9 +503,13 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// memory than the result.
     ///
     /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
-    /// use iri_string::resolve::FixedBaseResolver;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
+    /// use iri_string::resolve::{ErrorKind, FixedBaseResolver};
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
     /// let base = IriStr::new("http://example.com/")?;
@@ -345,15 +523,16 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// // to store the result.
     /// let mut buf = [0_u8; EXPECTED.len()];
     /// let resolved = task.write_to_byte_slice(&mut buf[..]);
-    /// assert!(resolved.is_err(), "failed due to not enough buffer size");
+    /// assert_eq!(
+    ///     resolved.map_err(|e| e.kind()),
+    ///     Err(ErrorKind::OutOfMemory),
+    ///     "failed due to not enough buffer size"
+    /// );
     /// # Ok::<_, Error>(())
     /// ```
     ///
     /// [`estimate_max_buf_size_for_resolution`]: `Self::estimate_max_buf_size_for_resolution`
-    pub fn write_to_byte_slice<'b>(
-        &self,
-        buf: &'b mut [u8],
-    ) -> Result<&'b RiStr<S>, BufferTooSmallError> {
+    pub fn write_to_byte_slice<'b>(&self, buf: &'b mut [u8]) -> Result<&'b RiStr<S>, Error> {
         let buf = ByteSliceBuf::new(buf);
         let s = self.write_to_buf(buf)?;
         // Convert the type.
@@ -371,11 +550,25 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// the non-allocating default values. In order to make the function
     /// exception-safe, this cannot write to the `&mut RiString<S>` directly.
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr, IriString};
     ///
@@ -390,7 +583,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///     let buf_long = IriString::try_from("https://example.com/loooooooooooooooooooong-enough")?;
     ///     let buf_long_capacity = buf_long.capacity();
     ///
-    ///     let resolved_long = task.write_to_iri_string(buf_long);
+    ///     let resolved_long = task.write_to_iri_string(buf_long)?;
     ///     assert_eq!(resolved_long, "http://example.com/there");
     ///     assert_eq!(
     ///         resolved_long.capacity(),
@@ -404,7 +597,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///     let buf_short = IriString::try_from("foo:bar")?;
     ///     let buf_short_capacity = buf_short.capacity();
     ///
-    ///     let resolved_short = task.write_to_iri_string(buf_short);
+    ///     let resolved_short = task.write_to_iri_string(buf_short)?;
     ///     assert_eq!(resolved_short, "http://example.com/there");
     ///     assert!(
     ///         resolved_short.capacity() >= buf_short_capacity,
@@ -414,21 +607,34 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[must_use]
-    pub fn write_to_iri_string(&self, dest: RiString<S>) -> RiString<S> {
+    pub fn write_to_iri_string(&self, dest: RiString<S>) -> Result<RiString<S>, Error> {
         let mut buf: String = dest.into();
         buf.clear();
-        self.write_to_buf(&mut buf).expect("not enough memory");
-        RiString::<S>::try_from(buf).expect("[consistency] the resolved IRI must be valid")
+        self.write_to_buf(&mut buf)?;
+        Ok(RiString::<S>::try_from(buf).expect("[consistency] the resolved IRI must be valid"))
     }
 
     /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -443,7 +649,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///     let mut buf_long = String::with_capacity(128);
     ///     let buf_long_capacity = buf_long.capacity();
     ///
-    ///     let resolved_long = task.append_to_std_string(&mut buf_long);
+    ///     let resolved_long = task.append_to_std_string(&mut buf_long)?;
     ///     assert_eq!(buf_long, "http://example.com/there");
     ///     assert_eq!(
     ///         buf_long.capacity(),
@@ -458,7 +664,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///     let buf_short_capacity = buf_short.capacity();
     ///     assert_eq!(buf_short_capacity, 0, "String::new() does not heap-allocate");
     ///
-    ///     let resolved_short = task.append_to_std_string(&mut buf_short);
+    ///     let resolved_short = task.append_to_std_string(&mut buf_short)?;
     ///     assert_eq!(resolved_short, "http://example.com/there");
     ///     assert!(
     ///         buf_short.capacity() >= buf_short_capacity,
@@ -468,20 +674,26 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> &'b RiStr<S> {
+    pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
         self.try_append_to_std_string(buf)
-            .expect("not enough memory")
     }
 
     /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
     ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
     /// # Examples
     ///
     /// ```
-    /// use std::collections::TryReserveError;
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
-    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::resolve::{Error, FixedBaseResolver};
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
     /// let base = IriStr::new("http://example.com/base-dir/")?;
@@ -492,17 +704,14 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// let mut buf = String::new();
     ///
-    /// let resolved_short: Result<_, TryReserveError> = task.try_append_to_std_string(&mut buf);
+    /// let resolved_short: Result<_, Error> = task.try_append_to_std_string(&mut buf);
     /// if let Ok(s) = resolved_short {
     ///     assert_eq!(s, "http://example.com/there");
     /// }
-    /// # Ok::<_, Error>(())
+    /// # Ok::<_, iri_string::validate::Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    pub fn try_append_to_std_string<'b>(
-        &self,
-        buf: &'b mut String,
-    ) -> Result<&'b RiStr<S>, alloc::collections::TryReserveError> {
+    pub fn try_append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
         let s = self.write_to_buf(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
@@ -522,8 +731,12 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Examples
     ///
     /// ```
-    /// use std::convert::TryFrom;
-    /// # use iri_string::validate::Error;
+    /// # #[derive(Debug)]
+    /// # enum Error { Validate(iri_string::validate::Error), Resolve(iri_string::resolve::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #   fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::resolve::Error> for Error {
+    /// #   fn from(e: iri_string::resolve::Error) -> Self { Self::Resolve(e) } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriReferenceStr, IriStr};
     ///
@@ -535,8 +748,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// let max_size = task.estimate_max_buf_size_for_resolution();
     /// let mut buf = vec![0_u8; max_size];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..])
-    ///     .expect("This should succeed since the buffer is long enough!");
+    /// let resolved = task.write_to_byte_slice(&mut buf[..])?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
@@ -575,7 +787,10 @@ impl ResolutionTaskCommon<'_> {
     // For the internal algorithm, see [RFC 3986 section 5.3].
     //
     // [RFC 3986 section 5.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.3
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, mut buf: B) -> Result<&'b [u8], B::ExtendError> {
+    fn write_to_buf<'b, B: Buffer<'b>>(&self, mut buf: B) -> Result<&'b [u8], ErrorRepr>
+    where
+        ErrorRepr: From<B::ExtendError>,
+    {
         // Write the scheme.
         buf.push_str(self.scheme)?;
         buf.push_str(":")?;
@@ -584,6 +799,7 @@ impl ResolutionTaskCommon<'_> {
         buf.push_optional_with_prefix("//", self.authority)?;
 
         // Process and write the path.
+        let path_start_pos = buf.as_bytes().len();
         match self.path {
             Path::Done(s) => {
                 // Not applying `remove_dot_segments`.
@@ -592,6 +808,11 @@ impl ResolutionTaskCommon<'_> {
             Path::NeedsDotSegRemoval(path) => {
                 path.merge_and_remove_dot_segments(&mut buf)?;
             }
+        }
+
+        // If authority is absent, the path should never start with `//`.
+        if self.authority.is_none() && buf.as_bytes()[path_start_pos..].starts_with(b"//") {
+            return Err(ErrorRepr::Unresolvable);
         }
 
         // Write the query if available.
@@ -830,7 +1051,7 @@ mod tests {
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
                     .expect("Invalid testcase: `input` should be IRI reference");
-                let got = resolve(input, base);
+                let got = resolve(input, base).expect("Invalid testcase: result should be valid");
                 assert_eq!(
                     AsRef::<str>::as_ref(&got),
                     *expected,
@@ -851,7 +1072,7 @@ mod tests {
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
                     .expect("Invalid testcase: `input` should be IRI reference");
-                let got = resolve(input, base);
+                let got = resolve(input, base).expect("Invalid testcase: result should be valid");
                 assert_eq!(
                     AsRef::<str>::as_ref(&got),
                     *expected,
@@ -876,7 +1097,9 @@ mod tests {
             for (input, expected) in *pairs {
                 let input = <&IriReferenceStr>::try_from(*input)
                     .expect("Invalid testcase: `input` should be IRI reference");
-                let got = resolver.resolve(input);
+                let got = resolver
+                    .resolve(input)
+                    .expect("Invalid testcase: result should be valid");
                 assert_eq!(
                     AsRef::<str>::as_ref(&got),
                     *expected,

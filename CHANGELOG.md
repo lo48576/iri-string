@@ -6,9 +6,10 @@
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
 * Add `capacity` method to allocated string types.
 * Remove `is_strict: bool` parameter from `resolve::resolve()`.
-* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and
-  `BufferTooSmallError` types.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and `resolve::Error` types.
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
+* Make IRI resolution fallible.
+    + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
 * Make parsers faster.
 * Drop internal dependency to `nom`.
 * Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
@@ -20,8 +21,7 @@
 * Add `capacity` method to allocated string types.
     + `shrink_to_fit()` and `len()` already exists, so this would be useful to determine
       when to do `shrink_to_fit`.
-* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and
-  `BufferTooSmallError` types.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and `resolve::Error` types.
     + They provide more efficient and controllable IRI resolution.
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
 
@@ -31,6 +31,9 @@
 * Remove `is_strict: bool` parameter from `resolve::resolve()`.
     + The IRI parsers provided by this crate is "strict", so resolution
       algorithm should use an algorithm for the strict parser.
+* Make IRI resolution fallible.
+    + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
+    + For the reasons behind, see crate-level documentation.
 * IRI with fragment part can be used as a base of IRI resolution.
     + Type of `base` parameter is changed for `resolve::resolve`,
       `RiReferenceStr::resolve_against`, and `RiRelativeStr::resolve_against`.
