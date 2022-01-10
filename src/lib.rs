@@ -105,6 +105,24 @@
 //! However, based on the interpretation above, we should consider authority part with empty string
 //! as satisfying the condition "authority is **present**".
 //!
+//! ## IRI resolution can fail
+//!
+//! Though this is not explicitly stated in RFC 3986, IRI resolution can fail.
+//! Below are examples:
+//!
+//! * base=`scheme:foo`, ref=`.///bar`.
+//!   Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//! * base=`scheme:foo/bar`, ref=`..//baz`.
+//!   Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//!
+//! IRI without authority (note that this is different from "with empty authority")
+//! cannot have a path starting with `//`, since it is ambiguous and can be
+//! interpreted as an IRI with authority. For the above example, `scheme://bar`
+//! is not valid output, as `bar` in `scheme://bar` should be interpreted as an
+//! authority, not a path.
+//!
+//! Thus, IRI resolution can fail for some abnormal cases.
+//!
 //! [RFC 3986]: https://tools.ietf.org/html/rfc3986
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
 //! [`resolve`]: resolve/index.html
@@ -128,5 +146,3 @@ pub mod resolve;
 pub mod spec;
 pub mod types;
 pub mod validate;
-
-pub use self::buffer::BufferTooSmallError;

@@ -13,12 +13,18 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     .expect("should be valid IRI");
 
     c.bench_function("resolve (new task, new buf)", |b| {
-        b.iter(|| rel.resolve_against(base))
+        b.iter(|| {
+            rel.resolve_against(base)
+                .expect("resolvable inputs should be passed")
+        })
     });
 
     c.bench_function("resolve (task reuse, new buf)", |b| {
         let task = FixedBaseResolver::new(base).create_task(rel);
-        b.iter(|| task.allocate_and_write());
+        b.iter(|| {
+            task.allocate_and_write()
+                .expect("resolvable inputs should be passed")
+        });
     });
 
     c.bench_function("resolve (task reuse, buf reuse)", |b| {
@@ -26,7 +32,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let task = FixedBaseResolver::new(base).create_task(rel);
         b.iter(|| {
             buf.clear();
-            task.append_to_std_string(&mut buf);
+            task.append_to_std_string(&mut buf)
+                .expect("resolvable inputs should be passed");
         });
     });
 
@@ -35,7 +42,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let task = FixedBaseResolver::new(base).create_task(rel);
         b.iter(|| {
             task.write_to_byte_slice(&mut buf)
-                .expect("buf size should be enough");
+                .expect("resolvable inputs and long buffer should be passed");
         });
     });
 }

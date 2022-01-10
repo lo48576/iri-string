@@ -8,7 +8,7 @@ use alloc::string::String;
 
 /// An error indicating that the buffer is too small.
 #[derive(Debug, Clone, Copy)]
-pub struct BufferTooSmallError(());
+pub(crate) struct BufferTooSmallError(());
 
 impl BufferTooSmallError {
     /// Creates a new error.
@@ -21,9 +21,12 @@ impl BufferTooSmallError {
 
 impl fmt::Display for BufferTooSmallError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("buffer is too small")
+        f.write_str("destination buffer does not have enough capacity")
     }
 }
+
+#[cfg(feature = "std")]
+impl std::error::Error for BufferTooSmallError {}
 
 /// A trait for possibly extensible buffer types.
 pub(crate) trait Buffer<'a> {
