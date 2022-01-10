@@ -14,7 +14,6 @@
 * Drop internal dependency to `nom`.
 * Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
   without corresponding `serde-{std,alloc}` features.
-* IRI with fragment part can be used as a base of IRI resolution.
 
 ### Added
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
@@ -34,10 +33,6 @@
 * Make IRI resolution fallible.
     + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
     + For the reasons behind, see crate-level documentation.
-* IRI with fragment part can be used as a base of IRI resolution.
-    + Type of `base` parameter is changed for `resolve::resolve`,
-      `RiReferenceStr::resolve_against`, and `RiRelativeStr::resolve_against`.
-    + `&RiAbsoluteStr<S>` can be converted into `&RiStr<S>` by `.as_ref()`.
 
 ### Changed (non-breaking)
 * Make parsers faster.
