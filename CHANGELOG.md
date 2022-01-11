@@ -10,6 +10,8 @@
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
 * Make IRI resolution fallible.
     + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
+* Make IRI resolution recognize percent-encoded period.
+    + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
 * Make parsers faster.
 * Drop internal dependency to `nom`.
 * Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
@@ -33,6 +35,12 @@
 * Make IRI resolution fallible.
     + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
     + For the reasons behind, see crate-level documentation.
+* Make IRI resolution recognize percent-encoded period.
+    + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
+    + Period is `unreserved` character, and can be escaped at any time
+      (see [RFC 3986 section 2.4](https://datatracker.ietf.org/doc/html/rfc3986#section-2.4).
+      This means that `%2E` and `%2e` in the path can be normalized to `.` before IRI resolution,
+      and thus they should also be handled specially during `remove_dot_segments` algorithm.
 
 ### Changed (non-breaking)
 * Make parsers faster.

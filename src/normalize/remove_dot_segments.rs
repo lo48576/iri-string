@@ -171,11 +171,11 @@ impl<'a> RemoveDotSegPath<'a> {
         let mut last_seg_buf: Option<PathSegment<'_>> = None;
         while let Some(next_seg) = self.pop_first_segment() {
             let segname = next_seg.segment();
-            let next_seg_is_dot = segname == ".";
-            if next_seg_is_dot || segname == ".." {
+            let segkind = SegmentKind::from(segname);
+            if segkind != SegmentKind::Normal {
                 match (
                     next_seg.has_leading_slash(),
-                    next_seg_is_dot,
+                    segkind,
                     self.starts_with_slash(),
                 ) {
                     (false, _, false) => {
@@ -187,7 +187,7 @@ impl<'a> RemoveDotSegPath<'a> {
                         let is_next_slash_removed = self.trim_leading_slash();
                         assert!(is_next_slash_removed);
                     }
-                    (true, false, is_not_last_seg) => {
+                    (true, SegmentKind::DotDot, is_not_last_seg) => {
                         // 2.C ("/.." or "/../").
                         if !is_not_last_seg {
                             // "/..".
@@ -196,15 +196,16 @@ impl<'a> RemoveDotSegPath<'a> {
                         }
                         pop_last_seg_and_preceding_slash(buf, path_start, &mut last_seg_buf);
                     }
-                    (true, true, false) => {
+                    (true, SegmentKind::Dot, false) => {
                         // 2.B ("/.").
                         assert!(self.is_empty());
                         self.prepend_slash();
                     }
-                    (true, true, true) => {
+                    (true, SegmentKind::Dot, true) => {
                         // 2.B ("/./").
                         // Nothing to do.
                     }
+                    (_, SegmentKind::Normal, _) => unreachable!(),
                 }
             } else {
                 // Flush the previous segment.
@@ -240,16 +241,13 @@ impl<'a> RemoveDotSegPath<'a> {
     #[inline]
     #[must_use]
     pub(crate) fn estimate_max_buf_size_for_resolution(&self) -> usize {
-        /// Segments to be ignored.
-        const IGNORE: &[&str] = &[".", ".."];
-
         let mut this = *self;
         let mut max = 0;
         while let Some(seg) = this.pop_first_segment() {
             if seg.has_leading_slash() {
                 max += 1;
             }
-            if !IGNORE.contains(&seg.segment()) {
+            if SegmentKind::from(seg.segment()) == SegmentKind::Normal {
                 max += seg.segment().len();
             }
         }
@@ -278,5 +276,27 @@ fn pop_last_seg_and_preceding_slash<'b, B: Buffer<'b>>(
     match rfind(&buf.as_bytes()[path_start..], b'/') {
         Some(slash_pos) => buf.truncate(path_start + slash_pos),
         None => buf.truncate(path_start),
+    }
+}
+
+/// Path segment kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SegmentKind {
+    /// `.` or the equivalents.
+    Dot,
+    /// `..` or the equivalents.
+    DotDot,
+    /// Other normal (not special) segments.
+    Normal,
+}
+
+impl From<&str> for SegmentKind {
+    fn from(s: &str) -> Self {
+        match s {
+            "." | "%2E" | "%2e" => Self::Dot,
+            ".." | ".%2E" | ".%2e" | "%2E." | "%2E%2E" | "%2E%2e" | "%2e." | "%2e%2E"
+            | "%2e%2e" => Self::DotDot,
+            _ => Self::Normal,
+        }
     }
 }
