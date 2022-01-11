@@ -13,12 +13,10 @@ use crate::types::{IriAbsoluteStr, IriReferenceStr};
 #[cfg(feature = "alloc")]
 use self::refimpl::resolve as resolve_refimpl;
 
-#[cfg(feature = "alloc")]
 fn abs_iri(s: &str) -> &IriAbsoluteStr {
     IriAbsoluteStr::new(s).expect("test case should be valid")
 }
 
-#[cfg(feature = "alloc")]
 fn iri_ref(s: &str) -> &IriReferenceStr {
     IriReferenceStr::new(s).expect("test case should be valid")
 }
@@ -209,11 +207,9 @@ const TEST_CASES: &[(&str, &[(&str, &str)])] = &[
 #[cfg(feature = "alloc")]
 fn test_resolve_standalone() {
     for (base, pairs) in TEST_CASES {
-        let base = <&IriAbsoluteStr>::try_from(*base)
-            .expect("Invalid testcase: base IRI should be absolute IRI");
+        let base = abs_iri(base);
         for (input, expected) in *pairs {
-            let input = <&IriReferenceStr>::try_from(*input)
-                .expect("Invalid testcase: `input` should be IRI reference");
+            let input = iri_ref(input);
             let got = resolve(input, base).expect("Invalid testcase: result should be valid");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
@@ -230,11 +226,9 @@ fn test_resolve_standalone() {
 #[cfg(feature = "alloc")]
 fn test_resolve_standalone_same_result_as_reference_impl() {
     for (base, pairs) in TEST_CASES {
-        let base = <&IriAbsoluteStr>::try_from(*base)
-            .expect("Invalid testcase: base IRI should be absolute IRI");
+        let base = abs_iri(base);
         for (input, expected) in *pairs {
-            let input = <&IriReferenceStr>::try_from(*input)
-                .expect("Invalid testcase: `input` should be IRI reference");
+            let input = iri_ref(input);
             let got = resolve(input, base).expect("Invalid testcase: result should be valid");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
@@ -293,12 +287,10 @@ fn test_resolve_percent_encoded_dots() {
 #[cfg(feature = "alloc")]
 fn test_fixed_base_resolver() {
     for (base, pairs) in TEST_CASES {
-        let base = <&IriAbsoluteStr>::try_from(*base)
-            .expect("Invalid testcase: base IRI should be absolute IRI");
+        let base = abs_iri(base);
         let resolver = FixedBaseResolver::new(base);
         for (input, expected) in *pairs {
-            let input = <&IriReferenceStr>::try_from(*input)
-                .expect("Invalid testcase: `input` should be IRI reference");
+            let input = iri_ref(input);
             let got = resolver
                 .resolve(input)
                 .expect("Invalid testcase: result should be valid");
@@ -317,12 +309,10 @@ fn test_fixed_base_resolver() {
 fn test_fixed_base_resolver_to_byte_slice() {
     let mut buf = [0_u8; 128];
     for (base, pairs) in TEST_CASES {
-        let base = <&IriAbsoluteStr>::try_from(*base)
-            .expect("Invalid testcase: base IRI should be absolute IRI");
+        let base = abs_iri(base);
         let resolver = FixedBaseResolver::new(base);
         for (input, expected) in *pairs {
-            let input = <&IriReferenceStr>::try_from(*input)
-                .expect("Invalid testcase: `input` should be IRI reference");
+            let input = iri_ref(input);
             let task = resolver.create_task(input);
             let got = task
                 .write_to_byte_slice(&mut buf)
@@ -344,12 +334,10 @@ fn test_fixed_base_resolver_to_byte_slice_should_never_panic() {
     let mut buf_empty = [];
 
     for (base, pairs) in TEST_CASES {
-        let base = <&IriAbsoluteStr>::try_from(*base)
-            .expect("Invalid testcase: base IRI should be absolute IRI");
+        let base = abs_iri(base);
         let resolver = FixedBaseResolver::new(base);
         for (input, _) in *pairs {
-            let input = <&IriReferenceStr>::try_from(*input)
-                .expect("Invalid testcase: `input` should be IRI reference");
+            let input = iri_ref(input);
             let task = resolver.create_task(input);
             let result_small = task.write_to_byte_slice(&mut buf_small);
             assert!(
@@ -369,10 +357,8 @@ fn test_fixed_base_resolver_to_byte_slice_should_never_panic() {
 fn test_task_live_longer_than_fixed_base_resolver() {
     let mut buf = [0_u8; 128];
 
-    let base = <&IriAbsoluteStr>::try_from("http://example.com/")
-        .expect("Invalid testcase: base IRI should be a valid IRI");
-    let reference = <&IriReferenceStr>::try_from("foo/bar")
-        .expect("Invalid testcase: reference IRI should be a valid IRI-reference");
+    let base = abs_iri("http://example.com/");
+    let reference = iri_ref("foo/bar");
 
     let task = {
         let resolver = FixedBaseResolver::new(base);
