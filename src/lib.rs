@@ -144,5 +144,7 @@ pub(crate) mod parser;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;
+#[cfg(test)]
+mod tests;
 pub mod types;
 pub mod validate;

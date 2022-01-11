@@ -4,7 +4,7 @@ use core::mem;
 
 use crate::parser::char;
 use crate::parser::str::{
-    find_split_hole, get_wrapped_inner, satisfy_chars_with_pct_encoded, strip_ascii_char_prefix,
+    find_split_hole, rfind_split_hole, get_wrapped_inner, satisfy_chars_with_pct_encoded, strip_ascii_char_prefix,
 };
 use crate::spec::Spec;
 use crate::validate::Error;
@@ -175,7 +175,7 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
     };
     // `host` can contain colons, but `port` cannot.
     // Strip and validate `port`.
-    let (maybe_host, _port) = match find_split_hole(i, b':') {
+    let (maybe_host, _port) = match rfind_split_hole(i, b':') {
         Some((maybe_host, maybe_port)) => {
             if maybe_port.bytes().all(|b| b.is_ascii_digit()) {
                 (maybe_host, Some(maybe_port))
