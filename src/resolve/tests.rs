@@ -13,6 +13,16 @@ use crate::types::{IriAbsoluteStr, IriReferenceStr};
 #[cfg(feature = "alloc")]
 use self::refimpl::resolve as resolve_refimpl;
 
+#[cfg(feature = "alloc")]
+fn abs_iri(s: &str) -> &IriAbsoluteStr {
+    IriAbsoluteStr::new(s).expect("test case should be valid")
+}
+
+#[cfg(feature = "alloc")]
+fn iri_ref(s: &str) -> &IriReferenceStr {
+    IriReferenceStr::new(s).expect("test case should be valid")
+}
+
 /// Test cases for strict resolvers.
 // [(base, [(input, output)])]
 const TEST_CASES: &[(&str, &[(&str, &str)])] = &[
@@ -237,6 +247,45 @@ fn test_resolve_standalone_same_result_as_reference_impl() {
             let referernce_result = resolve_refimpl(input, base);
             assert_eq!(got, referernce_result);
         }
+    }
+}
+
+#[test]
+#[cfg(feature = "alloc")]
+fn test_resolve_percent_encoded_dots() {
+    // [(base, ref, result)]
+    const TEST_CASES: &[(&str, &str, &str)] = &[
+        ("scheme:", ".", "scheme:"),
+        ("scheme:", "%2e", "scheme:"),
+        ("scheme:", "%2E", "scheme:"),
+        ("scheme://a", ".", "scheme://a/"),
+        ("scheme://a", "%2e", "scheme://a/"),
+        ("scheme://a", "%2E", "scheme://a/"),
+        ("scheme://a/b/c", ".", "scheme://a/b/"),
+        ("scheme://a/b/c", "%2e", "scheme://a/b/"),
+        ("scheme://a/b/c", "%2E", "scheme://a/b/"),
+        ("scheme://a/b/c", "./g", "scheme://a/b/g"),
+        ("scheme://a/b/c", "%2e/g", "scheme://a/b/g"),
+        ("scheme://a/b/c", "%2E/g", "scheme://a/b/g"),
+        ("scheme://a/b/c/d/e/f", "../../../g", "scheme://a/b/g"),
+        (
+            "scheme://a/b/c/d/e/f",
+            "%2E%2E/%2E%2e/%2E./g",
+            "scheme://a/b/g",
+        ),
+        (
+            "scheme://a/b/c/d/e/f",
+            "%2e%2E/%2e%2e/%2e./g",
+            "scheme://a/b/g",
+        ),
+        ("scheme://a/b/c/d/e/f", ".%2E/.%2e/../g", "scheme://a/b/g"),
+    ];
+
+    for (base, reference, expected) in TEST_CASES {
+        let base = abs_iri(base);
+        let reference = iri_ref(reference);
+        let got = resolve(reference, base).expect("resolution should success in this test");
+        assert_eq!(got, *expected);
     }
 }
 
