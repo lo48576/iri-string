@@ -1,4 +1,61 @@
 //! URI and IRI resolvers.
+//!
+//! # IRI resolution can fail
+//!
+//! Though this is not explicitly stated in RFC 3986, IRI resolution can fail.
+//! Below are examples:
+//!
+//! * base=`scheme:`, ref=`.///bar`.
+//!     + Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//! * base=`scheme:foo`, ref=`.///bar`.
+//!     + Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//! * base=`scheme:`, ref=`/..//baz`.
+//!     + Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//! * base=`scheme:foo/bar`, ref=`..//baz`.
+//!     + Resulting IRI should have scheme `scheme` and path `//bar`, but does not have authority.
+//!
+//! IRI without authority (note that this is different from "with empty authority")
+//! cannot have a path starting with `//`, since it is ambiguous and can be
+//! interpreted as an IRI with authority. For the above examples, `scheme://bar`
+//! is not valid output, as `bar` in `scheme://bar` will be interpreted as an
+//! authority, not a path.
+//!
+//! Thus, IRI resolution can fail for some abnormal cases.
+//!
+//! Note that this kind of failure can happen only when the base IRI has no
+//! authority and empty path. This would be rare in the wild, since many people
+//! would use an IRI with authority part, such as `http://`.
+//!
+//! If you are handling `scheme://`-style URIs and IRIs, don't worry about the
+//! failure. Currently no cases are known to fail with base IRIs with authorities.
+//!
+//! ## Examples
+//!
+//! ```
+//! # #[cfg(feature = "alloc")] {
+//! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+//! use iri_string::resolve::ErrorKind;
+//!
+//! let base = IriAbsoluteStr::new("scheme:")?;
+//! {
+//!     let reference = IriReferenceStr::new(".///bar")?;
+//!     let err = reference.resolve_against(base)
+//!         .expect_err("this resolution should fail");
+//!     assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//! }
+//!
+//! {
+//!     let reference2 = IriReferenceStr::new("/..//bar")?;
+//!     // Resulting string will be `scheme://bar`, but `bar` should be a path
+//!     // segment, not a host. So, the semantically correct target IRI cannot
+//!     // be represented.
+//!     let err2 = reference2.resolve_against(base)
+//!         .expect_err("this resolution should fail");
+//!     assert_eq!(err2.kind(), ErrorKind::Unresolvable);
+//! }
+//! # }
+//! # Ok::<_, iri_string::validate::Error>(())
+//! ```
 
 #[cfg(test)]
 mod tests;
@@ -21,23 +78,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 
 /// IRI resolution error.
 ///
-/// Though this is not explicitly stated in RFC 3986, IRI resolution can fail.
-/// Below are examples:
-///
-/// * base=`scheme:foo`, ref=`.///bar`.
-///   Resulting IRI should have scheme `scheme` and path `//bar`, but does not
-///   have authority.
-/// * base=`scheme:foo/bar`, ref=`..//baz`.
-///   Resulting IRI should have scheme `scheme` and path `//bar`, but does not
-///   have authority.
-///
-/// IRI without authority (note that this is different from "with empty authority")
-/// cannot have a path starting with `//`, since it is ambiguous and can be
-/// interpreted as an IRI with authority. For the above example, `scheme://bar`
-/// is not valid output, as `bar` in `scheme://bar` should be interpreted as an
-/// authority, not a path.
-///
-/// Thus, IRI resolution can fail for some abnormal cases.
+/// For detail about resolution failure, see [the module documentation][`crate::resolve`].
 #[derive(Debug, Clone)]
 pub struct Error {
     /// Inner error representation.
