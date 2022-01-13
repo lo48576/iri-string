@@ -1,5 +1,4 @@
 /// Reference implementation based on RFC 3986 section 5.
-
 use alloc::format;
 use alloc::string::String;
 
