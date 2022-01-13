@@ -4,7 +4,8 @@ use core::mem;
 
 use crate::parser::char;
 use crate::parser::str::{
-    find_split_hole, rfind_split_hole, get_wrapped_inner, satisfy_chars_with_pct_encoded, strip_ascii_char_prefix,
+    find_split_hole, get_wrapped_inner, rfind_split_hole, satisfy_chars_with_pct_encoded,
+    strip_ascii_char_prefix,
 };
 use crate::spec::Spec;
 use crate::validate::Error;
