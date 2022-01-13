@@ -487,12 +487,12 @@ macro_rules! define_custom_string_owned {
         $(#[$meta])*
         // `#[derive(..)]` cannot be used here, because it adds `S: DerivedTrait` bounds automatically.
         #[cfg(feature = "alloc")]
-        #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-        #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
-        #[cfg_attr(feature = "serde", serde(transparent))]
+        #[cfg_attr(feature = "serde-alloc", derive(serde::Serialize))]
+        #[cfg_attr(feature = "serde-alloc", serde(bound = "S: crate::spec::Spec"))]
+        #[cfg_attr(feature = "serde-alloc", serde(transparent))]
         pub struct $ty<S> {
             /// Spec.
-            #[cfg_attr(feature = "serde", serde(skip))]
+            #[cfg_attr(feature = "serde-alloc", serde(skip))]
             _spec: core::marker::PhantomData<fn() -> S>,
             /// Inner data.
             inner: alloc::string::String,
@@ -733,11 +733,12 @@ macro_rules! define_custom_string_owned {
         /// Serde deserializer implementation.
         #[cfg(all(feature = "alloc", feature = "serde"))]
         mod __serde_owned {
-            use super::{$slice, $ty};
+            use super::$ty;
 
             use core::{convert::TryFrom, fmt, marker::PhantomData};
 
-            use alloc::{borrow::ToOwned, string::String};
+            #[cfg(feature = "serde-alloc")]
+            use alloc::string::String;
 
             use serde::{
                 de::{self, Visitor},
@@ -761,11 +762,10 @@ macro_rules! define_custom_string_owned {
                 where
                     E: de::Error,
                 {
-                    <&$slice<S>>::try_from(v)
-                        .map(ToOwned::to_owned)
-                        .map_err(E::custom)
+                    <$ty<S> as TryFrom<&str>>::try_from(v).map_err(E::custom)
                 }
 
+                #[cfg(feature = "serde-alloc")]
                 #[inline]
                 fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
                 where
