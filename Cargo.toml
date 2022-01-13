@@ -1,7 +1,7 @@
 [package]
 name = "iri-string"
 version = "0.4.1"
-authors = ["YOSHIOKA Takuma <lo48576@hard-wi.red>"]
+authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.57"
 license = "MIT OR Apache-2.0"
