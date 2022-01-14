@@ -67,4 +67,5 @@ impl<T> fmt::Display for CreationError<T> {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "std")))]
 impl<T: fmt::Debug> error::Error for CreationError<T> {}

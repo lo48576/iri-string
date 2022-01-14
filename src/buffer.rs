@@ -26,6 +26,7 @@ impl fmt::Display for BufferTooSmallError {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "std")))]
 impl std::error::Error for BufferTooSmallError {}
 
 /// A trait for possibly extensible buffer types.
@@ -63,6 +64,7 @@ pub(crate) trait Buffer<'a> {
 }
 
 #[cfg(feature = "alloc")]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
 impl<'a> Buffer<'a> for &'a mut String {
     type ExtendError = alloc::collections::TryReserveError;
 
