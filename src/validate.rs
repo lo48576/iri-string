@@ -37,6 +37,7 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "std")))]
 impl error::Error for Error {}
 
 /// Validates [IRI][uri].
