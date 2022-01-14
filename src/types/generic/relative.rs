@@ -3,7 +3,7 @@
 #[cfg(feature = "alloc")]
 use crate::{
     raw,
-    resolve::resolve,
+    resolve::{resolve, Error},
     types::{RiAbsoluteStr, RiReferenceString, RiString},
     validate::iri,
 };
@@ -143,32 +143,48 @@ impl<S: Spec> RiRelativeStr<S> {
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
         AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
 
     /// Returns resolved IRI against the given base IRI, using strict resolver.
     ///
-    /// About reference resolution output example, see [RFC 3986 section
-    /// 5.4](https://tools.ietf.org/html/rfc3986#section-5.4).
+    /// For reference resolution output examples, see [RFC 3986 section 5.4].
     ///
-    /// About resolver strictness, see [RFC 3986 section
-    /// 5.4.2](https://tools.ietf.org/html/rfc3986#section-5.4.2):
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Strictness
+    ///
+    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
+    /// always interpreted as a composition of the scheme `http` and the path
+    /// `g`), so backward compatible parsing and resolution are not provided.
+    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
     ///
     /// > Some parsers allow the scheme name to be present in a relative
     /// > reference if it is the same as the base URI scheme. This is considered
     /// > to be a loophole in prior specifications of partial URI
     /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
-    /// avoided but is allowed for backward compatibility.
+    /// > avoided but is allowed for backward compatibility.
     /// >
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
-    /// Usual users will want to use strict resolver.
+    /// # Failures
     ///
-    /// Enabled by `alloc` or `std` feature.
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
+    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
+    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> RiString<S> {
-        resolve(self, base, true)
+    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+        resolve(self, base)
     }
 }
 

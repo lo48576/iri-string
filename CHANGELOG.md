@@ -2,14 +2,74 @@
 
 ## [Unreleased]
 
+## [0.5.0-beta.0]
+
+* Bump MSRV to 1.58.0.
+* Add conversion from a byte slice (`&[u8]`) into IRI string types.
+* Add `capacity` method to allocated string types.
+* Remove `is_strict: bool` parameter from `resolve::resolve()`.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and `resolve::Error` types.
+    + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
+    + See [IRI resolution using user-provided buffers (#6)](https://github.com/lo48576/iri-string/issues/6).
+* Make IRI resolution fallible.
+    + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
+    + See [How `/..//bar` should be resolved aganst `scheme:`? (#8)](https://github.com/lo48576/iri-string/issues/8).
+* Make IRI resolution recognize percent-encoded period.
+    + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
+    + See [Recognize percent-encoded periods (`%2E`) during IRI resolution (#9)](https://github.com/lo48576/iri-string/issues/9)
+* Make parsers faster.
+    + See [Make the parsers faster (#7)](https://github.com/lo48576/iri-string/issues/7)
+* Drop internal dependency to `nom`.
+* Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
+  without corresponding `serde-{std,alloc}` features.
+
+### Added
+* Add conversion from a byte slice (`&[u8]`) into IRI string types.
+* Add `capacity` method to allocated string types.
+    + `shrink_to_fit()` and `len()` already exists, so this would be useful to determine
+      when to do `shrink_to_fit`.
+* Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and `resolve::Error` types.
+    + They provide more efficient and controllable IRI resolution.
+    + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
+
+### Changed (breaking)
+* Bump MSRV to 1.58.0.
+    + Rust 1.58.0 is released at 2022-01-13.
+* Remove `is_strict: bool` parameter from `resolve::resolve()`.
+    + The IRI parsers provided by this crate is "strict", so resolution
+      algorithm should use an algorithm for the strict parser.
+* Make IRI resolution fallible.
+    + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
+    + For the reasons behind, see crate-level documentation.
+    + See [How `/..//bar` should be resolved aganst `scheme:`? (#8)](https://github.com/lo48576/iri-string/issues/8).
+* Make IRI resolution recognize percent-encoded period.
+    + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
+    + Period is `unreserved` character, and can be escaped at any time
+      (see [RFC 3986 section 2.4](https://datatracker.ietf.org/doc/html/rfc3986#section-2.4).
+      This means that `%2E` and `%2e` in the path can be normalized to `.` before IRI resolution,
+      and thus they should also be handled specially during `remove_dot_segments` algorithm.
+    + See [Recognize percent-encoded periods (`%2E`) during IRI resolution (#9)](https://github.com/lo48576/iri-string/issues/9)
+
+### Changed (non-breaking)
+* Make parsers faster.
+    + Parsers are rewritten, and they became very fast!
+    + Almost all usages are affected: type conversions, validations, and IRI resolutions.
+    + See [Make the parsers faster (#7)](https://github.com/lo48576/iri-string/issues/7)
+* Drop internal dependency to `nom`.
+    + Parsers are rewritten without `nom`.
+* Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
+  without corresponding `serde-{std,alloc}` features.
+    + `serde` and `std`/`alloc` might be enabled independently from the different
+      indirect dependencies, so this situation should not be compilation error.
+
 ## [0.4.1]
 
 * Bump internal dependency.
-    * `nom` from v6 to v7.
+    + `nom` from v6 to v7.
 
 ### Changed (non-breaking)
 * Bump internal dependency.
-    * `nom` from v6 to v7.
+    + `nom` from v6 to v7.
 
 ## [0.4.0]
 
@@ -67,8 +127,8 @@ Beleive rustdoc rather than this CHANGELOG.**
     + Type aliases for monomorphized types are also provided, but naming convertions are the same.
       They are named `{Iri,Uri}{..}Str{,ing}`.
         - For example, there is `IriAbsoluteStr` instead of legacy `AbsoluteIriStr`.
-    * `types::CreationError` is now revived.
-    * `types::IriCreationError` is now removed in favor of `types::CreationError`.
+    + `types::CreationError` is now revived.
+    + `types::IriCreationError` is now removed in favor of `types::CreationError`.
 * Remove depraceted items.
     + `IriReferenceStr::resolve()` is now removed.
       Use `IriReferenceStr::resolve_against()` instead.
@@ -86,8 +146,8 @@ Beleive rustdoc rather than this CHANGELOG.**
     + In `no_std` environment with allocator support, you can enable `alloc` feature.
 * Add methods for IRI string types.
     + `len()` and `is_empty()` methods are added to all IRI string slice types.
-    * `IriStr::fragment()` is added.
-    * `RelativeIriStr::resolve_against()` is added.
+    + `IriStr::fragment()` is added.
+    + `RelativeIriStr::resolve_against()` is added.
 * Add URI types.
 
 ## [0.2.3]
@@ -138,7 +198,7 @@ Beleive rustdoc rather than this CHANGELOG.**
       but this is redundant.
       Now `FooStr::new(s)` can be used instead of `<&FooStr>::try_from(s)` for `s: &str`.
 * `IriFragmentStr::from_prefixed()` is added (34cec2f422ba8046134668bdb662f69c9db7f52c).
-    * This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
+    + This creates `IriFragmentStr` from the given string with leading hash (`#`) character.
       For example, `IriFragmentStr::from_prefixed("#foo")` is same as `IriFragmentStr::new("foo")`.
 
 ### Changed (non-breaking)
@@ -195,7 +255,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.0...develop>
+[0.5.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.0>
 [0.4.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.1>
 [0.4.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.0>
 [0.3.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>

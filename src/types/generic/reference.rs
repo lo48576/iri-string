@@ -5,18 +5,18 @@ use core::convert::TryFrom;
 #[cfg(feature = "alloc")]
 use alloc::{borrow::Cow, string::String};
 
-use crate::{
-    raw,
-    spec::Spec,
-    types::{RiFragmentStr, RiRelativeStr, RiStr},
-    validate::iri_reference,
-};
+use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
-use crate::{
-    resolve::resolve,
-    types::{RiAbsoluteStr, RiRelativeString, RiString},
-    validate::iri,
-};
+use crate::raw;
+#[cfg(feature = "alloc")]
+use crate::resolve::{resolve, Error};
+use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
+use crate::types::{RiFragmentStr, RiRelativeStr, RiStr};
+#[cfg(feature = "alloc")]
+use crate::validate::iri;
+use crate::validate::iri_reference;
 
 define_custom_string_slice! {
     /// A borrowed string of an absolute IRI possibly with fragment part.
@@ -135,11 +135,18 @@ impl<S: Spec> RiReferenceStr<S> {
         }
     }
 
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    /// Returns resolved IRI against the given base IRI.
     ///
-    /// About reference resolution output example, see [RFC 3986 section 5.4].
+    /// For reference resolution output examples, see [RFC 3986 section 5.4].
     ///
-    /// About resolver strictness, see [RFC 3986 section 5.4.2]:
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Strictness
+    ///
+    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
+    /// always interpreted as a composition of the scheme `http` and the path
+    /// `g`), so backward compatible parsing and resolution are not provided.
+    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
     ///
     /// > Some parsers allow the scheme name to be present in a relative
     /// > reference if it is the same as the base URI scheme. This is considered
@@ -149,17 +156,27 @@ impl<S: Spec> RiReferenceStr<S> {
     /// >
     /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
     ///
-    /// Usual users will want to use strict resolver.
+    /// # Failures
     ///
-    /// Enabled by `alloc` or `std` feature.
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    pub fn resolve_against<'a>(&'a self, base: &'_ RiAbsoluteStr<S>) -> Cow<'a, RiStr<S>> {
+    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    pub fn resolve_against<'a>(
+        &'a self,
+        base: &'_ RiAbsoluteStr<S>,
+    ) -> Result<Cow<'a, RiStr<S>>, Error> {
         match self.to_iri() {
-            Ok(iri) => Cow::Borrowed(iri),
-            Err(relative) => Cow::Owned(resolve(relative, base, true)),
+            Ok(iri) => Ok(Cow::Borrowed(iri)),
+            Err(relative) => resolve(relative, base).map(Cow::Owned),
         }
     }
 
@@ -220,8 +237,9 @@ impl<S: Spec> RiReferenceStr<S> {
     /// assert_eq!(iri.fragment(), None);
     /// # Ok::<_, Error>(())
     /// ```
+    #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        raw::extract_fragment(self.as_str()).map(|fragment| unsafe {
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| unsafe {
             // This is safe because `extract_fragment` returns the fragment part of an IRI, and the
             // returned string is substring of the source IRI.
             RiFragmentStr::new_maybe_unchecked(fragment)

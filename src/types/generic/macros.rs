@@ -12,6 +12,7 @@ macro_rules! impl_from_slice_into_smartptr {
         mutability: $mut:ident,
     ) => {
         #[cfg(feature = "alloc")]
+        #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
         impl<S: crate::spec::Spec> From<&$ty<S>> for $($smartptr)::* <$ty<S>> {
             fn from(s: &$ty<S>) -> Self {
                 let inner: &str = s.as_str();
@@ -141,6 +142,7 @@ macro_rules! impl_cmp2_as_str {
 ///     + `From<&$ty>` for Rc<$ty>`
 ///     + `From<&$ty> for &str`
 ///     + `TryFrom<&str> for &$ty`
+///     + `TryFrom<&[u8]> for &$ty`
 ///     + `AsRef<$ty<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented).
 ///     + `PartialEq<$ty> for $ty`
@@ -173,6 +175,7 @@ macro_rules! define_custom_string_slice {
         #[cfg_attr(feature = "serde", derive(serde::Serialize))]
         #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
         #[cfg_attr(feature = "serde", serde(transparent))]
+        #[cfg_attr(feature = "docsrs", doc(cfg(feature = "serde")))]
         pub struct $ty<S> {
             /// Spec.
             #[cfg_attr(feature = "serde", serde(skip))]
@@ -195,6 +198,7 @@ macro_rules! define_custom_string_slice {
             /// # Safety
             ///
             /// The given string must be valid.
+            #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: &str) -> &Self {
                 debug_assert_eq!($validate::<S>(s), Ok(()));
                 // It is caller's responsibility to guarantee the given string is valid.
@@ -212,24 +216,28 @@ macro_rules! define_custom_string_slice {
             ///
             /// The given string must be valid.
             #[inline]
+            #[must_use]
             unsafe fn new_always_unchecked(s: &str) -> &Self {
                 &*(s as *const str as *const Self)
             }
 
             /// Returns `&str`.
             #[inline]
+            #[must_use]
             pub fn as_str(&self) -> &str {
                 self.as_ref()
             }
 
             /// Returns the string length.
             #[inline]
+            #[must_use]
             pub fn len(&self) -> usize {
                 self.as_str().len()
             }
 
             /// Returns whether the string is empty.
             #[inline]
+            #[must_use]
             pub fn is_empty(&self) -> bool {
                 self.as_str().is_empty()
             }
@@ -322,6 +330,19 @@ macro_rules! define_custom_string_slice {
             }
         }
 
+        impl<'a, S: crate::spec::Spec> core::convert::TryFrom<&'a [u8]> for &'a $ty<S> {
+            type Error = crate::validate::Error;
+
+            #[inline]
+            fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
+                match $validate::<S>(s) {
+                    Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
+                    Err(e) => Err(e),
+                }
+            }
+        }
+
         impl_cmp!(str, str, $ty<S>);
         impl_cmp!(str, &str, $ty<S>);
         impl_cmp!(str, str, &$ty<S>);
@@ -378,6 +399,7 @@ macro_rules! define_custom_string_slice {
 
             // About `'de` and `'a`, see
             // <https://serde.rs/lifetimes.html#the-deserializede-lifetime>.
+            #[cfg_attr(feature = "docsrs", doc(cfg(feature = "serde")))]
             impl<'de: 'a, 'a, S: 'de + crate::spec::Spec> Deserialize<'de> for &'a $ty<S> {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -416,6 +438,7 @@ macro_rules! define_custom_string_slice {
 ///     + `From<&$slice> for $ty`
 ///     + `From<$ty> for String`
 ///     + `TryFrom<&str> for $ty`
+///     + `TryFrom<&[u8]> for $ty`
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
@@ -467,12 +490,13 @@ macro_rules! define_custom_string_owned {
         $(#[$meta])*
         // `#[derive(..)]` cannot be used here, because it adds `S: DerivedTrait` bounds automatically.
         #[cfg(feature = "alloc")]
-        #[cfg_attr(feature = "serde", derive(serde::Serialize))]
-        #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
-        #[cfg_attr(feature = "serde", serde(transparent))]
+        #[cfg_attr(feature = "serde-alloc", derive(serde::Serialize))]
+        #[cfg_attr(feature = "serde-alloc", serde(bound = "S: crate::spec::Spec"))]
+        #[cfg_attr(feature = "serde-alloc", serde(transparent))]
+        #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
         pub struct $ty<S> {
             /// Spec.
-            #[cfg_attr(feature = "serde", serde(skip))]
+            #[cfg_attr(feature = "serde-alloc", serde(skip))]
             _spec: core::marker::PhantomData<fn() -> S>,
             /// Inner data.
             inner: alloc::string::String,
@@ -489,6 +513,7 @@ macro_rules! define_custom_string_owned {
             ///
             /// The given string must be valid.
             #[inline]
+            #[must_use]
             pub(crate) unsafe fn new_always_unchecked(s: alloc::string::String) -> Self {
                 Self {
                     _spec: core::marker::PhantomData,
@@ -503,6 +528,7 @@ macro_rules! define_custom_string_owned {
             /// # Safety
             ///
             /// The given string must be valid.
+            #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
                 debug_assert_eq!($validate::<S>(&s), Ok(()));
                 Self::new_always_unchecked(s)
@@ -512,6 +538,13 @@ macro_rules! define_custom_string_owned {
             #[inline]
             pub fn shrink_to_fit(&mut self) {
                 self.inner.shrink_to_fit()
+            }
+
+            /// Returns the internal buffer capacity in bytes.
+            #[inline]
+            #[must_use]
+            pub fn capacity(&self) -> usize {
+                self.inner.capacity()
             }
         }
 
@@ -629,6 +662,16 @@ macro_rules! define_custom_string_owned {
             }
         }
 
+        impl<S: crate::spec::Spec> core::convert::TryFrom<&'_ [u8]> for $ty<S> {
+            type Error = crate::validate::Error;
+
+            #[inline]
+            fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
+                <&$slice<S>>::try_from(s).map(Into::into)
+            }
+        }
+
         impl<S: crate::spec::Spec> core::convert::TryFrom<alloc::string::String> for $ty<S> {
             type Error = crate::types::CreationError<alloc::string::String>;
 
@@ -694,11 +737,12 @@ macro_rules! define_custom_string_owned {
         /// Serde deserializer implementation.
         #[cfg(all(feature = "alloc", feature = "serde"))]
         mod __serde_owned {
-            use super::{$slice, $ty};
+            use super::$ty;
 
             use core::{convert::TryFrom, fmt, marker::PhantomData};
 
-            use alloc::{borrow::ToOwned, string::String};
+            #[cfg(feature = "serde-alloc")]
+            use alloc::string::String;
 
             use serde::{
                 de::{self, Visitor},
@@ -722,11 +766,10 @@ macro_rules! define_custom_string_owned {
                 where
                     E: de::Error,
                 {
-                    <&$slice<S>>::try_from(v)
-                        .map(ToOwned::to_owned)
-                        .map_err(E::custom)
+                    <$ty<S> as TryFrom<&str>>::try_from(v).map_err(E::custom)
                 }
 
+                #[cfg(feature = "serde-alloc")]
                 #[inline]
                 fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
                 where
@@ -736,6 +779,7 @@ macro_rules! define_custom_string_owned {
                 }
             }
 
+            #[cfg_attr(feature = "docsrs", doc(cfg(feature = "serde")))]
             impl<'de, S: crate::spec::Spec> Deserialize<'de> for $ty<S> {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

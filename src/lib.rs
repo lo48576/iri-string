@@ -105,43 +105,34 @@
 //! However, based on the interpretation above, we should consider authority part with empty string
 //! as satisfying the condition "authority is **present**".
 //!
+//! ## IRI resolution can fail
+//!
+//! For some inputs, resulting string of IRI resolution can be syntactically
+//! correct but semantically wrong. In such cases, the resolver provided by this
+//! crate does not silently "fix" the IRI by non-standard processing, but just
+//! fail by returning `Err(_)`.
+//!
+//! For details, see the documentation of [`resolve`] module.
+//!
 //! [RFC 3986]: https://tools.ietf.org/html/rfc3986
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
-//! [`resolve`]: resolve/index.html
-//! [`types`]: types/index.html
-//! [`validate`]: validate/index.html
-//! [`RiReferenceStr::resolve_against()`]: types/struct.RiReferenceStr.html#method.resolve_against
-//! [`RiRelativeStr::resolve_against()`]: types/struct.RiRelativeStr.html#method.resolve_against
+//! [`RiReferenceStr::resolve_against()`]: `types::RiReferenceStr::resolve_against`
+//! [`RiRelativeStr::resolve_against()`]: `types::RiRelativeStr::resolve_against`
 #![warn(missing_docs)]
 #![warn(clippy::missing_docs_in_private_items)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// Inform users that `serde-alloc` is required when `serde` and `alloc` is enabled.
-#[cfg(all(
-    feature = "serde",
-    feature = "alloc",
-    not(feature = "std"),
-    not(any(feature = "serde-alloc", feature = "serde-std"))
-))]
-compile_error!(
-    "When both of `serde` and `alloc` features are enabled, \
-     `serde-alloc` or `serde-std` should also be enabled."
-);
-
-// Inform users that `serde-std` is required when `serde` and `std` is enabled.
-#[cfg(all(feature = "serde", feature = "std", not(feature = "serde-std")))]
-compile_error!(
-    "When both of `serde` and `std` features are enabled, \
-     `serde-std` should also be enabled."
-);
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+mod buffer;
+mod components;
+mod normalize;
 pub(crate) mod parser;
 pub(crate) mod raw;
-#[cfg(feature = "alloc")]
 pub mod resolve;
 pub mod spec;
+#[cfg(test)]
+mod tests;
 pub mod types;
 pub mod validate;

@@ -1,13 +1,15 @@
 //! Validators.
 
+#[cfg(test)]
+mod tests;
+
 use core::fmt;
 
 #[cfg(feature = "std")]
 use std::error;
 
-use nom::combinator::all_consuming;
-
-use crate::{parser, spec::Spec};
+use crate::parser::validate as parser;
+use crate::spec::Spec;
 
 /// Resource identifier validation error.
 // Note that this type should implement `Copy` trait.
@@ -21,6 +23,7 @@ impl Error {
     ///
     /// For internal use.
     #[inline]
+    #[must_use]
     pub(crate) fn new() -> Self {
         Error(())
     }
@@ -34,15 +37,8 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "std")))]
 impl error::Error for Error {}
-
-/// Converts the given result into a validation result.
-fn conv_err<T, E>(res: Result<T, E>) -> Result<(), Error> {
-    match res {
-        Ok(_) => Ok(()),
-        Err(_) => Err(Error::new()),
-    }
-}
 
 /// Validates [IRI][uri].
 ///
@@ -100,7 +96,7 @@ fn conv_err<T, E>(res: Result<T, E>) -> Result<(), Error> {
 /// [`RiStr`]: ../types/struct.RiStr.html
 /// [`RiString`]: ../types/struct.RiString.html
 pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::uri::<(), S>)(s))
+    parser::validate_uri::<S>(s)
 }
 
 /// Validates [IRI reference][uri-reference].
@@ -146,7 +142,7 @@ pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// [`RiReferenceStr`]: ../types/struct.RiReferenceStr.html
 /// [`RiReferenceString`]: ../types/struct.RiReferenceString.html
 pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::uri_reference::<(), S>)(s))
+    parser::validate_uri_reference::<S>(s)
 }
 
 /// Validates [absolute IRI][absolute-uri].
@@ -210,7 +206,7 @@ pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
 /// [`RiAbsoluteStr`]: ../types/struct.RiAbsoluteStr.html
 /// [`RiAbsoluteString`]: ../types/struct.RiAbsoluteString.html
 pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::absolute_uri::<(), S>)(s))
+    parser::validate_absolute_uri::<S>(s)
 }
 
 /// Validates [relative reference][relative-ref].
@@ -267,14 +263,14 @@ pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// [`RiRelativeStr`]: ../types/struct.RiRelativeStr.html
 /// [`RiRelativeString`]: ../types/struct.RiRelativeString.html
 pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::relative_ref::<(), S>)(s))
+    parser::validate_relative_ref::<S>(s)
 }
 
 /// Validates [IRI path][path].
 ///
 /// [path]: https://tools.ietf.org/html/rfc3986#section-3.3
 pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::path::<(), S>)(s))
+    parser::validate_path::<S>(s)
 }
 
 /// Validates [IRI fragment][fragment].
@@ -317,5 +313,5 @@ pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
 /// [`RiFragmentStr`]: ../types/struct.RiFragmentStr.html
 /// [`RiFragmentString`]: ../types/struct.RiFragmentString.html
 pub fn fragment<S: Spec>(s: &str) -> Result<(), Error> {
-    conv_err(all_consuming(parser::fragment::<(), S>)(s))
+    parser::validate_fragment::<S>(s)
 }
