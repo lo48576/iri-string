@@ -2,8 +2,6 @@
 //!
 //! Using this in wrong way will lead to unexpected wrong result.
 
-use core::marker::PhantomData;
-
 use crate::components::RiReferenceComponents;
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
@@ -84,14 +82,7 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
     }
 
     let (scheme, authority, path, query, fragment) = decompose(i.as_str());
-    RiReferenceComponents {
-        scheme,
-        authority,
-        path,
-        query,
-        fragment,
-        _spec: PhantomData,
-    }
+    RiReferenceComponents::<S>::from_major(scheme, authority, path, query, fragment)
 }
 
 /// Splits the string into the prefix and the fragment part.

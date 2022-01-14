@@ -13,19 +13,90 @@ use crate::parser::trusted as trusted_parser;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RiReferenceComponents<'a, S> {
     /// Scheme.
-    pub(crate) scheme: Option<&'a str>,
+    scheme: Option<&'a str>,
     /// Authority.
     ///
     /// Note that this can be `Some("")`.
-    pub(crate) authority: Option<&'a str>,
+    authority: Option<&'a str>,
     /// Path.
-    pub(crate) path: &'a str,
+    path: &'a str,
     /// Query.
-    pub(crate) query: Option<&'a str>,
+    query: Option<&'a str>,
     /// Fragment.
-    pub(crate) fragment: Option<&'a str>,
+    fragment: Option<&'a str>,
     /// Spec.
-    pub(crate) _spec: PhantomData<fn() -> S>,
+    _spec: PhantomData<fn() -> S>,
+}
+
+impl<'a, S: Spec> RiReferenceComponents<'a, S> {
+    /// Returns a scheme.
+    #[must_use]
+    pub(crate) fn scheme(&self) -> Option<&'a str> {
+        self.scheme
+    }
+
+    /// Returns a authority.
+    #[must_use]
+    pub(crate) fn authority(&self) -> Option<&'a str> {
+        self.authority
+    }
+
+    /// Returns a path.
+    #[must_use]
+    pub(crate) fn path(&self) -> &'a str {
+        self.path
+    }
+
+    /// Returns a query.
+    #[must_use]
+    pub(crate) fn query(&self) -> Option<&'a str> {
+        self.query
+    }
+
+    /// Returns a fragment.
+    #[must_use]
+    pub(crate) fn fragment(&self) -> Option<&'a str> {
+        self.fragment
+    }
+
+    /// Returns a major components.
+    #[must_use]
+    pub(crate) fn to_major(
+        self,
+    ) -> (
+        Option<&'a str>,
+        Option<&'a str>,
+        &'a str,
+        Option<&'a str>,
+        Option<&'a str>,
+    ) {
+        (
+            self.scheme(),
+            self.authority(),
+            self.path(),
+            self.query(),
+            self.fragment(),
+        )
+    }
+
+    /// Creates an object from the given major components.
+    #[must_use]
+    pub(crate) fn from_major(
+        scheme: Option<&'a str>,
+        authority: Option<&'a str>,
+        path: &'a str,
+        query: Option<&'a str>,
+        fragment: Option<&'a str>,
+    ) -> Self {
+        Self {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            _spec: PhantomData,
+        }
+    }
 }
 
 impl<'a, S: Spec> From<&'a RiReferenceStr<S>> for RiReferenceComponents<'a, S> {

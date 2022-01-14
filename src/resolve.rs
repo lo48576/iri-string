@@ -365,10 +365,11 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[must_use]
     pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> ResolutionTask<'a, S> {
         let b = self.base_components;
-        let b_scheme = b
-            .scheme
-            .expect("[validity] non-relative IRI must have a scheme");
         let r = RiReferenceComponents::from(reference);
+
+        let (r_scheme, r_authority, r_path, r_query, r_fragment) = r.to_major();
+        let (b_scheme, b_authority, b_path, b_query, _) = b.to_major();
+        let b_scheme = b_scheme.expect("[validity] non-relative IRI must have a scheme");
 
         /// The toplevel component the reference has.
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -397,13 +398,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             }
         }
 
-        let ref_toplevel = if r.scheme.is_some() {
+        let ref_toplevel = if r_scheme.is_some() {
             RefToplevel::Scheme
-        } else if r.authority.is_some() {
+        } else if r_authority.is_some() {
             RefToplevel::Authority
-        } else if !r.path.is_empty() {
+        } else if !r_path.is_empty() {
             RefToplevel::Path
-        } else if r.query.is_some() {
+        } else if r_query.is_some() {
             RefToplevel::Query
         } else {
             RefToplevel::None
@@ -411,11 +412,11 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
 
         let path = match ref_toplevel {
             RefToplevel::Scheme | RefToplevel::Authority => {
-                Path::NeedsDotSegRemoval(RemoveDotSegPath::from_single_path(r.path))
+                Path::NeedsDotSegRemoval(RemoveDotSegPath::from_single_path(r_path))
             }
             RefToplevel::Path => {
-                if r.path.starts_with('/') {
-                    Path::NeedsDotSegRemoval(RemoveDotSegPath::from_single_path(r.path))
+                if r_path.starts_with('/') {
+                    Path::NeedsDotSegRemoval(RemoveDotSegPath::from_single_path(r_path))
                 } else {
                     // About this branch, see
                     // <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3>.
@@ -423,26 +424,26 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
                     // > o  If the base URI has a defined authority component and an empty
                     // >    path, then return a string consisting of "/" concatenated with the
                     // >    reference's path; otherwise,
-                    let b_path = if b.authority.is_some() && b.path.is_empty() {
+                    let b_path = if b_authority.is_some() && b_path.is_empty() {
                         "/"
                     } else {
-                        b.path
+                        b_path
                     };
                     Path::NeedsDotSegRemoval(RemoveDotSegPath::from_paths_to_be_resolved(
-                        b_path, r.path,
+                        b_path, r_path,
                     ))
                 }
             }
-            RefToplevel::Query | RefToplevel::None => Path::Done(b.path),
+            RefToplevel::Query | RefToplevel::None => Path::Done(b_path),
         };
 
         ResolutionTask {
             common: ResolutionTaskCommon {
-                scheme: r.scheme.unwrap_or(b_scheme),
-                authority: ref_toplevel.choose(RefToplevel::Authority, r.authority, b.authority),
+                scheme: r_scheme.unwrap_or(b_scheme),
+                authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
                 path,
-                query: ref_toplevel.choose(RefToplevel::Query, r.query, b.query),
-                fragment: r.fragment,
+                query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
+                fragment: r_fragment,
             },
             _spec: PhantomData,
         }
