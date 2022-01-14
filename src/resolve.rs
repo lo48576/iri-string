@@ -120,7 +120,7 @@ impl From<ErrorRepr> for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(feature = "docsrs", doc(cfg(feature = "std")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match &self.repr {
@@ -137,7 +137,7 @@ impl std::error::Error for Error {
 pub(crate) enum ErrorRepr {
     /// Memory allocation error for `alloc` stuff.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Alloc(TryReserveError),
     /// Memory allocation error for fixed-size buffer.
     BufferFull(BufferTooSmallError),
@@ -153,7 +153,7 @@ impl From<BufferTooSmallError> for ErrorRepr {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<TryReserveError> for ErrorRepr {
     #[inline]
     fn from(e: TryReserveError) -> Self {
@@ -226,7 +226,7 @@ pub enum ErrorKind {
 /// [`RiReferenceStr::resolve_against()`]: `RiReferenceStr::resolve_against`
 /// [`RiRelativeStr::resolve_against()`]: `crate::types::RiRelativeStr::resolve_against`
 #[cfg(feature = "alloc")]
-#[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
@@ -319,7 +319,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
         let mut buf = String::new();
         self.create_task(reference).write_to_buf(&mut buf)?;
@@ -503,7 +503,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn allocate_and_write(&self) -> Result<RiString<S>, Error> {
         let mut s = String::new();
         self.write_to_buf(&mut s)?;
@@ -665,7 +665,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn write_to_iri_string(&self, dest: RiString<S>) -> Result<RiString<S>, Error> {
         let mut buf: String = dest.into();
         buf.clear();
@@ -733,7 +733,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
         self.try_append_to_std_string(buf)
     }
@@ -771,7 +771,7 @@ impl<S: Spec> ResolutionTask<'_, S> {
     /// # Ok::<_, iri_string::validate::Error>(())
     /// ```
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn try_append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
         let s = self.write_to_buf(buf)?;
         // Convert the type.

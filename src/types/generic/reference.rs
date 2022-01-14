@@ -169,7 +169,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn resolve_against<'a>(
         &'a self,
         base: &'_ RiAbsoluteStr<S>,
