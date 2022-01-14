@@ -8,11 +8,15 @@
 * Remove `is_strict: bool` parameter from `resolve::resolve()`.
 * Add `resolve::FixedBaseResolver`, `resolve::ResolutionTask`, and `resolve::Error` types.
     + Some methods for IRI resolution are now available even when `alloc` feature is disabled.
+    + See [IRI resolution using user-provided buffers (#6)](https://github.com/lo48576/iri-string/issues/6).
 * Make IRI resolution fallible.
     + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
+    + See [How `/..//bar` should be resolved aganst `scheme:`? (#8)](https://github.com/lo48576/iri-string/issues/8).
 * Make IRI resolution recognize percent-encoded period.
     + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
+    + See [Recognize percent-encoded periods (`%2E`) during IRI resolution (#9)](https://github.com/lo48576/iri-string/issues/9)
 * Make parsers faster.
+    + See [Make the parsers faster (#7)](https://github.com/lo48576/iri-string/issues/7)
 * Drop internal dependency to `nom`.
 * Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
   without corresponding `serde-{std,alloc}` features.
@@ -35,17 +39,20 @@
 * Make IRI resolution fallible.
     + Now `resolve()` and its family returns `Result<_, resolve::Error>`.
     + For the reasons behind, see crate-level documentation.
+    + See [How `/..//bar` should be resolved aganst `scheme:`? (#8)](https://github.com/lo48576/iri-string/issues/8).
 * Make IRI resolution recognize percent-encoded period.
     + Now `%2E` and `%2e` in path segment is handled as a plain period `.`.
     + Period is `unreserved` character, and can be escaped at any time
       (see [RFC 3986 section 2.4](https://datatracker.ietf.org/doc/html/rfc3986#section-2.4).
       This means that `%2E` and `%2e` in the path can be normalized to `.` before IRI resolution,
       and thus they should also be handled specially during `remove_dot_segments` algorithm.
+    + See [Recognize percent-encoded periods (`%2E`) during IRI resolution (#9)](https://github.com/lo48576/iri-string/issues/9)
 
 ### Changed (non-breaking)
 * Make parsers faster.
     + Parsers are rewritten, and they became very fast!
     + Almost all usages are affected: type conversions, validations, and IRI resolutions.
+    + See [Make the parsers faster (#7)](https://github.com/lo48576/iri-string/issues/7)
 * Drop internal dependency to `nom`.
     + Parsers are rewritten without `nom`.
 * Stop emitting compilation error when both `serde` and `std`/`alloc` are enabled
