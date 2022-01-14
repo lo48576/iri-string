@@ -175,7 +175,6 @@ macro_rules! define_custom_string_slice {
         #[cfg_attr(feature = "serde", derive(serde::Serialize))]
         #[cfg_attr(feature = "serde", serde(bound = "S: crate::spec::Spec"))]
         #[cfg_attr(feature = "serde", serde(transparent))]
-        #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
         pub struct $ty<S> {
             /// Spec.
             #[cfg_attr(feature = "serde", serde(skip))]
