@@ -235,6 +235,11 @@ pub fn resolve<S: Spec>(
 }
 
 /// A resolver against the fixed base.
+///
+/// If you want more control over how to resolve the buffer, create
+/// [`ResolutionTask`] by [`create_task`] method.
+///
+/// [`create_task`]: `Self::create_task`
 #[derive(Debug, Clone, Copy)]
 pub struct FixedBaseResolver<'a, S: Spec> {
     /// Components of the base IRI.
@@ -550,7 +555,8 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///
     /// Note that it would be still not enough even if the buffer is long enough
     /// to store the result. During processing, the resolver might use more
-    /// memory than the result.
+    /// memory than the result. You can get maximum required buffer size by
+    /// [`estimate_max_buf_size_for_resolution`] method.
     ///
     /// ```
     /// # #[derive(Debug)]
@@ -578,6 +584,8 @@ impl<S: Spec> ResolutionTask<'_, S> {
     ///     Err(ErrorKind::OutOfMemory),
     ///     "failed due to not enough buffer size"
     /// );
+    /// // You can retry writing if you have larger buffer,
+    /// // since `task` was not consumed.
     /// # Ok::<_, Error>(())
     /// ```
     ///
