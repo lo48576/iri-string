@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.com/lo48576/iri-string.svg?branch=develop)](https://travis-ci.com/lo48576/iri-string)
 [![Latest version](https://img.shields.io/crates/v/iri-string.svg)](https://crates.io/crates/iri-string)
 [![Documentation](https://docs.rs/iri-string/badge.svg)](https://docs.rs/iri-string)
-![Minimum rustc version: 1.57](https://img.shields.io/badge/rustc-1.57+-lightgray.svg)
+![Minimum rustc version: 1.58](https://img.shields.io/badge/rustc-1.58+-lightgray.svg)
 
 String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
 Identifiers) and [URI](https://tools.ietf.org/html/rfc3986)s (Uniform Resource Identifiers).
