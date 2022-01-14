@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0-beta.0]
+
 * Bump MSRV to 1.58.0.
 * Add conversion from a byte slice (`&[u8]`) into IRI string types.
 * Add `capacity` method to allocated string types.
@@ -253,7 +255,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.0...develop>
+[0.5.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.0>
 [0.4.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.1>
 [0.4.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.0>
 [0.3.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.3.0>
