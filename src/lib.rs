@@ -40,7 +40,7 @@
 //!     + Std library is required.
 //!     + This automatically enables `alloc` feature.
 //!     + The feature let the crate utilize std-specific stuff, such as `std::error::Error` trait.
-//! * Without neither of them:
+//! * With neither of them:
 //!     + The crate can be used in `no_std` environment.
 //!
 //! ## Other features
