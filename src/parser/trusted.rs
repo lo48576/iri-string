@@ -2,6 +2,8 @@
 //!
 //! Using this in wrong way will lead to unexpected wrong result.
 
+pub(crate) mod authority;
+
 use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 

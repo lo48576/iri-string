@@ -1,12 +1,15 @@
 //! Components of IRIs.
 
+mod authority;
+
 use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
+use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
 
-use crate::parser::trusted as trusted_parser;
+pub use self::authority::AuthorityComponents;
 
 /// Components of an IRI reference.
 ///
