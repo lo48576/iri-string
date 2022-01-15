@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+* Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
+
+### Added
+* Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
+    + Getters for `fragment` component is already provided.
+
 ## [0.5.0-beta.0]
 
 * Bump MSRV to 1.58.0.

@@ -187,6 +187,114 @@ impl<S: Spec> RiStr<S> {
             RiAbsoluteStr::new_maybe_unchecked(&self.as_str()[..prefix_len])
         }
     }
+}
+
+/// Components getters.
+impl<S: Spec> RiStr<S> {
+    /// Returns the scheme.
+    ///
+    /// The following colon is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.scheme_str(), "http");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn scheme_str(&self) -> &str {
+        trusted_parser::extract_scheme_absolute(self.as_str())
+    }
+
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.authority_str(), Some("example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        trusted_parser::extract_authority_absolute(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.path_str(), "/pathpath");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.path_str(), "uuid:10db315b-fcd1-4428-aca8-15babc9a2da2");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        trusted_parser::extract_path_absolute(self.as_str())
+    }
+
+    /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.query_str(), Some("queryquery"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.query_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        trusted_parser::extract_query(self.as_str())
+    }
 
     /// Returns the fragment part if exists.
     ///
