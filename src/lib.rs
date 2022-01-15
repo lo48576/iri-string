@@ -126,7 +126,7 @@
 extern crate alloc;
 
 mod buffer;
-mod components;
+pub mod components;
 mod normalize;
 pub(crate) mod parser;
 pub(crate) mod raw;
