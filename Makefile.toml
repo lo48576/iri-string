@@ -261,7 +261,7 @@ args = ["fmt", "--version"]
 
 [tasks.check-clippy]
 run_task = [
-    { name = "check-clippy-ignore-errors", conditions = { channels = ["beta", "nightly" ] } },
+    { name = "check-clippy-ignore-errors", condition = { channels = ["beta", "nightly" ] } },
     { name = "check-clippy-strict" },
 ]
 
