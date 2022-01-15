@@ -1,5 +1,6 @@
 //! Absolute IRI (without fragment part).
 
+use crate::components::AuthorityComponents;
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
 use crate::types::{RiReferenceStr, RiStr};
@@ -213,6 +214,37 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
         trusted_parser::extract_query_absolute_iri(self.as_str())
+    }
+
+    /// Returns the authority components.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://user:pass@example.com:8080/pathpath?queryquery")?;
+    /// let authority = iri.authority_components()
+    ///     .expect("authority is available");
+    /// assert_eq!(authority.userinfo(), Some("user:pass"));
+    /// assert_eq!(authority.host(), "example.com");
+    /// assert_eq!(authority.port(), Some("8080"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_components(&self) -> Option<AuthorityComponents<'_>> {
+        AuthorityComponents::from_iri(self.as_ref())
     }
 }
 
