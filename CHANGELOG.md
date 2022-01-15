@@ -8,6 +8,7 @@
 
 ### Added
 * Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
+    + Method names are `scheme_str`, `authority_str`, `path_str`, and `query_str`, respectively.
     + Getters for `fragment` component is already provided.
 * Add getter for subcomponents of `authority`: `userinfo`, `host`, and `port`.
     + `components::AuthorityComponents` type and `authority_components` method.
