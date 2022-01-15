@@ -51,6 +51,27 @@ pub(crate) fn find_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
     memchr::memchr(needle, haystack.as_bytes()).map(|pos| haystack.split_at(pos))
 }
 
+/// Finds the last needle, and returns the string before it and the rest.
+///
+/// If `needle` is not found, returns `None`.
+#[cfg(not(feature = "memchr"))]
+#[must_use]
+pub(crate) fn rfind_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
+    haystack
+        .bytes()
+        .rposition(|b| b == needle)
+        .map(|pos| haystack.split_at(pos))
+}
+
+/// Finds the last needle, and returns the string before it and the rest.
+///
+/// If `needle` is not found, returns `None`.
+#[cfg(feature = "memchr")]
+#[must_use]
+pub(crate) fn rfind_split(haystack: &str, needle: u8) -> Option<(&str, &str)> {
+    memchr::memrchr(needle, haystack.as_bytes()).map(|pos| haystack.split_at(pos))
+}
+
 /// Finds the first needle, and returns the string before it and the rest.
 ///
 /// If no needles are found, returns `None`.

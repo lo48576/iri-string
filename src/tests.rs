@@ -91,14 +91,7 @@ impl fmt::Display for Components<'_> {
 impl<'a, S: Spec> From<&'a RiReferenceStr<S>> for Components<'a> {
     #[inline]
     fn from(s: &'a RiReferenceStr<S>) -> Self {
-        let RiReferenceComponents {
-            scheme,
-            authority,
-            path,
-            query,
-            fragment,
-            _spec,
-        } = RiReferenceComponents::from(s);
+        let (scheme, authority, path, query, fragment) = RiReferenceComponents::from(s).to_major();
 
         Self {
             scheme,

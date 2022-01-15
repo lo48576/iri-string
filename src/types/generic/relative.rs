@@ -1,17 +1,18 @@
 //! Relative IRI reference.
 
+use crate::components::AuthorityComponents;
+use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
-use crate::{
-    raw,
-    resolve::{resolve, Error},
-    types::{RiAbsoluteStr, RiReferenceString, RiString},
-    validate::iri,
-};
-use crate::{
-    spec::Spec,
-    types::{RiFragmentStr, RiReferenceStr},
-    validate::relative_ref,
-};
+use crate::raw;
+#[cfg(feature = "alloc")]
+use crate::resolve::{resolve, Error};
+use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::types::{RiAbsoluteStr, RiReferenceString, RiString};
+use crate::types::{RiFragmentStr, RiReferenceStr};
+#[cfg(feature = "alloc")]
+use crate::validate::iri;
+use crate::validate::relative_ref;
 
 define_custom_string_slice! {
     /// A borrowed slice of a relative IRI reference.
@@ -101,6 +102,133 @@ define_custom_string_owned! {
 }
 
 impl<S: Spec> RiRelativeStr<S> {
+    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    ///
+    /// For reference resolution output examples, see [RFC 3986 section 5.4].
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Strictness
+    ///
+    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
+    /// always interpreted as a composition of the scheme `http` and the path
+    /// `g`), so backward compatible parsing and resolution are not provided.
+    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
+    ///
+    /// > Some parsers allow the scheme name to be present in a relative
+    /// > reference if it is the same as the base URI scheme. This is considered
+    /// > to be a loophole in prior specifications of partial URI
+    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
+    /// > avoided but is allowed for backward compatibility.
+    /// >
+    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve::Error`][`Error`].
+    ///
+    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
+    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+        resolve(self, base)
+    }
+}
+
+/// Components getters.
+impl<S: Spec> RiRelativeStr<S> {
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.authority_str(), Some("example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        trusted_parser::extract_authority_relative(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.path_str(), "/pathpath");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.path_str(), "foo//bar:baz");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        trusted_parser::extract_path_relative(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.query_str(), Some("queryquery"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz?")?;
+    /// assert_eq!(iri.query_str(), Some(""));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        trusted_parser::extract_query(self.as_str())
+    }
+
     /// Returns the fragment part if exists.
     ///
     /// A leading `#` character is truncated if the fragment part exists.
@@ -148,43 +276,35 @@ impl<S: Spec> RiRelativeStr<S> {
         AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
 
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    /// Returns the authority components.
     ///
-    /// For reference resolution output examples, see [RFC 3986 section 5.4].
+    /// # Examples
     ///
-    /// Enabled by `alloc` or `std` feature.
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
     ///
-    /// # Strictness
+    /// let iri = IriRelativeStr::new("//user:pass@example.com:8080/pathpath?queryquery")?;
+    /// let authority = iri.authority_components()
+    ///     .expect("authority is available");
+    /// assert_eq!(authority.userinfo(), Some("user:pass"));
+    /// assert_eq!(authority.host(), "example.com");
+    /// assert_eq!(authority.port(), Some("8080"));
+    /// # Ok::<_, Error>(())
+    /// ```
     ///
-    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
-    /// always interpreted as a composition of the scheme `http` and the path
-    /// `g`), so backward compatible parsing and resolution are not provided.
-    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
     ///
-    /// > Some parsers allow the scheme name to be present in a relative
-    /// > reference if it is the same as the base URI scheme. This is considered
-    /// > to be a loophole in prior specifications of partial URI
-    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
-    /// > avoided but is allowed for backward compatibility.
-    /// >
-    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
-    ///
-    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
-    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
-    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
-        resolve(self, base)
+    /// let iri = IriRelativeStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_components(&self) -> Option<AuthorityComponents<'_>> {
+        AuthorityComponents::from_iri(self.as_ref())
     }
 }
 

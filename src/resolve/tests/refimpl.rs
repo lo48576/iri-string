@@ -16,42 +16,45 @@ pub(super) fn resolve<S: Spec>(
     let r = RiReferenceComponents::from(reference);
     let b = RiReferenceComponents::from(base.as_ref());
 
+    let (r_scheme, r_authority, r_path, r_query, r_fragment) = r.to_major();
+    let (b_scheme, b_authority, b_path, b_query, _) = b.to_major();
+
     let t_scheme: &str;
     let t_authority: Option<&str>;
     let t_path: String;
     let t_query: Option<&str>;
 
-    if let Some(r_scheme) = r.scheme {
+    if let Some(r_scheme) = r_scheme {
         t_scheme = r_scheme;
-        t_authority = r.authority;
-        t_path = remove_dot_segments(r.path.into());
-        t_query = r.query;
+        t_authority = r_authority;
+        t_path = remove_dot_segments(r_path.into());
+        t_query = r_query;
     } else {
-        if r.authority.is_some() {
-            t_authority = r.authority;
-            t_path = remove_dot_segments(r.path.into());
-            t_query = r.query;
+        if r_authority.is_some() {
+            t_authority = r_authority;
+            t_path = remove_dot_segments(r_path.into());
+            t_query = r_query;
         } else {
-            if r.path.is_empty() {
-                t_path = b.path.into();
-                if r.query.is_some() {
-                    t_query = r.query;
+            if r_path.is_empty() {
+                t_path = b_path.into();
+                if r_query.is_some() {
+                    t_query = r_query;
                 } else {
-                    t_query = b.query;
+                    t_query = b_query;
                 }
             } else {
-                if r.path.starts_with('/') {
-                    t_path = remove_dot_segments(r.path.into());
+                if r_path.starts_with('/') {
+                    t_path = remove_dot_segments(r_path.into());
                 } else {
-                    t_path = remove_dot_segments(merge(b.path, r.path, b.authority.is_some()));
+                    t_path = remove_dot_segments(merge(b_path, r_path, b_authority.is_some()));
                 }
-                t_query = r.query;
+                t_query = r_query;
             }
-            t_authority = b.authority;
+            t_authority = b_authority;
         }
-        t_scheme = b.scheme.expect("non-relative IRI must have a scheme");
+        t_scheme = b_scheme.expect("non-relative IRI must have a scheme");
     }
-    let t_fragment: Option<&str> = r.fragment;
+    let t_fragment: Option<&str> = r_fragment;
 
     let s = recompose(t_scheme, t_authority, &t_path, t_query, t_fragment);
     RiString::<S>::try_from(s).expect("resolution result must be a valid IRI")

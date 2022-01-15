@@ -5,6 +5,7 @@ use core::convert::TryFrom;
 #[cfg(feature = "alloc")]
 use alloc::{borrow::Cow, string::String};
 
+use crate::components::AuthorityComponents;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
@@ -169,7 +170,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "docsrs", doc(cfg(feature = "alloc")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn resolve_against<'a>(
         &'a self,
         base: &'_ RiAbsoluteStr<S>,
@@ -178,6 +179,150 @@ impl<S: Spec> RiReferenceStr<S> {
             Ok(iri) => Ok(Cow::Borrowed(iri)),
             Err(relative) => resolve(relative, base).map(Cow::Owned),
         }
+    }
+}
+
+/// Components getters.
+impl<S: Spec> RiReferenceStr<S> {
+    /// Returns the scheme.
+    ///
+    /// The following colon is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.scheme_str(), Some("http"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("foo/bar:baz")?;
+    /// assert_eq!(iri.scheme_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn scheme_str(&self) -> Option<&str> {
+        trusted_parser::extract_scheme(self.as_str())
+    }
+
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.authority_str(), Some("example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("foo/bar:baz")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        trusted_parser::extract_authority(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.path_str(), "/pathpath");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.path_str(), "uuid:10db315b-fcd1-4428-aca8-15babc9a2da2");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("foo/bar:baz")?;
+    /// assert_eq!(iri.path_str(), "foo/bar:baz");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        trusted_parser::extract_path(self.as_str())
+    }
+
+    /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.query_str(), Some("queryquery"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.query_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("foo/bar:baz?")?;
+    /// assert_eq!(iri.query_str(), Some(""));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        trusted_parser::extract_query(self.as_str())
     }
 
     /// Returns the fragment part if exists.
@@ -244,6 +389,37 @@ impl<S: Spec> RiReferenceStr<S> {
             // returned string is substring of the source IRI.
             RiFragmentStr::new_maybe_unchecked(fragment)
         })
+    }
+
+    /// Returns the authority components.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("http://user:pass@example.com:8080/pathpath?queryquery")?;
+    /// let authority = iri.authority_components()
+    ///     .expect("authority is available");
+    /// assert_eq!(authority.userinfo(), Some("user:pass"));
+    /// assert_eq!(authority.host(), "example.com");
+    /// assert_eq!(authority.port(), Some("8080"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_components(&self) -> Option<AuthorityComponents<'_>> {
+        AuthorityComponents::from_iri(self)
     }
 }
 
