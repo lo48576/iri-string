@@ -101,53 +101,6 @@ define_custom_string_owned! {
 }
 
 impl<S: Spec> RiRelativeStr<S> {
-    /// Returns the fragment part if exists.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    ///
-    /// # Examples
-    ///
-    /// If the IRI has a fragment part, `Some(_)` is returned.
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
-    /// let iri = IriRelativeStr::new("?foo#bar")?;
-    /// let fragment = IriFragmentStr::new("bar")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
-    /// let iri = IriRelativeStr::new("#foo")?;
-    /// let fragment = IriFragmentStr::new("foo")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// When the fragment part exists but is empty string, `Some(_)` is returned.
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
-    /// let iri = IriRelativeStr::new("#")?;
-    /// let fragment = IriFragmentStr::new("")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// If the IRI has no fragment, `None` is returned.
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::IriRelativeStr, validate::Error};
-    /// let iri = IriRelativeStr::new("")?;
-    /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[must_use]
-    pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
-    }
-
     /// Returns resolved IRI against the given base IRI, using strict resolver.
     ///
     /// For reference resolution output examples, see [RFC 3986 section 5.4].
@@ -273,6 +226,53 @@ impl<S: Spec> RiRelativeStr<S> {
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
         trusted_parser::extract_query(self.as_str())
+    }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// If the IRI has a fragment part, `Some(_)` is returned.
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
+    /// let iri = IriRelativeStr::new("?foo#bar")?;
+    /// let fragment = IriFragmentStr::new("bar")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
+    /// let iri = IriRelativeStr::new("#foo")?;
+    /// let fragment = IriFragmentStr::new("foo")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// When the fragment part exists but is empty string, `Some(_)` is returned.
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriRelativeStr}, validate::Error};
+    /// let iri = IriRelativeStr::new("#")?;
+    /// let fragment = IriFragmentStr::new("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the IRI has no fragment, `None` is returned.
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::IriRelativeStr, validate::Error};
+    /// let iri = IriRelativeStr::new("")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
+        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
 }
 

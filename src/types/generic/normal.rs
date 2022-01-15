@@ -187,40 +187,6 @@ impl<S: Spec> RiStr<S> {
             RiAbsoluteStr::new_maybe_unchecked(&self.as_str()[..prefix_len])
         }
     }
-
-    /// Returns the fragment part if exists.
-    ///
-    /// A leading `#` character is truncated if the fragment part exists.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
-    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
-    /// let fragment = IriFragmentStr::new("corge")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
-    /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
-    /// let fragment = IriFragmentStr::new("")?;
-    /// assert_eq!(iri.fragment(), Some(fragment));
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// ```
-    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
-    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
-    /// assert_eq!(iri.fragment(), None);
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[inline]
-    #[must_use]
-    pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
-    }
 }
 
 /// Components getters.
@@ -328,6 +294,40 @@ impl<S: Spec> RiStr<S> {
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
         trusted_parser::extract_query(self.as_str())
+    }
+
+    /// Returns the fragment part if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
+    /// let fragment = IriFragmentStr::new("corge")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::{IriFragmentStr, IriStr}, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
+    /// let fragment = IriFragmentStr::new("")?;
+    /// assert_eq!(iri.fragment(), Some(fragment));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.fragment(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
+        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
 }
 
