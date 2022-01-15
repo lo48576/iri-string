@@ -1,11 +1,11 @@
 //! Absolute IRI (without fragment part).
 
+use crate::parser::trusted as trusted_parser;
+use crate::spec::Spec;
+use crate::types::{RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiReferenceString, RiString};
-use crate::{
-    types::{RiReferenceStr, RiStr},
-    validate::absolute_iri,
-};
+use crate::validate::absolute_iri;
 
 define_custom_string_slice! {
     /// A borrowed slice of an absolute IRI without fragment part.
@@ -105,6 +105,114 @@ define_custom_string_owned! {
         validator = absolute_iri,
         slice = RiAbsoluteStr,
         expecting_msg = "Absolute IRI string",
+    }
+}
+
+/// Components getters.
+impl<S: Spec> RiAbsoluteStr<S> {
+    /// Returns the scheme.
+    ///
+    /// The following colon is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://example.com/pathpath?queryquery")?;
+    /// assert_eq!(iri.scheme_str(), "http");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn scheme_str(&self) -> &str {
+        trusted_parser::extract_scheme_absolute(self.as_str())
+    }
+
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://example.com/pathpath?queryquery")?;
+    /// assert_eq!(iri.authority_str(), Some("example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        trusted_parser::extract_authority_absolute(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://example.com/pathpath?queryquery")?;
+    /// assert_eq!(iri.path_str(), "/pathpath");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.path_str(), "uuid:10db315b-fcd1-4428-aca8-15babc9a2da2");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        trusted_parser::extract_path_absolute(self.as_str())
+    }
+
+    /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://example.com/pathpath?queryquery")?;
+    /// assert_eq!(iri.query_str(), Some("queryquery"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.query_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        trusted_parser::extract_query_absolute_iri(self.as_str())
     }
 }
 

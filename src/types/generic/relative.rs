@@ -1,17 +1,17 @@
 //! Relative IRI reference.
 
+use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
-use crate::{
-    raw,
-    resolve::{resolve, Error},
-    types::{RiAbsoluteStr, RiReferenceString, RiString},
-    validate::iri,
-};
-use crate::{
-    spec::Spec,
-    types::{RiFragmentStr, RiReferenceStr},
-    validate::relative_ref,
-};
+use crate::raw;
+#[cfg(feature = "alloc")]
+use crate::resolve::{resolve, Error};
+use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::types::{RiAbsoluteStr, RiReferenceString, RiString};
+use crate::types::{RiFragmentStr, RiReferenceStr};
+#[cfg(feature = "alloc")]
+use crate::validate::iri;
+use crate::validate::relative_ref;
 
 define_custom_string_slice! {
     /// A borrowed slice of a relative IRI reference.
@@ -185,6 +185,94 @@ impl<S: Spec> RiRelativeStr<S> {
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
         resolve(self, base)
+    }
+}
+
+/// Components getters.
+impl<S: Spec> RiRelativeStr<S> {
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.authority_str(), Some("example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.authority_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        trusted_parser::extract_authority_relative(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.path_str(), "/pathpath");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz")?;
+    /// assert_eq!(iri.path_str(), "foo//bar:baz");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        trusted_parser::extract_path_relative(self.as_str())
+    }
+
+    /// Returns the path.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//example.com/pathpath?queryquery#fragfrag")?;
+    /// assert_eq!(iri.query_str(), Some("queryquery"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("foo//bar:baz?")?;
+    /// assert_eq!(iri.query_str(), Some(""));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        trusted_parser::extract_query(self.as_str())
     }
 }
 

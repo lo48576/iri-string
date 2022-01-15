@@ -10,6 +10,18 @@ use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
 
+/// Eats a `scheme` and a following colon, and returns the rest and the scheme.
+///
+/// Returns `(rest, scheme)`.
+///
+/// This should be called at the head of an absolute IRIs/URIs.
+#[must_use]
+fn scheme_colon(i: &str) -> (&str, &str) {
+    let (scheme, rest) =
+        find_split_hole(i, b':').expect("[precondition] absolute IRIs must have `scheme` part");
+    (rest, scheme)
+}
+
 /// Eats a `scheme` and a following colon if available, and returns the rest and the scheme.
 ///
 /// This should be called at the head of an `IRI-reference` or similar.
@@ -125,9 +137,140 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
     }
 }
 
-/// Splits the string into the prefix and the fragment part.
+/// Extracts `scheme` part from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[inline]
+#[must_use]
+pub(crate) fn extract_scheme(i: &str) -> Option<&str> {
+    scheme_colon_opt(i).1
+}
+
+/// Extracts `scheme` part from an absolute IRI.
+///
+/// # Precondition
+///
+/// The given string must be a valid absolute IRI.
+#[inline]
+#[must_use]
+pub(crate) fn extract_scheme_absolute(i: &str) -> &str {
+    scheme_colon(i).1
+}
+
+/// Extracts `authority` part from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[inline]
+#[must_use]
+pub(crate) fn extract_authority(i: &str) -> Option<&str> {
+    let (i, _scheme) = scheme_colon_opt(i);
+    slash_slash_authority_opt(i).1
+}
+
+/// Extracts `authority` part from an absolute IRI.
+///
+/// # Precondition
+///
+/// The given string must be a valid absolute IRI.
+#[inline]
+#[must_use]
+pub(crate) fn extract_authority_absolute(i: &str) -> Option<&str> {
+    let (i, _scheme) = scheme_colon(i);
+    slash_slash_authority_opt(i).1
+}
+
+/// Extracts `authority` part from a relative IRI.
+///
+/// # Precondition
+///
+/// The given string must be a valid relative IRI.
+#[inline]
+#[must_use]
+pub(crate) fn extract_authority_relative(i: &str) -> Option<&str> {
+    slash_slash_authority_opt(i).1
+}
+
+/// Extracts `path` part from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[inline]
+#[must_use]
+pub(crate) fn extract_path(i: &str) -> &str {
+    let (i, _scheme) = scheme_colon_opt(i);
+    let (i, _authority) = slash_slash_authority_opt(i);
+    until_query(i).1
+}
+
+/// Extracts `path` part from an absolute IRI.
+///
+/// # Precondition
+///
+/// The given string must be a valid absolute IRI.
+#[inline]
+#[must_use]
+pub(crate) fn extract_path_absolute(i: &str) -> &str {
+    let (i, _scheme) = scheme_colon(i);
+    let (i, _authority) = slash_slash_authority_opt(i);
+    until_query(i).1
+}
+
+/// Extracts `path` part from a relative IRI.
+///
+/// # Precondition
+///
+/// The given string must be a valid relative IRI.
+#[inline]
+#[must_use]
+pub(crate) fn extract_path_relative(i: &str) -> &str {
+    let (i, _authority) = slash_slash_authority_opt(i);
+    until_query(i).1
+}
+
+/// Extracts `query` part from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[inline]
+#[must_use]
+pub(crate) fn extract_query(i: &str) -> Option<&str> {
+    let (i, _before_query) = until_query(i);
+    decompose_query_and_fragment(i).0
+}
+
+/// Extracts `query` part from an `absolute-IRI` string.
+///
+/// # Precondition
+///
+/// The given string must be a valid `absolute-IRI` string.
+#[must_use]
+pub(crate) fn extract_query_absolute_iri(i: &str) -> Option<&str> {
+    let (i, _before_query) = until_query(i);
+    if i.is_empty() {
+        None
+    } else {
+        debug_assert_eq!(
+            i.as_bytes().get(0),
+            Some(&b'?'),
+            "`absolute-IRI` string must not have `fragment part"
+        );
+        Some(&i[1..])
+    }
+}
+
+/// Splits an IRI string into the prefix and the fragment part.
 ///
 /// A leading `#` character is truncated if the fragment part exists.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
 #[inline]
 #[must_use]
 pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
