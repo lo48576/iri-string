@@ -49,6 +49,10 @@ pub(crate) trait Buffer<'a> {
     /// (`self.content_bytes().len()`).
     /// Should panic if `new_len` does not lie on a `char` boundary.
     fn truncate(&mut self, new_len: usize);
+    /// Pushes the characters.
+    fn extend_chars<I>(&mut self, iter: I) -> Result<(), Self::ExtendError>
+    where
+        I: IntoIterator<Item = char>;
     /// Writes the optional string with the prefix.
     fn push_optional_with_prefix(
         &mut self,
@@ -90,6 +94,22 @@ impl<'a> Buffer<'a> for &'a mut String {
             panic!("[precondition] truncation should make the content shorter")
         }
         (**self).truncate(new_len);
+    }
+
+    fn extend_chars<I>(&mut self, iter: I) -> Result<(), Self::ExtendError>
+    where
+        I: IntoIterator<Item = char>,
+    {
+        // Cannot use `(**self).extend(iter)`, as it panics on OOM.
+        let iter = iter.into_iter();
+        (**self).try_reserve(iter.size_hint().0)?;
+        let mut buf = [0_u8; 4];
+        for c in iter {
+            let s = c.encode_utf8(&mut buf);
+            (**self).try_reserve(s.len())?;
+            (**self).push_str(s);
+        }
+        Ok(())
     }
 
     fn push_optional_with_prefix(
@@ -171,6 +191,17 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
         }
 
         self.len = new_len;
+    }
+
+    fn extend_chars<I>(&mut self, iter: I) -> Result<(), Self::ExtendError>
+    where
+        I: IntoIterator<Item = char>,
+    {
+        let mut buf = [0_u8; 4];
+        for c in iter {
+            self.push_str(c.encode_utf8(&mut buf))?;
+        }
+        Ok(())
     }
 
     fn push_optional_with_prefix(

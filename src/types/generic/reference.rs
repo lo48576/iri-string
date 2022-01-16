@@ -6,11 +6,13 @@ use core::convert::TryFrom;
 use alloc::{borrow::Cow, string::String};
 
 use crate::components::AuthorityComponents;
+#[cfg(feature = "alloc")]
+use crate::normalize::Error;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 #[cfg(feature = "alloc")]
-use crate::resolve::{resolve, Error};
+use crate::resolve::resolve;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
