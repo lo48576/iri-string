@@ -2,11 +2,20 @@
 
 ## [Unreleased]
 
+## [0.5.0-beta.2]
+
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
+
+### Fixed
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
+    + Now `serde-std` enables `alloc` features automatically.
+
 ## [0.5.0-beta.1]
 
 * Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
 * Add types and getters for subcomponents of `authority`: `userinfo`, `host`, and `port`.
     + `components::AuthorityComponents` type and `authority_components` method.
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
 
 ### Added
 * Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
@@ -14,6 +23,10 @@
     + Getters for `fragment` component is already provided.
 * Add getter for subcomponents of `authority`: `userinfo`, `host`, and `port`.
     + `components::AuthorityComponents` type and `authority_components` method.
+
+### Fixed
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
+    + Now `serde-std` enables `alloc` features automatically.
 
 ## [0.5.0-beta.0]
 
@@ -268,7 +281,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.2...develop>
+[0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>
 [0.5.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.0>
 [0.4.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.1>
