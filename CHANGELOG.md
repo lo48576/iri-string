@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0-beta.2]
+
 * Fix a bug that `serde-std` feature did not enable serde support for owned types.
 
 ### Fixed
@@ -279,7 +281,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.2...develop>
+[0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>
 [0.5.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.0>
 [0.4.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.4.1>
