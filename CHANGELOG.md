@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
+
+### Fixed
+* Fix a bug that `serde-std` feature did not enable serde support for owned types.
+    + Now `serde-std` enables `alloc` features automatically.
+
 ## [0.5.0-beta.1]
 
 * Add getters for major components of IRIs/URIs: `scheme`, `authority`, `path`, and `query`.
