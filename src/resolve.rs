@@ -138,11 +138,80 @@ pub fn resolve<S: Spec>(
     FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
 }
 
+/// Resolves and normalizes the IRI reference.
+///
+/// It is recommended to use methods such as [`RiReferenceStr::resolve_normalize_against()`]
+/// and [`RiRelativeStr::resolve_normalize_against()`], rather than this
+/// freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if
+///
+/// * memory allocation failed, or
+/// * the IRI referernce is unresolvable against the base.
+///
+/// To see examples of unresolvable IRIs, visit the
+/// [module documentation][`self`].
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] enum Error {
+/// #     Validate(iri_string::validate::Error),
+/// #     Normalize(iri_string::normalize::Error) }
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+/// # impl From<iri_string::normalize::Error> for Error {
+/// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+/// use iri_string::resolve::{resolve_normalize, FixedBaseResolver};
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+/// let reference = IriReferenceStr::new("../there")?;
+///
+/// // Resolve and normalize `reference` against `base`.
+/// let resolved = resolve_normalize(reference, base)?;
+/// assert_eq!(resolved, "http://example.com/there");
+///
+/// // These two produces the same result with the same type.
+/// assert_eq!(
+///     FixedBaseResolver::new(base).resolve(reference)?,
+///     "http://example.com/there"
+/// );
+/// assert_eq!(
+///     FixedBaseResolver::new(base)
+///         .create_normalizing_task(reference)
+///         .allocate_and_write()?,
+///     "http://example.com/there"
+/// );
+///
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
+/// [`RiReferenceStr::resolve_normalize_against()`]: `RiReferenceStr::resolve_normalize_against`
+/// [`RiRelativeStr::resolve_normalize_against()`]: `crate::types::RiRelativeStr::resolve_normalize_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub fn resolve_normalize<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, Error> {
+    FixedBaseResolver::new(base.as_ref()).resolve_normalize(reference.as_ref())
+}
+
 /// A resolver against the fixed base.
 ///
 /// If you want more control over how to resolve the buffer, create
-/// [`NormalizationTask`] by [`create_task`] method.
+/// [`NormalizationTask`] by [`create_task`] or [`create_normalizing_task`] method.
 ///
+/// [`create_normalizing_task`]: `Self::create_normalizing_task`
 /// [`create_task`]: `Self::create_task`
 #[derive(Debug, Clone, Copy)]
 pub struct FixedBaseResolver<'a, S: Spec> {
@@ -192,6 +261,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
+    /// The task returned by this method does **not** normalize the resolution
+    /// result. However, `..` and `.` are recognized even when they are
+    /// percent-encoded.
+    ///
     /// # Failures
     ///
     /// This fails if
@@ -199,8 +272,8 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// * memory allocation failed, or
     /// * the IRI referernce is unresolvable against the base.
     ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
+    /// To see examples of unresolvable IRIs, visit the
+    /// [module documentation][`self`].
     ///
     /// # Examples
     ///
@@ -224,18 +297,63 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// Note that `..` and `.` path segments are recognized even when they are
+    /// percent-encoded.
+    ///
+    /// ```
+    /// # #[derive(Debug)] enum Error {
+    /// #     Validate(iri_string::validate::Error),
+    /// #     Normalize(iri_string::normalize::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::normalize::Error> for Error {
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// # #[cfg(feature = "alloc")] {
+    /// # // `ResolutionTask::allocate_and_write()` is available only when
+    /// # // `alloc` feature is enabled.
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// // `%2e%2e` is recognized as `..`.
+    /// // However, `dot%2edot` is NOT normalized into `dot.dot`.
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_task(reference);
+    ///
+    /// let resolved = task.allocate_and_write()?;
+    /// // Resolved but not normalized.
+    /// assert_eq!(resolved, "HTTP://example.COM/dot%2edot");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [`create_normalizing_task`]: `Self::create_normalizing_task`
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
         self.create_task(reference).allocate_and_write()
     }
 
-    /// Creates a resolution task.
+    /// Resolves the given reference against the fixed base, and normalizes the result.
     ///
-    /// The returned [`NormalizationTask`] allows you to resolve the IRI without
-    /// memory allocation, resolve to existing buffers, estimate required
-    /// memory size, etc. If you need more control than
-    /// [`resolve`][`Self::resolve`] method, use this.
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// The task returned by this method is normalized.
+    ///
+    /// If you don't want the result to be normalized, use [`create_task`] method.
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the
+    /// [module documentation][`self`].
     ///
     /// # Examples
     ///
@@ -253,17 +371,73 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # #[cfg(feature = "alloc")] {
     /// # // `ResolutionTask::allocate_and_write()` is available only when
     /// # // `alloc` feature is enabled.
-    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
-    /// let reference = IriReferenceStr::new("../there")?;
-    /// let task = resolver.create_task(reference);
+    /// // `%2e%2e` is recognized as `..`.
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_normalizing_task(reference);
     ///
     /// let resolved = task.allocate_and_write()?;
-    /// assert_eq!(resolved, "http://example.com/there");
+    /// // Not only resolved, but also normalized.
+    /// assert_eq!(resolved, "http://example.com/dot.dot");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// [`create_task`]: `Self::create_task`
+    /// [`unreserved` characters]: https://datatracker.ietf.org/doc/html/rfc3986#section-2.3
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    pub fn resolve_normalize(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
+        self.create_normalizing_task(reference).allocate_and_write()
+    }
+
+    /// Creates a resolution task.
+    ///
+    /// The returned [`NormalizationTask`] allows you to resolve the IRI without
+    /// memory allocation, resolve to existing buffers, estimate required
+    /// memory size, etc. If you need more control than
+    /// [`resolve`][`Self::resolve`] method, use this.
+    ///
+    /// The task returned by this method does not normalize the resolution
+    /// result. However, note that `..` and `.` is recognized even when they
+    /// are percent-encoded.
+    ///
+    /// If you don't want to normalize the result, use [`create_task`] instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] enum Error {
+    /// #     Validate(iri_string::validate::Error),
+    /// #     Normalize(iri_string::normalize::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::normalize::Error> for Error {
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// # #[cfg(feature = "alloc")] {
+    /// # // `ResolutionTask::allocate_and_write()` is available only when
+    /// # // `alloc` feature is enabled.
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// // `%2e%2e` is recognized as `..`.
+    /// // However, `dot%2edot` is NOT normalized into `dot.dot`.
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_task(reference);
+    ///
+    /// let resolved = task.allocate_and_write()?;
+    /// // Resolved but not normalized.
+    /// assert_eq!(resolved, "HTTP://example.COM/dot%2edot");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [`create_task`]: `Self::create_task`
     #[must_use]
     pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> NormalizationTask<'a, S> {
         let b = self.base_components;
@@ -350,5 +524,52 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             },
             _spec: PhantomData,
         }
+    }
+
+    /// Creates a resolution task.
+    ///
+    /// The returned [`NormalizationTask`] allows you to resolve the IRI without
+    /// memory allocation, resolve to existing buffers, estimate required
+    /// memory size, etc. If you need more control than
+    /// [`resolve_normalize`][`Self::resolve_normalize`] method, use this.
+    ///
+    /// The task returned by this method normalizes the resolution result.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] enum Error {
+    /// #     Validate(iri_string::validate::Error),
+    /// #     Normalize(iri_string::normalize::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::normalize::Error> for Error {
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// # #[cfg(feature = "alloc")] {
+    /// # // `ResolutionTask::allocate_and_write()` is available only when
+    /// # // `alloc` feature is enabled.
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_normalizing_task(reference);
+    ///
+    /// let resolved = task.allocate_and_write()?;
+    /// // Not only resolved, but also normalized.
+    /// assert_eq!(resolved, "http://example.com/dot.dot");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    pub fn create_normalizing_task(
+        &self,
+        reference: &'a RiReferenceStr<S>,
+    ) -> NormalizationTask<'a, S> {
+        let mut task = self.create_task(reference);
+        task.enable_normalization();
+        task
     }
 }

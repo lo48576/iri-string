@@ -59,6 +59,18 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
         }
     }
 
+    /// Enables normalization for the task.
+    pub(crate) fn enable_normalization(&mut self) {
+        debug_assert!(
+            matches!(
+                self.common.op,
+                NormalizationType::Full | NormalizationType::RemoveDotSegments
+            ),
+            "No cases should be overlooked"
+        );
+        self.common.op = NormalizationType::Full;
+    }
+
     /// Resolves the IRI, and writes it to the buffer.
     fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], Error>
     where
