@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.0-beta.3]
+
 * Add `normalize` module, and unify it with IRI resolution.
     + Move `resolve::{Error, ErrorKind}` to `normalize` module.
     + Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
@@ -301,7 +303,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.2...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.3...develop>
+[0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>
 [0.5.0-beta.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.0>
