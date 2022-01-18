@@ -60,8 +60,6 @@
 #[cfg(test)]
 mod tests;
 
-use core::marker::PhantomData;
-
 use crate::components::RiReferenceComponents;
 #[cfg(feature = "alloc")]
 use crate::normalize::Error;
@@ -511,17 +509,15 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             RefToplevel::Query | RefToplevel::None => Path::Done(b_path),
         };
 
-        NormalizationTask {
-            common: NormalizationTaskCommon {
-                scheme: r_scheme.unwrap_or(b_scheme),
-                authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
-                path,
-                query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
-                fragment: r_fragment,
-                op: NormalizationType::RemoveDotSegments,
-            },
-            _spec: PhantomData,
+        NormalizationTaskCommon {
+            scheme: r_scheme.unwrap_or(b_scheme),
+            authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
+            path,
+            query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
+            fragment: r_fragment,
+            op: NormalizationType::RemoveDotSegments,
         }
+        .into()
     }
 
     /// Creates a resolution task.
