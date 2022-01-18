@@ -139,6 +139,7 @@ USE_MINIMAL_DEPENDENCIES = true
 VERBOSE = { value = "false", condition = { env_not_set = ["VERBOSE"] } }
 script = [
 '''
+cargo +${MSRV} make ci-once
 cargo +${MSRV} make ci-all-profiles
 cargo +stable make --profile default ci
 cargo +stable make --profile feat-all ci
