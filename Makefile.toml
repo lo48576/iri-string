@@ -241,7 +241,7 @@ args = ["update"]
 
 [tasks.check-rustfmt]
 run_task = [
-    { name = "check-rustfmt-ignore-errors", conditions = { channels = ["beta", "nightly" ] } },
+    { name = "check-rustfmt-ignore-errors", condition = { channels = ["beta", "nightly" ] } },
     { name = "check-rustfmt-strict" },
 ]
 
