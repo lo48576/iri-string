@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+* Add `normalize` module, and unify it with IRI resolution.
+    + Move `resolve::{Error, ErrorKind}` to `normalize` module.
+    + Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+    + Add `normalize::create_task` function.
+    + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
+* Add normalizing variations for IRI resolution.
+
+### Added
+* Add `normalize` module.
+    + Add `normalize::create_task()` function.
+    + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
+* Add normalizing variations for IRI resolution.
+    + `resolve_normalize` for `resolve`.
+    + `resolve_normalize_against` for `resolve_against`.
+
+### Changed (breaking)
+* Move `resolve::{Error, ErrorKind}` to `normalize` module.
+* Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+    + Now `resolve::FixedBaseResolver::create_task()` returns `NormalizationTask`.
+
 ## [0.5.0-beta.2]
 
 * Fix a bug that `serde-std` feature did not enable serde support for owned types.
