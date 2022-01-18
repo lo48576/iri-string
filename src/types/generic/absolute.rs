@@ -1,6 +1,11 @@
 //! Absolute IRI (without fragment part).
 
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
 use crate::components::AuthorityComponents;
+#[cfg(feature = "alloc")]
+use crate::normalize::{self, Error};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
 use crate::types::{RiReferenceStr, RiStr};
@@ -106,6 +111,42 @@ define_custom_string_owned! {
         validator = absolute_iri,
         slice = RiAbsoluteStr,
         expecting_msg = "Absolute IRI string",
+    }
+}
+
+impl<S: Spec> RiAbsoluteStr<S> {
+    /// Returns the normalized IRI.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] enum Error {
+    /// #     Validate(iri_string::validate::Error),
+    /// #     Normalize(iri_string::normalize::Error) }
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// # impl From<iri_string::normalize::Error> for Error {
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::normalize::create_task;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
+    ///
+    /// let normalized = iri.normalize()?;
+    /// assert_eq!(normalized, "http://example.com/baz?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    #[inline]
+    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, Error> {
+        let mut buf = String::new();
+        normalize::create_task(self.as_ref()).append_to_std_string(&mut buf)?;
+        Ok(unsafe {
+            // SAFETY: The normalized IRI must be the absolute and does not get additional fragment.
+            RiAbsoluteString::<S>::new_maybe_unchecked(buf)
+        })
     }
 }
 

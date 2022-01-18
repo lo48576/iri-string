@@ -173,12 +173,12 @@ pub(crate) const fn is_ascii_scheme_continue(c: u8) -> bool {
     (TABLE[c as usize] & MASK_SCHEME_CONTINUE) != 0
 }
 
-///// Returns `true` if the given ASCII character matches `unreserved`.
-//#[inline]
-//#[must_use]
-//pub(crate) const fn is_ascii_unreserved(c: u8) -> bool {
-//    (TABLE[c as usize] & MASK_UNRESERVED) != 0
-//}
+/// Returns `true` if the given ASCII character matches `unreserved`.
+#[inline]
+#[must_use]
+pub(crate) const fn is_ascii_unreserved(c: u8) -> bool {
+    (TABLE[c as usize] & MASK_UNRESERVED) != 0
+}
 
 ///// Returns `true` if the given ASCII character matches `gen-delims`.
 //#[inline]
