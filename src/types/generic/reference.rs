@@ -6,11 +6,13 @@ use core::convert::TryFrom;
 use alloc::{borrow::Cow, string::String};
 
 use crate::components::AuthorityComponents;
+#[cfg(feature = "alloc")]
+use crate::normalize::Error;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 #[cfg(feature = "alloc")]
-use crate::resolve::{resolve, Error};
+use crate::resolve::{resolve, resolve_normalize};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
@@ -165,7 +167,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// * the IRI referernce is unresolvable against the base.
     ///
     /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
+    /// for [`resolve`][`crate::resolve`] module.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
@@ -179,6 +181,29 @@ impl<S: Spec> RiReferenceStr<S> {
             Ok(iri) => Ok(Cow::Borrowed(iri)),
             Err(relative) => resolve(relative, base).map(Cow::Owned),
         }
+    }
+
+    /// Returns normalized and resolved IRI against the given base IRI.
+    ///
+    /// This returns the normalized result of
+    /// [`resolve_against`][`Self::resolve_against`] method.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the documentation
+    /// for [`resolve`][`crate::resolve`] module.
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[inline]
+    pub fn resolve_normalize_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+        resolve_normalize(self, base)
     }
 }
 

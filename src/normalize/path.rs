@@ -1,21 +1,45 @@
-//! `remove_dot_segments` algorithm described in [RCC 3986 5.2.4].
-//!
-//! [RCC 3986 5.2.4]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
+//! Stuff for path normalization.
 
 use core::mem;
 
 use crate::buffer::Buffer;
-use crate::normalize::PathSegment;
+use crate::normalize::{normalize_pct_encodings, NormalizationType};
 use crate::parser::str::{find_split, rfind};
+
+/// Path that is (possibly) not yet processed or being processed.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Path<'a> {
+    /// The result. No more processing is needed.
+    Done(&'a str),
+    /// Not yet completely processed path.
+    NeedsProcessing(PathToNormalize<'a>),
+}
+
+impl Path<'_> {
+    /// Returns the estimated maximum size required for IRI resolution.
+    ///
+    /// With a buffer of the returned size, IRI resolution (and merge) would
+    /// succeed without OOM error. The resolution may succeed with smaller
+    /// buffer than this function estimates, but it is not guaranteed.
+    ///
+    /// Note that this is `O(N)` operation (where N is input length).
+    #[must_use]
+    pub(super) fn estimate_max_buf_size_for_resolution(&self) -> usize {
+        match self {
+            Self::Done(s) => s.len(),
+            Self::NeedsProcessing(path) => path.estimate_max_buf_size_for_resolution(),
+        }
+    }
+}
 
 /// Path that needs merge and/or dot segment removal.
 ///
 /// If the first string is not empty, it must end with a slash.
-#[derive(Clone, Copy)]
-pub(crate) struct RemoveDotSegPath<'a>(Option<&'a str>, &'a str);
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct PathToNormalize<'a>(Option<&'a str>, &'a str);
 
-impl<'a> RemoveDotSegPath<'a> {
-    /// Creates a `RemoveDotSegPath` from the given base and reference paths to be resolved.
+impl<'a> PathToNormalize<'a> {
+    /// Creates a `PathToNormalize` from the given base and reference paths to be resolved.
     #[must_use]
     pub(crate) fn from_paths_to_be_resolved(base: &'a str, reference: &'a str) -> Self {
         if reference.starts_with('/') {
@@ -28,7 +52,7 @@ impl<'a> RemoveDotSegPath<'a> {
         }
     }
 
-    /// Creates a `RemoveDotSegPath` from the given single path.
+    /// Creates a `PathToNormalize` from the given single path.
     #[inline]
     #[must_use]
     pub(crate) fn from_single_path(path: &'a str) -> Self {
@@ -137,7 +161,7 @@ impl<'a> RemoveDotSegPath<'a> {
         })
     }
 
-    /// Runs path `merge` algorithm and `remove_dot_segments` algorithm at once.
+    /// Runs path normalization.
     ///
     /// This does neither modify nor consume `self` as the function signature
     /// indicates, so this can be called multiple times safely.
@@ -147,31 +171,32 @@ impl<'a> RemoveDotSegPath<'a> {
     ///
     /// [RFC 3986 section 5.2.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3
     /// [RFC 3986 section 5.2.4]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
-    pub(crate) fn merge_and_remove_dot_segments<'b, B: Buffer<'b>>(
+    pub(super) fn normalize<'b, B: Buffer<'b>>(
         &self,
         buf: &mut B,
+        op_norm: NormalizationType,
     ) -> Result<(), B::ExtendError> {
-        (*self).merge_and_remove_dot_segments_impl(buf)
+        (*self).normalize_impl(buf, op_norm)
     }
 
-    /// Runs path `merge` algorithm and `remove_dot_segments` algorithm at once.
+    /// Runs path normalization.
     ///
     /// See [RFC 3986 section 5.2.3] for `merge`, and [RFC 3986 section 5.2.4]
     /// for `remove_dot_segments`.
     ///
     /// [RFC 3986 section 5.2.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3
     /// [RFC 3986 section 5.2.4]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
-    fn merge_and_remove_dot_segments_impl<'b, B: Buffer<'b>>(
+    fn normalize_impl<'b, B: Buffer<'b>>(
         mut self,
         buf: &mut B,
+        op_norm: NormalizationType,
     ) -> Result<(), B::ExtendError> {
         let path_start = buf.as_bytes().len();
 
         // Last path segment.
         let mut last_seg_buf: Option<PathSegment<'_>> = None;
         while let Some(next_seg) = self.pop_first_segment() {
-            let segname = next_seg.segment();
-            let segkind = SegmentKind::from(segname);
+            let segkind = next_seg.kind();
             if segkind != SegmentKind::Normal {
                 match (
                     next_seg.has_leading_slash(),
@@ -205,7 +230,7 @@ impl<'a> RemoveDotSegPath<'a> {
                         // 2.B ("/./").
                         // Nothing to do.
                     }
-                    (_, SegmentKind::Normal, _) => unreachable!(),
+                    (_, SegmentKind::Normal, _) => unreachable!("[consistency] already checked"),
                 }
             } else {
                 // Flush the previous segment.
@@ -213,7 +238,7 @@ impl<'a> RemoveDotSegPath<'a> {
                     if !last_seg.has_leading_slash() {
                         assert_eq!(buf.as_bytes().len(), path_start);
                     }
-                    last_seg.write_to(buf)?;
+                    last_seg.write_to(buf, op_norm)?;
                 }
                 // Store the last segment.
                 last_seg_buf = Some(next_seg);
@@ -225,7 +250,7 @@ impl<'a> RemoveDotSegPath<'a> {
             if !seg.has_leading_slash() {
                 assert_eq!(buf.as_bytes().len(), path_start);
             }
-            seg.write_to(buf)?;
+            seg.write_to(buf, op_norm)?;
         }
 
         Ok(())
@@ -247,7 +272,7 @@ impl<'a> RemoveDotSegPath<'a> {
             if seg.has_leading_slash() {
                 max += 1;
             }
-            if SegmentKind::from(seg.segment()) == SegmentKind::Normal {
+            if seg.kind() == SegmentKind::Normal {
                 max += seg.segment().len();
             }
         }
@@ -279,6 +304,57 @@ fn pop_last_seg_and_preceding_slash<'b, B: Buffer<'b>>(
     }
 }
 
+/// A segment with optional leading slash.
+#[derive(Clone, Copy)]
+struct PathSegment<'a> {
+    /// Presence of a leading slash.
+    leading_slash: bool,
+    /// Segment name (without any slashes).
+    segment: &'a str,
+}
+
+impl<'a> PathSegment<'a> {
+    /// Returns `true` if the segment has a leading slash.
+    #[inline]
+    #[must_use]
+    fn has_leading_slash(&self) -> bool {
+        self.leading_slash
+    }
+
+    /// Returns the segment without any slashes.
+    #[inline]
+    #[must_use]
+    fn segment(&self) -> &'a str {
+        self.segment
+    }
+
+    /// Returns the segment kind.
+    #[must_use]
+    fn kind(&self) -> SegmentKind {
+        match self.segment {
+            "." | "%2E" | "%2e" => SegmentKind::Dot,
+            ".." | ".%2E" | ".%2e" | "%2E." | "%2E%2E" | "%2E%2e" | "%2e." | "%2e%2E"
+            | "%2e%2e" => SegmentKind::DotDot,
+            _ => SegmentKind::Normal,
+        }
+    }
+
+    /// Writes the segment to the buffer.
+    fn write_to<'b, B: Buffer<'b>>(
+        &self,
+        buf: &mut B,
+        op_norm: NormalizationType,
+    ) -> Result<(), B::ExtendError> {
+        if self.has_leading_slash() {
+            buf.push_str("/")?;
+        }
+        match op_norm {
+            NormalizationType::Full => buf.extend_chars(normalize_pct_encodings(self.segment())),
+            NormalizationType::RemoveDotSegments => buf.push_str(self.segment()),
+        }
+    }
+}
+
 /// Path segment kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SegmentKind {
@@ -288,15 +364,4 @@ enum SegmentKind {
     DotDot,
     /// Other normal (not special) segments.
     Normal,
-}
-
-impl From<&str> for SegmentKind {
-    fn from(s: &str) -> Self {
-        match s {
-            "." | "%2E" | "%2e" => Self::Dot,
-            ".." | ".%2E" | ".%2e" | "%2E." | "%2E%2E" | "%2E%2e" | "%2e." | "%2e%2E"
-            | "%2e%2e" => Self::DotDot,
-            _ => Self::Normal,
-        }
-    }
 }
