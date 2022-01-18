@@ -61,9 +61,9 @@ pub(crate) enum NormalizationType {
 #[derive(Debug, Clone, Copy)]
 pub struct NormalizationTask<'a, S> {
     /// Common data.
-    pub(crate) common: NormalizationTaskCommon<'a>,
+    common: NormalizationTaskCommon<'a>,
     /// Spec.
-    pub(crate) _spec: PhantomData<fn() -> S>,
+    _spec: PhantomData<fn() -> S>,
 }
 
 impl<'a, S: Spec> NormalizationTask<'a, S> {
@@ -476,6 +476,16 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
         let path_max = self.common.path.estimate_max_buf_size_for_resolution();
 
         known_exact + path_max
+    }
+}
+
+impl<'a, S: Spec> From<NormalizationTaskCommon<'a>> for NormalizationTask<'a, S> {
+    #[inline]
+    fn from(common: NormalizationTaskCommon<'a>) -> Self {
+        Self {
+            common,
+            _spec: PhantomData,
+        }
     }
 }
 
