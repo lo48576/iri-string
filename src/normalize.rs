@@ -20,6 +20,34 @@ use self::error::ErrorRepr;
 pub use self::error::{Error, ErrorKind};
 pub(crate) use self::path::{Path, PathToNormalize};
 
+/// Creates a normalization task.
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] enum Error {
+/// #     Validate(iri_string::validate::Error),
+/// #     Normalize(iri_string::normalize::Error) }
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+/// # impl From<iri_string::normalize::Error> for Error {
+/// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+/// # #[cfg(feature = "alloc")] {
+/// use iri_string::normalize::create_task;
+/// use iri_string::types::IriStr;
+///
+/// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz")?;
+///
+/// let normalized = create_task(iri).allocate_and_write()?;
+/// assert_eq!(normalized, "http://example.com/baz");
+/// # }
+/// # Ok::<_, Error>(())
+/// ```
+#[must_use]
+pub fn create_task<S: Spec>(iri: &RiStr<S>) -> NormalizationTask<'_, S> {
+    NormalizationTask::new(iri)
+}
+
 /// Normalization type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum NormalizationType {
@@ -40,7 +68,7 @@ pub struct NormalizationTask<'a, S> {
 
 impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// Creates a new normalization task.
-    pub fn new(iri: &'a RiStr<S>) -> Self {
+    fn new(iri: &'a RiStr<S>) -> Self {
         let components = RiReferenceComponents::from(iri.as_ref());
         let (scheme, authority, path, query, fragment) = components.to_major();
         let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
@@ -101,11 +129,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri.as_ref());
     ///
     /// assert_eq!(
     ///     task.allocate_and_write()?,
@@ -146,11 +174,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
@@ -175,12 +203,12 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::{ErrorKind, NormalizationTask};
+    /// use iri_string::normalize::{ErrorKind, NormalizationTask, create_task};
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
     /// const EXPECTED: &str = "http://example.com/f";
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// // Buffer is too short for processing, even though it is long enough
     /// // to store the result.
@@ -236,11 +264,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::{IriStr, IriString};
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/../../there")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// // Long buffer is reused.
     /// {
@@ -296,11 +324,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
@@ -324,11 +352,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// // Long buffer is reused.
     /// {
@@ -381,11 +409,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
@@ -426,11 +454,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
     /// # impl From<iri_string::normalize::Error> for Error {
     /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::NormalizationTask;
+    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = NormalizationTask::new(iri);
+    /// let task = create_task(iri);
     ///
     /// let max_size = task.estimate_max_buf_size_for_resolution();
     /// let mut buf = vec![0_u8; max_size];

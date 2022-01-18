@@ -122,11 +122,9 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr};
 ///     FixedBaseResolver::new(base).create_task(reference).allocate_and_write()?,
 ///     "http://example.com/there"
 /// );
-///
 /// # Ok::<_, Error>(())
 /// ```
 ///
-/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
 /// [`RiReferenceStr::resolve_against()`]: `RiReferenceStr::resolve_against`
 /// [`RiRelativeStr::resolve_against()`]: `crate::types::RiRelativeStr::resolve_against`
 #[cfg(feature = "alloc")]
