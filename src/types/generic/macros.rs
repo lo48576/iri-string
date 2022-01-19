@@ -441,6 +441,7 @@ macro_rules! define_custom_string_slice {
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
+///     + `From<$ty<UriSpec>> for $ty<IriSpec>`
 ///     + `AsRef<$slice<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented.
 ///     + `PartialEq<$ty> for $ty`
@@ -714,6 +715,16 @@ macro_rules! define_custom_string_owned {
             #[inline]
             fn deref(&self) -> &$slice<S> {
                 self.as_ref()
+            }
+        }
+
+        impl From<$ty<crate::spec::UriSpec>> for $ty<crate::spec::IriSpec> {
+            #[inline]
+            fn from(uri: $ty<crate::spec::UriSpec>) -> Self {
+                unsafe {
+                    // SAFETY: Valid URI is also a valid IRI.
+                    Self::new_maybe_unchecked(uri.into())
+                }
             }
         }
 
