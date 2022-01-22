@@ -792,7 +792,7 @@ macro_rules! define_custom_string_owned {
     };
 }
 
-/// Implements infallible conversions and other useful traits between two IRI types.
+/// Implements trivial conversions and other useful traits between two IRI types.
 ///
 /// Implemented traits:
 ///
@@ -836,7 +836,7 @@ macro_rules! define_custom_string_owned {
 ///     + `$from_owned` and `$to_owned`
 ///         - `PartialEq<$from_owned> for $to_owned`
 ///         - `PartialEq<$to_owned> for $from_owned`
-macro_rules! impl_infallible_conv_between_iri {
+macro_rules! impl_trivial_conv_between_iri {
     (
         from_slice: $from_slice:ident,
         from_owned: $from_owned:ident,

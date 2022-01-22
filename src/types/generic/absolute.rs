@@ -289,14 +289,14 @@ impl<S: Spec> RiAbsoluteStr<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiAbsoluteStr,
     from_owned: RiAbsoluteString,
     to_slice: RiStr,
     to_owned: RiString,
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiAbsoluteStr,
     from_owned: RiAbsoluteString,
     to_slice: RiReferenceStr,
