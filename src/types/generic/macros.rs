@@ -545,6 +545,15 @@ macro_rules! define_custom_string_owned {
             pub fn capacity(&self) -> usize {
                 self.inner.capacity()
             }
+
+            /// Returns the borrowed IRI string slice.
+            ///
+            /// This is equivalent to `&*self`.
+            #[inline]
+            #[must_use]
+            pub fn as_slice(&self) -> &$slice<S> {
+                self.as_ref()
+            }
         }
 
         impl<S: crate::spec::Spec> core::fmt::Debug for $ty<S> {
