@@ -10,6 +10,8 @@ use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::task::Error as TaskError;
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};
@@ -196,13 +198,11 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// # #[cfg(feature = "alloc")] {
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
@@ -216,7 +216,7 @@ impl<S: Spec> RiStr<S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[inline]
-    pub fn normalize(&self) -> Result<RiString<S>, Error> {
+    pub fn normalize(&self) -> Result<RiString<S>, TaskError<Error>> {
         normalize::create_task(self).allocate_and_write()
     }
 }

@@ -84,12 +84,12 @@ use crate::buffer::{Buffer, ByteSliceBuf};
 use crate::components::RiReferenceComponents;
 use crate::parser::char;
 use crate::spec::Spec;
+use crate::task::Error as TaskError;
 use crate::types::RiStr;
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
 
-use self::error::ErrorRepr;
-pub use self::error::{Error, ErrorKind};
+pub use self::error::Error;
 pub(crate) use self::path::{Path, PathToNormalize};
 
 /// Creates a normalization task.
@@ -97,13 +97,11 @@ pub(crate) use self::path::{Path, PathToNormalize};
 /// # Examples
 ///
 /// ```
-/// # #[derive(Debug)] enum Error {
-/// #     Validate(iri_string::validate::Error),
-/// #     Normalize(iri_string::normalize::Error) }
+/// # #[derive(Debug)] struct Error;
 /// # impl From<iri_string::validate::Error> for Error {
-/// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-/// # impl From<iri_string::normalize::Error> for Error {
-/// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// # #[cfg(feature = "alloc")] {
 /// use iri_string::normalize::create_task;
 /// use iri_string::types::IriStr;
@@ -172,9 +170,9 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     }
 
     /// Resolves the IRI, and writes it to the buffer.
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], Error>
+    fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], TaskError<Error>>
     where
-        ErrorRepr: From<B::ExtendError>,
+        TaskError<Error>: From<B::ExtendError>,
     {
         self.common.write_to_buf(buf).map_err(Into::into)
     }
@@ -194,13 +192,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
@@ -215,7 +211,7 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn allocate_and_write(&self) -> Result<RiString<S>, Error> {
+    pub fn allocate_and_write(&self) -> Result<RiString<S>, TaskError<Error>> {
         let mut s = String::new();
         self.write_to_buf(&mut s)?;
         Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
@@ -239,13 +235,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
@@ -268,14 +262,13 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// [`estimate_max_buf_size_for_resolution`] method.
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
     /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
-    /// use iri_string::normalize::{ErrorKind, NormalizationTask, create_task};
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
+    /// use iri_string::normalize::{NormalizationTask, create_task};
+    /// use iri_string::task::Error as TaskError;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
@@ -286,9 +279,8 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// // to store the result.
     /// let mut buf = [0_u8; EXPECTED.len()];
     /// let resolved = task.write_to_byte_slice(&mut buf[..]);
-    /// assert_eq!(
-    ///     resolved.map_err(|e| e.kind()),
-    ///     Err(ErrorKind::OutOfMemory),
+    /// assert!(
+    ///     matches!(resolved, Err(TaskError::Buffer(_))),
     ///     "failed due to not enough buffer size"
     /// );
     /// // You can retry writing if you have larger buffer,
@@ -297,7 +289,10 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// ```
     ///
     /// [`estimate_max_buf_size_for_resolution`]: `Self::estimate_max_buf_size_for_resolution`
-    pub fn write_to_byte_slice<'b>(&self, buf: &'b mut [u8]) -> Result<&'b RiStr<S>, Error> {
+    pub fn write_to_byte_slice<'b>(
+        &self,
+        buf: &'b mut [u8],
+    ) -> Result<&'b RiStr<S>, TaskError<Error>> {
         let buf = ByteSliceBuf::new(buf);
         let s = self.write_to_buf(buf)?;
         // Convert the type.
@@ -328,13 +323,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// # #[cfg(feature = "alloc")] {
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::{IriStr, IriString};
@@ -373,7 +366,7 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn write_to_iri_string(&self, dest: RiString<S>) -> Result<RiString<S>, Error> {
+    pub fn write_to_iri_string(&self, dest: RiString<S>) -> Result<RiString<S>, TaskError<Error>> {
         let mut buf: String = dest.into();
         buf.clear();
         self.write_to_buf(&mut buf)?;
@@ -417,13 +410,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// not long enough.
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
     /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
@@ -462,7 +453,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
-        self.try_append_to_std_string(buf)
+        match self.try_append_to_std_string(buf) {
+            Ok(v) => Ok(v),
+            Err(TaskError::Buffer(e)) => panic!("buffer error: {}", e),
+            Err(TaskError::Process(e)) => Err(e),
+        }
     }
 
     /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
@@ -499,7 +494,10 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn try_append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
+    pub fn try_append_to_std_string<'b>(
+        &self,
+        buf: &'b mut String,
+    ) -> Result<&'b RiStr<S>, TaskError<Error>> {
         let s = self.write_to_buf(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
@@ -519,13 +517,11 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
@@ -586,9 +582,9 @@ impl NormalizationTaskCommon<'_> {
     // [RFC 3986 section 5.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.3
     // [RFC 3986 section 6.2]: https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2
     // [RFC 3987 section 5.3.2]: https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, mut buf: B) -> Result<&'b [u8], ErrorRepr>
+    fn write_to_buf<'b, B: Buffer<'b>>(&self, mut buf: B) -> Result<&'b [u8], TaskError<Error>>
     where
-        ErrorRepr: From<B::ExtendError>,
+        TaskError<Error>: From<B::ExtendError>,
     {
         let buf_offset = buf.as_bytes().len();
         // Write the scheme.
@@ -636,7 +632,7 @@ impl NormalizationTaskCommon<'_> {
 
         // If authority is absent, the path should never start with `//`.
         if self.authority.is_none() && buf.as_bytes()[path_start_pos..].starts_with(b"//") {
-            return Err(ErrorRepr::Unresolvable);
+            return Err(TaskError::Process(Error::new()));
         }
 
         // Write the query if available.

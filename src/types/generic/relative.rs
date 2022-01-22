@@ -10,6 +10,8 @@ use crate::raw;
 use crate::resolve::{resolve, resolve_normalize};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
+use crate::task::Error as TaskError;
+#[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiReferenceString, RiString};
 use crate::types::{RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
@@ -139,7 +141,10 @@ impl<S: Spec> RiRelativeStr<S> {
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+    pub fn resolve_against(
+        &self,
+        base: &RiAbsoluteStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
         resolve(self, base)
     }
 
@@ -165,7 +170,7 @@ impl<S: Spec> RiRelativeStr<S> {
     pub fn resolve_normalize_against(
         &self,
         base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, Error> {
+    ) -> Result<RiString<S>, TaskError<Error>> {
         resolve_normalize(self, base)
     }
 }
