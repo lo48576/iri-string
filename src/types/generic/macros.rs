@@ -545,6 +545,15 @@ macro_rules! define_custom_string_owned {
             pub fn capacity(&self) -> usize {
                 self.inner.capacity()
             }
+
+            /// Returns the borrowed IRI string slice.
+            ///
+            /// This is equivalent to `&*self`.
+            #[inline]
+            #[must_use]
+            pub fn as_slice(&self) -> &$slice<S> {
+                self.as_ref()
+            }
         }
 
         impl<S: crate::spec::Spec> core::fmt::Debug for $ty<S> {
@@ -792,7 +801,7 @@ macro_rules! define_custom_string_owned {
     };
 }
 
-/// Implements infallible conversions and other useful traits between two IRI types.
+/// Implements trivial conversions and other useful traits between two IRI types.
 ///
 /// Implemented traits:
 ///
@@ -836,7 +845,7 @@ macro_rules! define_custom_string_owned {
 ///     + `$from_owned` and `$to_owned`
 ///         - `PartialEq<$from_owned> for $to_owned`
 ///         - `PartialEq<$to_owned> for $from_owned`
-macro_rules! impl_infallible_conv_between_iri {
+macro_rules! impl_trivial_conv_between_iri {
     (
         from_slice: $from_slice:ident,
         from_owned: $from_owned:ident,

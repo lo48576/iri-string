@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Add `as_slice` method to owned string types.
+
+### Added
+* Add `as_slice` method to owned string types.
+
 ## [0.5.0-beta.3]
 
 * Add `normalize` module, and unify it with IRI resolution.

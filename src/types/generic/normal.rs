@@ -490,7 +490,7 @@ impl<S: Spec> RiString<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiStr,
     from_owned: RiString,
     to_slice: RiReferenceStr,

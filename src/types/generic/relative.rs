@@ -347,7 +347,7 @@ impl<S: Spec> RiRelativeString<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiRelativeStr,
     from_owned: RiRelativeString,
     to_slice: RiReferenceStr,
