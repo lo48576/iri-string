@@ -604,7 +604,7 @@ impl NormalizationTaskCommon<'_> {
 struct NormalizeCaseAndPercentEncodings<'a> {
     /// The rest of the input.
     rest: &'a str,
-    /// Number of characters that consists of a percent encoding.
+    /// Number of the rest ASCII characters in a percent-encoded character.
     rest_pct_encoded: u8,
     /// Whether to normalize the case.
     normalize_case: bool,
