@@ -167,7 +167,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// * the IRI referernce is unresolvable against the base.
     ///
     /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve`][`crate::resolve`] module.
+    /// for [`normalize`][`crate::normalize`] module.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
@@ -198,7 +198,7 @@ impl<S: Spec> RiReferenceStr<S> {
     /// * the IRI referernce is unresolvable against the base.
     ///
     /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve`][`crate::resolve`] module.
+    /// for [`normalize`][`crate::normalize`] module.
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]

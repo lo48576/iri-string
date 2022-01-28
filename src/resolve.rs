@@ -27,7 +27,8 @@
 //! would use an IRI with authority part, such as `http://`.
 //!
 //! If you are handling `scheme://`-style URIs and IRIs, don't worry about the
-//! failure. Currently no cases are known to fail with base IRIs with authorities.
+//! failure. Currently no cases are known to fail when at least one of the base
+//! IRI or the relative IRI contains authorities.
 //!
 //! ## Examples
 //!

@@ -107,12 +107,12 @@
 //!
 //! ## IRI resolution can fail
 //!
-//! For some inputs, resulting string of IRI resolution can be syntactically
-//! correct but semantically wrong. In such cases, the resolver provided by this
-//! crate does not silently "fix" the IRI by non-standard processing, but just
+//! For some inputs, resulting string of IRI normalization and resolution can be syntactically
+//! correct but semantically wrong. In such cases, the normalizer and resolver provided by this
+//! crate do not silently "fix" the IRI by non-standard processing, but just
 //! fail by returning `Err(_)`.
 //!
-//! For details, see the documentation of [`resolve`] module.
+//! For details, see the documentation of [`normalize`] module.
 //!
 //! [RFC 3986]: https://tools.ietf.org/html/rfc3986
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
