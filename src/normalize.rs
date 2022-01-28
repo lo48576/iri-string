@@ -1,4 +1,76 @@
 //! Normalization.
+//!
+//! # IRI normalization (and resolution) can fail
+//!
+//! Though this is not explicitly stated in RFC 3986, IRI normalization can fail.
+//! For example, `foo:.///bar`, `foo:./..//bar`, and `foo:/..//bar` are all
+//! normalized to `foo://bar` as a string. However, IRI without authority (note
+//! that this is different from "with empty authority") cannot have a path
+//! starting with `//`, since it is ambiguous and can be interpreted as an IRI
+//! with authority. So, `foo://bar` is decomposed as scheme `foo`, authority
+//! `bar`, and empty path. The expected result is the combination of scheme
+//! `foo`, no authority, and path `//bar` (though this is not possible to
+//! serialize), so the algorithm fails as it cannot return the intended result.
+//!
+//! IRI resolution can also fail since it (conditionally) invokes normalization
+//! during the resolution process. For example, resolving a reference `.///bar`
+//! or `/..//bar` against the base `foo:` fail.
+//!
+//! Thus, IRI resolution can fail for some abnormal cases.
+//!
+//! Note that this kind of failure can happen only when the base IRI has no
+//! authority and empty path. This would be rare in the wild, since many people
+//! would use an IRI with authority part, such as `http://`.
+//!
+//! If you are handling `scheme://`-style URIs and IRIs, don't worry about the
+//! failure. Currently no cases are known to fail when at least one of the base
+//! IRI or the relative IRI contains authorities.
+//!
+//! ## Examples
+//!
+//! ### Normalization failure
+//!
+//! ```
+//!
+//! # #[cfg(feature = "alloc")] {
+//! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+//! use iri_string::normalize::ErrorKind;
+//!
+//! let base = IriAbsoluteStr::new("foo:.///bar")?;
+//! let err = base.normalize()
+//!     .expect_err("this resolution should fail");
+//! assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//! # }
+//! # Ok::<_, iri_string::validate::Error>(())
+//! ```
+//!
+//! ### Resolution failure
+//!
+//! ```
+//! # #[cfg(feature = "alloc")] {
+//! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+//! use iri_string::normalize::ErrorKind;
+//!
+//! let base = IriAbsoluteStr::new("scheme:")?;
+//! {
+//!     let reference = IriReferenceStr::new(".///bar")?;
+//!     let err = reference.resolve_against(base)
+//!         .expect_err("this resolution should fail");
+//!     assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//! }
+//!
+//! {
+//!     let reference2 = IriReferenceStr::new("/..//bar")?;
+//!     // Resulting string will be `scheme://bar`, but `bar` should be a path
+//!     // segment, not a host. So, the semantically correct target IRI cannot
+//!     // be represented.
+//!     let err2 = reference2.resolve_against(base)
+//!         .expect_err("this resolution should fail");
+//!     assert_eq!(err2.kind(), ErrorKind::Unresolvable);
+//! }
+//! # }
+//! # Ok::<_, iri_string::validate::Error>(())
+//! ```
 
 mod error;
 mod path;
@@ -116,8 +188,8 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// * buffer was not long enough, or
     /// * the resulting IRI referernce is unresolvable.
     ///
-    /// To see examples of unresolvable IRIs, visit the module documentation
-    /// for [`resolve`][`crate::resolve`].
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`crate::normalize`].
     ///
     /// # Examples
     ///
@@ -161,8 +233,8 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// * buffer was not long enough, or
     /// * the resulting IRI referernce is unresolvable.
     ///
-    /// To see examples of unresolvable IRIs, visit the module documentation
-    /// for [`resolve`][`crate::resolve`].
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`crate::normalize`].
     ///
     /// # Examples
     ///
@@ -250,8 +322,8 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// * buffer was not long enough, or
     /// * the resulting IRI referernce is unresolvable.
     ///
-    /// To see examples of unresolvable IRIs, visit the module documentation
-    /// for [`resolve`][`crate::resolve`].
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`crate::normalize`].
     ///
     /// # Examples
     ///
