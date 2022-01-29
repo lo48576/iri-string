@@ -3,15 +3,38 @@
 ## [Unreleased]
 
 * Add `as_slice` method to owned string types.
+* Refine task API
+    + Move some methods of `normalize::NormalizationTask` into newly added
+      `task::ProcessAndWrite` trait.
+        - `allocate_and_write`, `write_to_byte_slice`, `append_to_std_string`,
+          and `try_append_to_std_string` is moved.
+    + Change type parameter of `NormalizationTask` from a spec into a string slice type.
+    + Change error type for `NormalizationTask`.
+    + Remove `normalize::create_task()` function.
 
 ### Added
 * Add `as_slice` method to owned string types.
+
+### Changed (breaking)
+* Move some methods of `normalize::NormalizationTask` into newly added
+  `task::ProcessAndWrite` trait.
+    + `allocate_and_write`, `write_to_byte_slice`, `append_to_std_string`,
+      and `try_append_to_std_string` is moved.
+* Change type parameter of `NormalizationTask` from a spec into a string slice type.
+    + Now `NormalizationTask<S>` should be changed to `NormalizationTask<RiStr<S>>`
+      or `NormalizationTask<RiAbsoluteStr<S>>`.
+    + This enables the task to return more appropriate type. For example,
+      returning `&RiAbsoluteStr<S>` rather than `&RiStr<S>` when the input IRI
+      type is `RiAbsoluteStr<S>`.
+* Change error type for `NormalizationTask`.
+    + Now buffer error and processing error is split to different types.
+* Remove `normalize::create_task()` function.
 
 ## [0.5.0-beta.3]
 
 * Add `normalize` module, and unify it with IRI resolution.
     + Move `resolve::{Error, ErrorKind}` to `normalize` module.
-    + Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+    + Move and rename `resolve::ResolutionTask` to `normalize::NormalizationTask`.
     + Add `normalize::create_task` function.
     + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
 * Add normalizing variations for IRI resolution.
@@ -26,7 +49,7 @@
 
 ### Changed (breaking)
 * Move `resolve::{Error, ErrorKind}` to `normalize` module.
-* Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+* Move and rename `resolve::ResolutionTask` to `normalize::NormalizationTask`.
     + Now `resolve::FixedBaseResolver::create_task()` returns `NormalizationTask`.
 
 ## [0.5.0-beta.2]
