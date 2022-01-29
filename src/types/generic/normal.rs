@@ -11,7 +11,7 @@ use crate::parser::trusted as trusted_parser;
 use crate::raw;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
-use crate::task::Error as TaskError;
+use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};

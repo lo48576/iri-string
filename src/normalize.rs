@@ -33,13 +33,12 @@
 //! ```
 //!
 //! # #[cfg(feature = "alloc")] {
+//! use iri_string::normalize::Error;
+//! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
-//! use iri_string::normalize::ErrorKind;
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
-//! let err = base.normalize()
-//!     .expect_err("this resolution should fail");
-//! assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//! assert!(base.normalize().is_err(), "this resolution should fail");
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
@@ -48,15 +47,15 @@
 //!
 //! ```
 //! # #[cfg(feature = "alloc")] {
+//! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
-//! use iri_string::normalize::ErrorKind;
 //!
 //! let base = IriAbsoluteStr::new("scheme:")?;
 //! {
 //!     let reference = IriReferenceStr::new(".///bar")?;
 //!     let err = reference.resolve_against(base)
 //!         .expect_err("this resolution should fail");
-//!     assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//!     assert!(matches!(err, TaskError::Process(_)));
 //! }
 //!
 //! {
@@ -66,7 +65,7 @@
 //!     // be represented.
 //!     let err2 = reference2.resolve_against(base)
 //!         .expect_err("this resolution should fail");
-//!     assert_eq!(err2.kind(), ErrorKind::Unresolvable);
+//!     assert!(matches!(err2, TaskError::Process(_)));
 //! }
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
@@ -84,7 +83,7 @@ use crate::buffer::{Buffer, ByteSliceBuf};
 use crate::components::RiReferenceComponents;
 use crate::parser::char;
 use crate::spec::Spec;
-use crate::task::Error as TaskError;
+use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::RiStr;
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
@@ -104,6 +103,7 @@ pub(crate) use self::path::{Path, PathToNormalize};
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// # #[cfg(feature = "alloc")] {
 /// use iri_string::normalize::create_task;
+/// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::IriStr;
 ///
 /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz")?;
@@ -128,6 +128,10 @@ pub(crate) enum NormalizationType {
 }
 
 /// IRI normalization/resolution task.
+///
+/// Most of the main functionalities are provided from [`ProcessAndWrite`] trait,
+/// so you may need to write `use iri_string::task::ProcessAndWrite` where you
+/// use this task type.
 #[derive(Debug, Clone, Copy)]
 pub struct NormalizationTask<'a, S> {
     /// Common data.
@@ -175,131 +179,6 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
         TaskError<Error>: From<B::ExtendError>,
     {
         self.common.write_to_buf(buf).map_err(Into::into)
-    }
-
-    /// Normalizes the IRI, and writes it to the newly allocated buffer.
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * buffer was not long enough, or
-    /// * the resulting IRI referernce is unresolvable.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`crate::normalize`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::create_task;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = create_task(iri.as_ref());
-    ///
-    /// assert_eq!(
-    ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn allocate_and_write(&self) -> Result<RiString<S>, TaskError<Error>> {
-        let mut s = String::new();
-        self.write_to_buf(&mut s)?;
-        Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
-    }
-
-    /// Normalizes the IRI, and writes it to the given byte slice.
-    ///
-    /// To estimate how much memory is required (at most), use
-    /// [`estimate_max_buf_size_for_resolution`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * buffer was not long enough, or
-    /// * the resulting IRI referernce is unresolvable.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`crate::normalize`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::create_task;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = create_task(iri);
-    ///
-    /// // Long enough!
-    /// let mut buf = [0_u8; 128];
-    /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
-    ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// This returns error when the buffer is not long enough for processing.
-    ///
-    /// Note that it would be still not enough even if the buffer is long enough
-    /// to store the result. During processing, the resolver might use more
-    /// memory than the result. You can get maximum required buffer size by
-    /// [`estimate_max_buf_size_for_resolution`] method.
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
-    /// use iri_string::normalize::{NormalizationTask, create_task};
-    /// use iri_string::task::Error as TaskError;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
-    /// const EXPECTED: &str = "http://example.com/f";
-    /// let task = create_task(iri);
-    ///
-    /// // Buffer is too short for processing, even though it is long enough
-    /// // to store the result.
-    /// let mut buf = [0_u8; EXPECTED.len()];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..]);
-    /// assert!(
-    ///     matches!(resolved, Err(TaskError::Buffer(_))),
-    ///     "failed due to not enough buffer size"
-    /// );
-    /// // You can retry writing if you have larger buffer,
-    /// // since `task` was not consumed.
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// [`estimate_max_buf_size_for_resolution`]: `Self::estimate_max_buf_size_for_resolution`
-    pub fn write_to_byte_slice<'b>(
-        &self,
-        buf: &'b mut [u8],
-    ) -> Result<&'b RiStr<S>, TaskError<Error>> {
-        let buf = ByteSliceBuf::new(buf);
-        let s = self.write_to_buf(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
     }
 
     /// Resolves the IRI, and writes it to the buffer inside the provided [`RiString`].
@@ -373,139 +252,6 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
         Ok(RiString::<S>::try_from(buf).expect("[consistency] the resolved IRI must be valid"))
     }
 
-    /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::create_task;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = create_task(iri);
-    ///
-    /// let mut buf = String::from("Result: ");
-    ///
-    /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
-    /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    /// }
-    /// # }
-    /// # Ok::<_, iri_string::validate::Error>(())
-    /// ```
-    ///
-    /// The buffer will be automatically expanded or reallocated when it was
-    /// not long enough.
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
-    /// use iri_string::normalize::create_task;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = create_task(iri);
-    ///
-    /// // Long buffer is reused.
-    /// {
-    ///     let mut buf_long = String::with_capacity(128);
-    ///     let buf_long_capacity = buf_long.capacity();
-    ///
-    ///     let resolved_long = task.append_to_std_string(&mut buf_long)?;
-    ///     assert_eq!(buf_long, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(
-    ///         buf_long.capacity(),
-    ///         buf_long_capacity,
-    ///         "the internal buffer was reused"
-    ///     );
-    /// }
-    ///
-    /// // Short buffer will be extended or reallocated.
-    /// {
-    ///     let mut buf_short = String::new();
-    ///     let buf_short_capacity = buf_short.capacity();
-    ///     assert_eq!(buf_short_capacity, 0, "String::new() does not heap-allocate");
-    ///
-    ///     let resolved_short = task.append_to_std_string(&mut buf_short)?;
-    ///     assert_eq!(resolved_short, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert!(
-    ///         buf_short.capacity() >= buf_short_capacity,
-    ///         "the internal buffer would have been expanded"
-    ///     );
-    /// }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn append_to_std_string<'b>(&self, buf: &'b mut String) -> Result<&'b RiStr<S>, Error> {
-        match self.try_append_to_std_string(buf) {
-            Ok(v) => Ok(v),
-            Err(TaskError::Buffer(e)) => panic!("buffer error: {}", e),
-            Err(TaskError::Process(e)) => Err(e),
-        }
-    }
-
-    /// Resolves the IRI, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::create_task;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
-    /// let task = create_task(iri);
-    ///
-    /// let mut buf = String::from("Result: ");
-    ///
-    /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
-    /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    /// }
-    /// # }
-    /// # Ok::<_, iri_string::validate::Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn try_append_to_std_string<'b>(
-        &self,
-        buf: &'b mut String,
-    ) -> Result<&'b RiStr<S>, TaskError<Error>> {
-        let s = self.write_to_buf(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
-    }
-
     /// Returns the estimated maximum size required for IRI normalization/resolution.
     ///
     /// With a buffer of the returned size, IRI normalization/resolution would
@@ -523,6 +269,7 @@ impl<'a, S: Spec> NormalizationTask<'a, S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::normalize::create_task;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
@@ -554,6 +301,206 @@ impl<'a, S: Spec> From<NormalizationTaskCommon<'a>> for NormalizationTask<'a, S>
             common,
             _spec: PhantomData,
         }
+    }
+}
+
+impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, S> {
+    type OutputBorrowed = RiStr<S>;
+    #[cfg(feature = "alloc")]
+    type OutputOwned = RiString<S>;
+    type ProcessError = Error;
+
+    /// Processes the data, and writes it to the newly allocated buffer.
+    ///
+    /// # Failures
+    ///
+    /// This fails if:
+    ///
+    /// * failed to allocate memory, or
+    /// * failed to process data.
+    ///
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`self`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// use iri_string::normalize::create_task;
+    /// use iri_string::task::ProcessAndWrite;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let task = create_task(iri.as_ref());
+    ///
+    /// assert_eq!(
+    ///     task.allocate_and_write()?,
+    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
+    /// );
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
+        let mut s = String::new();
+        self.write_to_buf(&mut s)?;
+        Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
+    }
+
+    /// Processes the data, and writes it to the given byte slice.
+    ///
+    /// # Failures
+    ///
+    /// This fails if:
+    ///
+    /// * buffer is not large enough, or
+    /// * failed to process data.
+    ///
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`self`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// use iri_string::normalize::create_task;
+    /// use iri_string::task::ProcessAndWrite;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let task = create_task(iri);
+    ///
+    /// // Long enough!
+    /// let mut buf = [0_u8; 128];
+    /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
+    ///
+    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// This returns error when the buffer is not long enough for processing.
+    ///
+    /// Note that it would be still not enough even if the buffer is long enough
+    /// to store the result. During processing, the resolver might use more
+    /// memory than the result. You can get maximum required buffer size by
+    /// [`estimate_max_buf_size_for_resolution`] method.
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl From<iri_string::normalize::Error> for Error {
+    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
+    /// use iri_string::normalize::{NormalizationTask, create_task};
+    /// use iri_string::task::{Error as TaskError, ProcessAndWrite};
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
+    /// const EXPECTED: &str = "http://example.com/f";
+    /// let task = create_task(iri);
+    ///
+    /// // Buffer is too short for processing, even though it is long enough
+    /// // to store the result.
+    /// let mut buf = [0_u8; EXPECTED.len()];
+    /// let resolved = task.write_to_byte_slice(&mut buf[..]);
+    /// assert!(
+    ///     matches!(resolved, Err(TaskError::Buffer(_))),
+    ///     "failed due to not enough buffer size"
+    /// );
+    /// // You can retry writing if you have larger buffer,
+    /// // since `task` was not consumed.
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [`estimate_max_buf_size_for_resolution`]: `NormalizationTask::estimate_max_buf_size_for_resolution`
+    fn write_to_byte_slice(
+        self,
+        buf: &mut [u8],
+    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
+        let buf = ByteSliceBuf::new(buf);
+        let s = self.write_to_buf(buf)?;
+        // Convert the type.
+        // This should never fail (unless the crate has bugs), but do the
+        // validation here for extra safety.
+        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
+        Ok(s)
+    }
+
+    /// Processes the data, and appends it to the buffer inside the provided [`String`].
+    ///
+    /// # Failures
+    ///
+    /// This fails if failed to process data.
+    ///
+    /// # Panics
+    ///
+    /// This panics if failed to allocate memory.
+    /// To avoid panic on allocation failure, use [`try_append_to_std_string`].
+    ///
+    /// [`try_append_to_std_string`]: `ProcessAndWrite::try_append_to_std_string`
+    #[cfg(feature = "alloc")]
+    fn append_to_std_string(
+        self,
+        buf: &mut String,
+    ) -> Result<&Self::OutputBorrowed, Self::ProcessError> {
+        match self.try_append_to_std_string(buf) {
+            Ok(v) => Ok(v),
+            Err(TaskError::Buffer(e)) => panic!("buffer error: {}", e),
+            Err(TaskError::Process(e)) => Err(e),
+        }
+    }
+
+    /// Processes the data, and appends it to the buffer inside the provided [`String`].
+    ///
+    /// # Failures
+    ///
+    /// This fails if:
+    ///
+    /// * failed to allocate memory, or
+    /// * failed to process data.
+    ///
+    /// To see examples of unresolvable IRIs, visit the [module
+    /// documentation][`self`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::normalize::create_task;
+    /// use iri_string::task::ProcessAndWrite;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let task = create_task(iri);
+    ///
+    /// let mut buf = String::from("Result: ");
+    ///
+    /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
+    /// if let Ok(s) = result {
+    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// }
+    /// # }
+    /// # Ok::<_, iri_string::validate::Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    fn try_append_to_std_string(
+        self,
+        buf: &mut String,
+    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
+        let s = self.write_to_buf(buf)?;
+        // Convert the type.
+        // This should never fail (unless the crate has bugs), but do the
+        // validation here for extra safety.
+        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
+        Ok(s)
     }
 }
 

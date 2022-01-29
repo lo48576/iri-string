@@ -69,7 +69,7 @@ use crate::normalize::{
 };
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
-use crate::task::Error as TaskError;
+use crate::task::{Error as TaskError, ProcessAndWrite};
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
 use crate::types::{RiAbsoluteStr, RiReferenceStr};
@@ -103,6 +103,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr};
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// use iri_string::resolve::{resolve, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
 /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
@@ -165,6 +166,7 @@ pub fn resolve<S: Spec>(
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// use iri_string::resolve::{resolve_normalize, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
 /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
@@ -299,6 +301,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -353,6 +356,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -405,6 +409,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -530,6 +535,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {

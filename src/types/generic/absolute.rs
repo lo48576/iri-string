@@ -8,6 +8,8 @@ use crate::components::AuthorityComponents;
 use crate::normalize::{self, Error};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::task::ProcessAndWrite;
 use crate::types::{RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiReferenceString, RiString};
