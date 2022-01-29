@@ -1,5 +1,73 @@
 # Change Log
 
+## [0.5.0 (under development)]
+
+This entry describes the changes since the last stable release (v0.4.1).
+v0.5.0 is under active development and not yet released.
+
+* Bump MSRV to 1.58.0.
+* Add more conversions between IRI string types.
+    * Implement `TryFrom<&[u8]>`) for IRI string types.
+    * Add `as_slice` method to the owned string types.
+* Add `capacity()` method to the owned string types.
+* Add components getters for borrowed string types.
+* Add IRI normalization API and related types.
+* Add normalizing variations for IRI resolution.
+* Support nostd for IRI resolution.
+* Change IRI resolution API incompatibly.
+    + Change number and types of parameters.
+    + Change return types.
+* Let IRI resolution recognize percent-encoded period during normalization.
+* Drop internal dependency to `nom` crate.
+* Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
+
+### Added
+* Add more conversions between IRI string types.
+    + Implement `TryFrom<&[u8]>`) for IRI string types.
+    + Add `as_slice` method to the owned string types.
+* Add `capacity()` method to the owned string types.
+* Add components getters for borrowed string types.
+    + Add getters for major components of IRIs/URIs:
+      `scheme`, `authority`, `path`, and `query`.
+    + Add types and getters for subcomponents of `authority`:
+      `userinfo`, `host`, and `port`.
+        - `components::AuthorityComponents` type and `authority_components` method.
+* Add IRI normalization API and related types.
+    + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
+    + Add `normalize::NormalizationTask`.
+* Add normalizing variations for IRI resolution.
+    + `resolve_normalize` for `resolve`.
+    + `resolve_normalize_against` for `resolve_against`.
+* Support nostd for IRI resolution.
+    + Add `resolve::FixedBaseResolver` to get `normalize::NormalizationTask`.
+    + Users can write the resolution/normalization result to user-provided buffer by `NormalizationTask`.
+
+### Changed (breaking)
+* Bump MSRV to 1.58.0.
+    + Rust 1.58.0 is released at 2022-01-13.
+* Change IRI resolution API incompatibly.
+    + Remove `is_strict: bool` parameter from `resolve::resolve()`.
+    + Make IRI resolution fallible.
+        - Now IRI resolution returns `Result`.
+        - For details about possible resolution/normalization failure, see the
+          documentation for `normalize` module and the issue [How `/..//bar`
+          should be resolved aganst `scheme:`?
+          (#8)](https://github.com/lo48576/iri-string/issues/8).
+
+### Changed (non-breaking)
+* Let IRI resolution recognize percent-encoded period during normalization.
+    + For example, `/%2e%2e/` in the path are now recognized as `/../`, and
+      handled specially as "parent directory".
+* Drop internal dependency to `nom` crate.
+    + Parsers are rewritten manually, and are now much faster than before.
+* Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
+    + Previously, compilation error are intentionally caused when both `serde`
+      and `{alloc,std}` are enabled but corresponding `serde-{alloc,std}` is not.
+    + Note that you still need to enable `serde-alloc` or `serde-std` to use
+      serde support for owned string types.
+        - This change only intends to support the cases when flags are
+          independently enabled from different indirect dependencies.
+
 ## [Unreleased]
 
 * Add `as_slice` method to owned string types.
@@ -13,7 +81,7 @@
     + Remove `normalize::create_task()` function.
 
 ### Added
-* Add `as_slice` method to owned string types.
+* Add `as_slice` method to the owned string types.
 
 ### Changed (breaking)
 * Move some methods of `normalize::NormalizationTask` into newly added
@@ -331,6 +399,7 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
+[0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
 [Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.3...develop>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
