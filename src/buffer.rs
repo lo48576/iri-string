@@ -1,33 +1,14 @@
 //! Buffers.
 
+mod error;
+
 use core::cmp::Ordering;
-use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
-/// An error indicating that the buffer is too small.
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct BufferTooSmallError(());
-
-impl BufferTooSmallError {
-    /// Creates a new error.
-    #[inline]
-    #[must_use]
-    fn new() -> Self {
-        Self(())
-    }
-}
-
-impl fmt::Display for BufferTooSmallError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("destination buffer does not have enough capacity")
-    }
-}
-
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for BufferTooSmallError {}
+pub(crate) use self::error::BufferTooSmallError;
+pub use self::error::Error;
 
 /// A trait for possibly extensible buffer types.
 pub(crate) trait Buffer<'a> {

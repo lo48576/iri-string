@@ -34,15 +34,15 @@
 //!
 //! ```
 //! # #[cfg(feature = "alloc")] {
+//! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
-//! use iri_string::normalize::ErrorKind;
 //!
 //! let base = IriAbsoluteStr::new("scheme:")?;
 //! {
 //!     let reference = IriReferenceStr::new(".///bar")?;
 //!     let err = reference.resolve_against(base)
 //!         .expect_err("this resolution should fail");
-//!     assert_eq!(err.kind(), ErrorKind::Unresolvable);
+//!     assert!(matches!(err, TaskError::Process(_)), "normalization error");
 //! }
 //!
 //! {
@@ -52,7 +52,7 @@
 //!     // be represented.
 //!     let err2 = reference2.resolve_against(base)
 //!         .expect_err("this resolution should fail");
-//!     assert_eq!(err2.kind(), ErrorKind::Unresolvable);
+//!     assert!(matches!(err2, TaskError::Process(_)), "normalization error");
 //! }
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
@@ -69,8 +69,10 @@ use crate::normalize::{
 };
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
+use crate::task::{Error as TaskError, ProcessAndWrite};
+#[cfg(feature = "alloc")]
 use crate::types::RiString;
-use crate::types::{RiAbsoluteStr, RiReferenceStr};
+use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 
 /// Resolves the IRI reference.
 ///
@@ -95,14 +97,13 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr};
 /// # Examples
 ///
 /// ```
-/// # #[derive(Debug)] enum Error {
-/// #     Validate(iri_string::validate::Error),
-/// #     Normalize(iri_string::normalize::Error) }
+/// # #[derive(Debug)] struct Error;
 /// # impl From<iri_string::validate::Error> for Error {
-/// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-/// # impl From<iri_string::normalize::Error> for Error {
-/// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// use iri_string::resolve::{resolve, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
 /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
@@ -131,7 +132,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr};
 pub fn resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
-) -> Result<RiString<S>, Error> {
+) -> Result<RiString<S>, TaskError<Error>> {
     FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
 }
 
@@ -159,14 +160,13 @@ pub fn resolve<S: Spec>(
 /// # Examples
 ///
 /// ```
-/// # #[derive(Debug)] enum Error {
-/// #     Validate(iri_string::validate::Error),
-/// #     Normalize(iri_string::normalize::Error) }
+/// # #[derive(Debug)] struct Error;
 /// # impl From<iri_string::validate::Error> for Error {
-/// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-/// # impl From<iri_string::normalize::Error> for Error {
-/// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
 /// use iri_string::resolve::{resolve_normalize, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
 /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
@@ -199,7 +199,7 @@ pub fn resolve<S: Spec>(
 pub fn resolve_normalize<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
-) -> Result<RiString<S>, Error> {
+) -> Result<RiString<S>, TaskError<Error>> {
     FixedBaseResolver::new(base.as_ref()).resolve_normalize(reference.as_ref())
 }
 
@@ -222,13 +222,11 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
@@ -275,13 +273,11 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
@@ -299,14 +295,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// percent-encoded.
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -330,7 +325,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// [`create_normalizing_task`]: `Self::create_normalizing_task`
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
+    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, TaskError<Error>> {
         self.create_task(reference).allocate_and_write()
     }
 
@@ -355,14 +350,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -386,7 +380,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// [`unreserved` characters]: https://datatracker.ietf.org/doc/html/rfc3986#section-2.3
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn resolve_normalize(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, Error> {
+    pub fn resolve_normalize(
+        &self,
+        reference: &RiReferenceStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
         self.create_normalizing_task(reference).allocate_and_write()
     }
 
@@ -406,14 +403,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -436,7 +432,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     ///
     /// [`create_task`]: `Self::create_task`
     #[must_use]
-    pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> NormalizationTask<'a, S> {
+    pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> NormalizationTask<'a, RiStr<S>> {
         let b = self.base_components;
         let r = RiReferenceComponents::from(reference);
 
@@ -533,14 +529,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
@@ -562,7 +557,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     pub fn create_normalizing_task(
         &self,
         reference: &'a RiReferenceStr<S>,
-    ) -> NormalizationTask<'a, S> {
+    ) -> NormalizationTask<'a, RiStr<S>> {
         let mut task = self.create_task(reference);
         task.enable_normalization();
         task

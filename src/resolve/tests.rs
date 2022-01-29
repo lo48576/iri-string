@@ -8,6 +8,7 @@ mod refimpl;
 
 use super::*;
 
+use crate::task::ProcessAndWrite;
 use crate::types::{IriAbsoluteStr, IriReferenceStr};
 
 #[cfg(feature = "alloc")]

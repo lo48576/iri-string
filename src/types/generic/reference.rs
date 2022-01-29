@@ -15,6 +15,8 @@ use crate::raw;
 use crate::resolve::{resolve, resolve_normalize};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
+use crate::task::Error as TaskError;
+#[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
 use crate::types::{RiFragmentStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
@@ -176,7 +178,7 @@ impl<S: Spec> RiReferenceStr<S> {
     pub fn resolve_against<'a>(
         &'a self,
         base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<Cow<'a, RiStr<S>>, Error> {
+    ) -> Result<Cow<'a, RiStr<S>>, TaskError<Error>> {
         match self.to_iri() {
             Ok(iri) => Ok(Cow::Borrowed(iri)),
             Err(relative) => resolve(relative, base).map(Cow::Owned),
@@ -202,7 +204,10 @@ impl<S: Spec> RiReferenceStr<S> {
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
-    pub fn resolve_normalize_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+    pub fn resolve_normalize_against(
+        &self,
+        base: &RiAbsoluteStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
         resolve_normalize(self, base)
     }
 }
