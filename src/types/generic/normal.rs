@@ -5,7 +5,7 @@ use alloc::string::String;
 
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::{self, Error};
+use crate::normalize::{Error, NormalizationTask};
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
@@ -204,7 +204,6 @@ impl<S: Spec> RiStr<S> {
     /// # impl<T> From<iri_string::task::Error<T>> for Error {
     /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
@@ -217,7 +216,7 @@ impl<S: Spec> RiStr<S> {
     #[cfg(feature = "alloc")]
     #[inline]
     pub fn normalize(&self) -> Result<RiString<S>, TaskError<Error>> {
-        normalize::create_task(self).allocate_and_write()
+        NormalizationTask::from(self).allocate_and_write()
     }
 }
 

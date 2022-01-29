@@ -72,7 +72,7 @@ use crate::spec::Spec;
 use crate::task::{Error as TaskError, ProcessAndWrite};
 #[cfg(feature = "alloc")]
 use crate::types::RiString;
-use crate::types::{RiAbsoluteStr, RiReferenceStr};
+use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 
 /// Resolves the IRI reference.
 ///
@@ -432,7 +432,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     ///
     /// [`create_task`]: `Self::create_task`
     #[must_use]
-    pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> NormalizationTask<'a, S> {
+    pub fn create_task(&self, reference: &'a RiReferenceStr<S>) -> NormalizationTask<'a, RiStr<S>> {
         let b = self.base_components;
         let r = RiReferenceComponents::from(reference);
 
@@ -557,7 +557,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     pub fn create_normalizing_task(
         &self,
         reference: &'a RiReferenceStr<S>,
-    ) -> NormalizationTask<'a, S> {
+    ) -> NormalizationTask<'a, RiStr<S>> {
         let mut task = self.create_task(reference);
         task.enable_normalization();
         task
