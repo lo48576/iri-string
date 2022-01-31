@@ -1,12 +1,16 @@
 //! IRI-specific implementations.
 
 #[cfg(feature = "alloc")]
+use crate::convert::try_percent_encode_iri_inline;
+use crate::spec::IriSpec;
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr};
+#[cfg(feature = "alloc")]
 use crate::types::{
     RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
 };
-use crate::{
-    spec::IriSpec,
-    types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr},
+#[cfg(feature = "alloc")]
+use crate::types::{
+    UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
 };
 
 /// A borrowed string type for an absolute IRI.
@@ -48,3 +52,117 @@ pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriRelativeString = RiRelativeString<IriSpec>;
+
+/// Implements the conversion from an IRI into a URI.
+macro_rules! impl_encode_to_uri {
+    (
+        $ty_owned_iri:ident,
+        $ty_owned_uri:ident,
+        $ty_borrowed_iri:ident,
+        $example_iri:expr,
+        $example_uri:expr
+    ) => {
+        /// Conversion from an IRI into a URI.
+        #[cfg(feature = "alloc")]
+        impl $ty_owned_iri {
+            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
+            ///
+            /// After the encode, the IRI is also a valid URI.
+            ///
+            /// If you want a new URI string rather than modifying the IRI string,
+            /// use [`encode_into_uri`][`Self::encode_into_uri`] method.
+            ///
+            /// If you need more precise control over memory allocation and buffer
+            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use iri_string::validate::Error;
+            /// #[cfg(feature = "alloc")] {
+            #[doc = concat!("use iri_string::types::", stringify!($ty_owned_iri), ";")]
+            ///
+            #[doc = concat!("let mut iri = ", stringify!($ty_owned_iri), "::try_from(", stringify!($example_iri), ")?;")]
+            /// iri.encode_to_uri();
+            #[doc = concat!("assert_eq!(iri, ", stringify!($example_uri), ");")]
+            /// # }
+            /// # Ok::<_, Error>(())
+            /// ```
+            pub fn encode_to_uri(&mut self) {
+                try_percent_encode_iri_inline(self.as_inner_mut())
+                    .expect("failed to allocate memory");
+                debug_assert!(
+                    <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
+                    "[consistency] the content must be valid at any time"
+                );
+            }
+
+            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
+            ///
+            /// If you want to modify the value rather than creating a new
+            /// URI string, use [`encode_to_uri`][`Self::encode_to_uri`] method.
+            ///
+            /// If you need more precise control over memory allocation and buffer
+            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use iri_string::validate::Error;
+            /// #[cfg(feature = "alloc")] {
+            #[doc = concat!("use iri_string::types::{", stringify!($ty_owned_iri), ", ", stringify!($ty_owned_uri), "};")]
+            ///
+            #[doc = concat!("let iri = ", stringify!($ty_owned_iri), "::try_from(", stringify!($example_iri), ")?;")]
+            /// // Type annotation here is not necessary.
+            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
+            #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
+            /// # }
+            /// # Ok::<_, Error>(())
+            /// ```
+            pub fn encode_into_uri(self) -> $ty_owned_uri {
+                let mut s: String = self.into();
+                try_percent_encode_iri_inline(&mut s).expect("failed to allocate memory");
+                // This should never fail (unless the crate has bugs), but do the
+                // validation here for extra safety.
+                <$ty_owned_uri>::try_from(s)
+                    .expect("[consistency] the properly percent-encoded IRI must be a valid URI")
+            }
+        }
+    };
+}
+
+impl_encode_to_uri!(
+    IriAbsoluteString,
+    UriAbsoluteString,
+    IriAbsoluteStr,
+    "http://example.com/?alpha=\u{03B1}",
+    "http://example.com/?alpha=%CE%B1"
+);
+impl_encode_to_uri!(
+    IriReferenceString,
+    UriReferenceString,
+    IriReferenceStr,
+    "http://example.com/?alpha=\u{03B1}",
+    "http://example.com/?alpha=%CE%B1"
+);
+impl_encode_to_uri!(
+    IriRelativeString,
+    UriRelativeString,
+    IriRelativeStr,
+    "../?alpha=\u{03B1}",
+    "../?alpha=%CE%B1"
+);
+impl_encode_to_uri!(
+    IriString,
+    UriString,
+    IriStr,
+    "http://example.com/?alpha=\u{03B1}",
+    "http://example.com/?alpha=%CE%B1"
+);
+impl_encode_to_uri!(
+    IriFragmentString,
+    UriFragmentString,
+    IriFragmentStr,
+    "alpha-is-\u{03B1}",
+    "alpha-is-%CE%B1"
+);

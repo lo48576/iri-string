@@ -12,6 +12,11 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
 
+/// Hexadecimal digits for a nibble.
+const HEXDIGITS: [u8; 16] = [
+    b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F',
+];
+
 /// A resource identifier mapped to a URI of some kind.
 ///
 /// Note that some methods are not directly implemented but provided from
@@ -299,12 +304,6 @@ where
     // This function have many preconditions and I don't want checks for them
     // to be mandatory, so make this nested inner function.
     fn fill_by_percent_encoded<'a>(buf: &'a mut [u8], bytes: &mut core::str::Bytes<'_>) -> &'a str {
-        /// Hexadecimal digits for a nibble.
-        const HEXDIGITS: [u8; 16] = [
-            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D',
-            b'E', b'F',
-        ];
-
         let src_len = bytes.len();
         // `<[u8; N]>::array_chunks_mut` is unstable as of Rust 1.58.1.
         for (dest, byte) in buf.chunks_exact_mut(3).zip(bytes.by_ref()) {
@@ -355,5 +354,63 @@ where
         f(encoded)?;
     }
 
+    Ok(())
+}
+
+/// Percent-encodes the given IRI using the given buffer.
+#[cfg(feature = "alloc")]
+pub(crate) fn try_percent_encode_iri_inline(
+    iri: &mut String,
+) -> Result<(), alloc::collections::TryReserveError> {
+    // Calculate the result length and extend the buffer.
+    let num_nonascii = iri.bytes().filter(|b| !b.is_ascii()).count();
+    if num_nonascii == 0 {
+        // No need to escape.
+        return Ok(());
+    }
+    let additional = num_nonascii * 2;
+    iri.try_reserve(additional)?;
+    let src_len = iri.len();
+
+    // Temporarily take the ownership of the internal buffer.
+    let mut buf = core::mem::take(iri).into_bytes();
+    // `b'\0'` cannot appear in a valid IRI, so this default value would be
+    // useful in case of debugging.
+    buf.extend(core::iter::repeat(b'\0').take(additional));
+
+    // Fill the buffer from the tail to the head.
+    let mut dest_end = buf.len();
+    let mut src_end = src_len;
+    let mut rest_nonascii = num_nonascii;
+    while rest_nonascii > 0 {
+        debug_assert!(
+            src_end > 0,
+            "[validity] the source position should not overrun"
+        );
+        debug_assert!(
+            dest_end > 0,
+            "[validity] the destination position should not overrun"
+        );
+        src_end -= 1;
+        dest_end -= 1;
+        let byte = buf[src_end];
+        if byte.is_ascii() {
+            buf[dest_end] = byte;
+            // Use the ASCII character directly.
+        } else {
+            // Percent-encode the byte.
+            dest_end -= 2;
+            buf[dest_end] = b'%';
+            let upper = byte >> 4;
+            let lower = byte & 0b1111;
+            buf[dest_end + 1] = HEXDIGITS[usize::from(upper)];
+            buf[dest_end + 2] = HEXDIGITS[usize::from(lower)];
+            rest_nonascii -= 1;
+        }
+    }
+
+    // Move the result from the temporary buffer to the destination.
+    let s = String::from_utf8(buf).expect("[consistency] the encoding result is an ASCII string");
+    *iri = s;
     Ok(())
 }

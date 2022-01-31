@@ -534,6 +534,22 @@ macro_rules! define_custom_string_owned {
                 Self::new_always_unchecked(s)
             }
 
+            /// Returns a mutable reference to the inner string buffer.
+            ///
+            /// This may be useful to implement inline modification algorithm,
+            /// but be careful as this method itself cannot validate the new
+            /// content.
+            ///
+            /// # Safety
+            ///
+            /// The content after modification must be valid.
+            #[inline]
+            #[must_use]
+            // TODO: Use wrapper type to enforce validation on finish?
+            pub(crate) fn as_inner_mut(&mut self) -> &mut alloc::string::String {
+                &mut self.inner
+            }
+
             /// Shrinks the capacity of the inner buffer to match its length.
             #[inline]
             pub fn shrink_to_fit(&mut self) {
