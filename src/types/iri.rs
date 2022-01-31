@@ -120,7 +120,7 @@ macro_rules! impl_encode_to_uri {
             /// # Ok::<_, Error>(())
             /// ```
             pub fn encode_into_uri(self) -> $ty_owned_uri {
-                let mut s: String = self.into();
+                let mut s: alloc::string::String = self.into();
                 try_percent_encode_iri_inline(&mut s).expect("failed to allocate memory");
                 // This should never fail (unless the crate has bugs), but do the
                 // validation here for extra safety.
