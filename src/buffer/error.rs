@@ -79,7 +79,7 @@ impl BufferTooSmallError {
     /// Creates a new error.
     #[inline]
     #[must_use]
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(())
     }
 }
