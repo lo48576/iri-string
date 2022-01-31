@@ -71,9 +71,7 @@ macro_rules! impl_for_iri {
 
             #[cfg(feature = "alloc")]
             fn allocate_and_write(self) -> Result<Self::OutputOwned, Error<Self::ProcessError>> {
-                // The length of the result will be the equal to or longer than the source IRI.
                 let mut s = String::new();
-                s.try_reserve(self.0.len())?;
                 self.try_append_to_std_string(&mut s)?;
                 // Convert the type.
                 // This should never fail (unless the crate has bugs), but do the
@@ -87,10 +85,19 @@ macro_rules! impl_for_iri {
                 buf: &mut [u8],
             ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
                 let mut buf = ByteSliceBuf::new(buf);
-                write_percent_encoded(self.0.as_str(), |s| buf.push_str(s))?;
-                // Convert the type.
-                // This should never fail (unless the crate has bugs), but do the
-                // validation here for extra safety.
+                let num_nonascii = count_nonascii(self.0.as_str());
+                if num_nonascii == 0 {
+                    // No need to escape.
+                    buf.push_str(self.0.as_str())?;
+                } else {
+                    let additional = num_nonascii * 2;
+                    // Fail fast if the buffer is too short.
+                    buf.try_reserve(additional)?;
+                    write_percent_encoded(self.0.as_str(), |s| buf.push_str(s))?;
+                    // Convert the type.
+                    // This should never fail (unless the crate has bugs), but do the
+                    // validation here for extra safety.
+                }
                 let s = <&Self::OutputBorrowed>::try_from(buf.into_bytes())
                     .expect("[consistency] an IRI must be convertible into a valid URI");
                 Ok(s)
@@ -102,14 +109,29 @@ macro_rules! impl_for_iri {
                 buf: &mut String,
             ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
                 let start = buf.len();
-                write_percent_encoded(
-                    self.0.as_str(),
-                    |s| -> Result<(), alloc::collections::TryReserveError> {
-                        buf.try_reserve(s.len())?;
+                let num_nonascii = count_nonascii(self.0.as_str());
+                if num_nonascii == 0 {
+                    // No need to escape.
+                    buf.push_str(self.0.as_str());
+                } else {
+                    // Extend the buffer at once.
+                    let additional = self.0.len() + num_nonascii * 2;
+                    buf.try_reserve(additional)?;
+                    // `let Ok(_) = ...` is not yet stable as of Rust 1.58.1.
+                    let _always_success = write_percent_encoded(self.0.as_str(), |s| {
+                        debug_assert!(
+                            (buf.capacity() - buf.len()) >= s.len(),
+                            "[consistency] buffer should have been \
+                             extended to the necessary size"
+                        );
                         buf.push_str(s);
-                        Ok(())
-                    },
-                )?;
+                        Ok::<_, core::convert::Infallible>(())
+                    });
+                    debug_assert!(
+                        _always_success.is_ok(),
+                        "[validity] the operation is infallible"
+                    );
+                }
                 let end = buf.len();
                 let written = &buf[start..end];
                 let iri = unsafe {
@@ -363,7 +385,7 @@ pub(crate) fn try_percent_encode_iri_inline(
     iri: &mut String,
 ) -> Result<(), alloc::collections::TryReserveError> {
     // Calculate the result length and extend the buffer.
-    let num_nonascii = iri.bytes().filter(|b| !b.is_ascii()).count();
+    let num_nonascii = count_nonascii(iri);
     if num_nonascii == 0 {
         // No need to escape.
         return Ok(());
@@ -413,4 +435,11 @@ pub(crate) fn try_percent_encode_iri_inline(
     let s = String::from_utf8(buf).expect("[consistency] the encoding result is an ASCII string");
     *iri = s;
     Ok(())
+}
+
+/// Returns the number of non-ASCII characters.
+#[inline]
+#[must_use]
+fn count_nonascii(s: &str) -> usize {
+    s.bytes().filter(|b| !b.is_ascii()).count()
 }

@@ -46,6 +46,8 @@ pub(crate) trait Buffer<'a> {
         }
         Ok(())
     }
+    /// Expands the internal buffer if possible.
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError>;
 }
 
 #[cfg(feature = "alloc")]
@@ -104,6 +106,10 @@ impl<'a> Buffer<'a> for &'a mut String {
             (**self).push_str(body);
         }
         Ok(())
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError> {
+        (**self).try_reserve(additional)
     }
 }
 
@@ -201,5 +207,14 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
             self.len = body_end;
         }
         Ok(())
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError> {
+        let rest_len = self.buf.len() - self.len;
+        if additional > rest_len {
+            Err(BufferTooSmallError::new())
+        } else {
+            Ok(())
+        }
     }
 }
