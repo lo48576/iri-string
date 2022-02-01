@@ -143,7 +143,6 @@ macro_rules! impl_cmp2_as_str {
 ///     + `From<&$ty> for &str`
 ///     + `TryFrom<&str> for &$ty`
 ///     + `TryFrom<&[u8]> for &$ty`
-///     + `AsRef<$ty<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented).
 ///     + `PartialEq<$ty> for $ty`
 ///     + `str` and `$ty`
@@ -354,15 +353,6 @@ macro_rules! define_custom_string_slice {
             }
         }
 
-        impl AsRef<$ty<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
-            fn as_ref(&self) -> &$ty<crate::spec::IriSpec> {
-                unsafe {
-                    // This is safe because URIs are subset of IRIs.
-                    <$ty<crate::spec::IriSpec>>::new_maybe_unchecked(self.as_str())
-                }
-            }
-        }
-
         /// Serde deserializer implementation.
         #[cfg(feature = "serde")]
         mod __serde_slice {
@@ -441,7 +431,6 @@ macro_rules! define_custom_string_slice {
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
-///     + `AsRef<$slice<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented.
 ///     + `PartialEq<$ty> for $ty`
 ///     + `$slice` and `str`
@@ -531,6 +520,22 @@ macro_rules! define_custom_string_owned {
             pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
                 debug_assert_eq!($validate::<S>(&s), Ok(()));
                 Self::new_always_unchecked(s)
+            }
+
+            /// Returns a mutable reference to the inner string buffer.
+            ///
+            /// This may be useful to implement inline modification algorithm,
+            /// but be careful as this method itself cannot validate the new
+            /// content.
+            ///
+            /// # Safety
+            ///
+            /// The content after modification must be valid.
+            #[inline]
+            #[must_use]
+            // TODO: Use wrapper type to enforce validation on finish?
+            pub(crate) fn as_inner_mut(&mut self) -> &mut alloc::string::String {
+                &mut self.inner
             }
 
             /// Shrinks the capacity of the inner buffer to match its length.
@@ -714,12 +719,6 @@ macro_rules! define_custom_string_owned {
             #[inline]
             fn deref(&self) -> &$slice<S> {
                 self.as_ref()
-            }
-        }
-
-        impl AsRef<$slice<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
-            fn as_ref(&self) -> &$slice<crate::spec::IriSpec> {
-                AsRef::<$slice<crate::spec::UriSpec>>::as_ref(self).as_ref()
             }
         }
 

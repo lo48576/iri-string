@@ -6,9 +6,13 @@ This entry describes the changes since the last stable release (v0.4.1).
 v0.5.0 is under active development and not yet released.
 
 * Bump MSRV to 1.58.0.
-* Add more conversions between IRI string types.
-    * Implement `TryFrom<&[u8]>`) for IRI string types.
-    * Add `as_slice` method to the owned string types.
+* Add more conversions from/to IRI string types.
+    + Implement `TryFrom<&[u8]>` for the IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
 * Add `capacity()` method to the owned string types.
 * Add components getters for borrowed string types.
 * Add IRI normalization API and related types.
@@ -22,9 +26,13 @@ v0.5.0 is under active development and not yet released.
 * Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
 
 ### Added
-* Add more conversions between IRI string types.
-    + Implement `TryFrom<&[u8]>`) for IRI string types.
+* Add more conversions from/to IRI string types.
+    + Implement `TryFrom<&[u8]>` for the IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
     + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
 * Add `capacity()` method to the owned string types.
 * Add components getters for borrowed string types.
     + Add getters for major components of IRIs/URIs:
