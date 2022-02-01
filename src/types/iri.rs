@@ -58,7 +58,6 @@ pub type IriRelativeString = RiRelativeString<IriSpec>;
 /// Implements the conversion from an IRI into a URI.
 macro_rules! impl_encode_to_uri {
     (
-        @common,
         $ty_owned_iri:ident,
         $ty_owned_uri:ident,
         $ty_borrowed_iri:ident,
@@ -66,6 +65,33 @@ macro_rules! impl_encode_to_uri {
         $example_iri:expr,
         $example_uri:expr
     ) => {
+        /// Conversion from an IRI into a URI.
+        #[cfg(feature = "alloc")]
+        impl $ty_borrowed_iri {
+            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
+            ///
+            /// If you need more precise control over memory allocation and buffer
+            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use iri_string::validate::Error;
+            /// #[cfg(feature = "alloc")] {
+            #[doc = concat!("use iri_string::types::{", stringify!($ty_borrowed_iri), ", ", stringify!($ty_owned_uri), "};")]
+            ///
+            #[doc = concat!("let iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
+            /// // Type annotation here is not necessary.
+            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
+            #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
+            /// # }
+            /// # Ok::<_, Error>(())
+            /// ```
+            pub fn encode_into_uri(&self) -> $ty_owned_uri {
+                MappedToUri::from(self).allocate_and_write().expect("failed to allocate memory")
+            }
+        }
+
         /// Conversion from an IRI into a URI.
         #[cfg(feature = "alloc")]
         impl $ty_owned_iri {
@@ -100,152 +126,7 @@ macro_rules! impl_encode_to_uri {
                     "[consistency] the content must be valid at any time"
                 );
             }
-        }
-    };
-    (
-        @fragment,
-        $ty_owned_iri:ident,
-        $ty_owned_uri:ident,
-        $ty_borrowed_iri:ident,
-        $ty_borrowed_uri:ident,
-        $example_iri:expr,
-        $example_uri:expr
-        $(,)?
-    ) => {
-        impl_encode_to_uri!(
-            @common,
-            $ty_owned_iri,
-            $ty_owned_uri,
-            $ty_borrowed_iri,
-            $ty_borrowed_uri,
-            $example_iri,
-            $example_uri
-        );
 
-        /// Conversion from an IRI into a URI.
-        #[cfg(feature = "alloc")]
-        impl $ty_borrowed_iri {
-            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
-            ///
-            /// If you need more precise control over memory allocation and buffer
-            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
-            ///
-            /// # Examples
-            ///
-            /// ```
-            /// # use iri_string::validate::Error;
-            /// #[cfg(feature = "alloc")] {
-            #[doc = concat!("use iri_string::types::{", stringify!($ty_borrowed_iri), ", ", stringify!($ty_owned_uri), "};")]
-            ///
-            #[doc = concat!("let iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
-            /// // Type annotation here is not necessary.
-            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
-            #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
-            /// # }
-            /// # Ok::<_, Error>(())
-            /// ```
-            pub fn encode_into_uri(&self) -> $ty_owned_uri {
-                // Fragment itself is valid URI or IRI (in the sense that it can
-                // be interpreted as a path with possible query and fragment).
-                // So, theoretically `MappedToUri` can be used here to encode
-                // the fragment string. However, such hack can lead to debugging
-                // difficulty and/or degraded maintainability, so use more
-                // direct way here.
-                let mut s: alloc::string::String = self.as_str().into();
-                try_percent_encode_iri_inline(&mut s).expect("failed to allocate memory");
-                // This should never fail (unless the crate has bugs), but do the
-                // validation here for extra safety.
-                <$ty_owned_uri>::try_from(s).expect(
-                    "[consistency] the properly percent-encoded IRI \
-                     fragment must be a valid URI fragment"
-                )
-            }
-        }
-
-        /// Conversion from an IRI into a URI.
-        #[cfg(feature = "alloc")]
-        impl $ty_owned_iri {
-            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
-            ///
-            /// If you want to modify the value rather than creating a new
-            /// URI string, use [`encode_to_uri`][`Self::encode_to_uri`] method.
-            ///
-            /// If you need more precise control over memory allocation and buffer
-            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
-            ///
-            /// # Examples
-            ///
-            /// ```
-            /// # use iri_string::validate::Error;
-            /// #[cfg(feature = "alloc")] {
-            #[doc = concat!("use iri_string::types::{", stringify!($ty_owned_iri), ", ", stringify!($ty_owned_uri), "};")]
-            ///
-            #[doc = concat!("let iri = ", stringify!($ty_owned_iri), "::try_from(", stringify!($example_iri), ")?;")]
-            /// // Type annotation here is not necessary.
-            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
-            #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
-            /// # }
-            /// # Ok::<_, Error>(())
-            /// ```
-            pub fn encode_into_uri(self) -> $ty_owned_uri {
-                let mut s: alloc::string::String = self.into();
-                try_percent_encode_iri_inline(&mut s).expect("failed to allocate memory");
-                // This should never fail (unless the crate has bugs), but do the
-                // validation here for extra safety.
-                <$ty_owned_uri>::try_from(s)
-                    .expect("[consistency] the properly percent-encoded IRI must be a valid URI")
-            }
-        }
-    };
-    // Not fragment.
-    (
-        $ty_owned_iri:ident,
-        $ty_owned_uri:ident,
-        $ty_borrowed_iri:ident,
-        $ty_borrowed_uri:ident,
-        $example_iri:expr,
-        $example_uri:expr
-    ) => {
-        impl_encode_to_uri!(
-            @common,
-            $ty_owned_iri,
-            $ty_owned_uri,
-            $ty_borrowed_iri,
-            $ty_borrowed_uri,
-            $example_iri,
-            $example_uri
-        );
-
-        /// Conversion from an IRI into a URI.
-        #[cfg(feature = "alloc")]
-        impl $ty_borrowed_iri {
-            /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
-            ///
-            /// If you need more precise control over memory allocation and buffer
-            /// handling, use [`MappedToUri`][`crate::convert::MappedToUri`] type.
-            ///
-            /// # Examples
-            ///
-            /// ```
-            /// # use iri_string::validate::Error;
-            /// #[cfg(feature = "alloc")] {
-            #[doc = concat!("use iri_string::types::{", stringify!($ty_borrowed_iri), ", ", stringify!($ty_owned_uri), "};")]
-            ///
-            #[doc = concat!("let iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
-            /// // Type annotation here is not necessary.
-            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
-            #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
-            /// # }
-            /// # Ok::<_, Error>(())
-            /// ```
-            pub fn encode_into_uri(&self) -> $ty_owned_uri {
-                MappedToUri::from(self).allocate_and_write().expect("failed to allocate memory")
-            }
-        }
-
-        /// Conversion from an IRI into a URI.
-        #[cfg(feature = "alloc")]
-        impl $ty_owned_iri {
             /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
             ///
             /// If you want to modify the value rather than creating a new
@@ -308,7 +189,6 @@ impl_encode_to_uri!(
     "http://example.com/?alpha=%CE%B1"
 );
 impl_encode_to_uri!(
-    @fragment,
     IriFragmentString,
     UriFragmentString,
     IriFragmentStr,

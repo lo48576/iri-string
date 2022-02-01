@@ -8,9 +8,11 @@ use alloc::string::String;
 use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
 use crate::spec::{IriSpec, UriSpec};
 use crate::task::{Error, ProcessAndWrite};
-use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
-use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
+use crate::types::{
+    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
+};
 
 /// Hexadecimal digits for a nibble.
 const HEXDIGITS: [u8; 16] = [
@@ -254,6 +256,7 @@ impl_for_iri!(RiAbsoluteStr, RiAbsoluteString);
 impl_for_iri!(RiReferenceStr, RiReferenceString);
 impl_for_iri!(RiRelativeStr, RiRelativeString);
 impl_for_iri!(RiStr, RiString);
+impl_for_iri!(RiFragmentStr, RiFragmentString);
 
 /// Percent-encodes and writes the IRI string using the given buffer.
 fn write_percent_encoded<F, E>(mut s: &str, mut f: F) -> Result<(), E>
