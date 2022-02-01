@@ -143,7 +143,6 @@ macro_rules! impl_cmp2_as_str {
 ///     + `From<&$ty> for &str`
 ///     + `TryFrom<&str> for &$ty`
 ///     + `TryFrom<&[u8]> for &$ty`
-///     + `AsRef<$ty<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented).
 ///     + `PartialEq<$ty> for $ty`
 ///     + `str` and `$ty`
@@ -354,15 +353,6 @@ macro_rules! define_custom_string_slice {
             }
         }
 
-        impl AsRef<$ty<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
-            fn as_ref(&self) -> &$ty<crate::spec::IriSpec> {
-                unsafe {
-                    // This is safe because URIs are subset of IRIs.
-                    <$ty<crate::spec::IriSpec>>::new_maybe_unchecked(self.as_str())
-                }
-            }
-        }
-
         /// Serde deserializer implementation.
         #[cfg(feature = "serde")]
         mod __serde_slice {
@@ -441,7 +431,6 @@ macro_rules! define_custom_string_slice {
 ///     + `TryFrom<String> for $ty`
 ///     + `FromStr for $ty`
 ///     + `Deref<Target = $slice> for $ty`
-///     + `AsRef<$slice<IriSpec>> for $ty<UriSpec>`
 /// * comparison (only `PartialEq` impls are listed, but `PartialOrd` is also implemented.
 ///     + `PartialEq<$ty> for $ty`
 ///     + `$slice` and `str`
@@ -533,6 +522,22 @@ macro_rules! define_custom_string_owned {
                 Self::new_always_unchecked(s)
             }
 
+            /// Returns a mutable reference to the inner string buffer.
+            ///
+            /// This may be useful to implement inline modification algorithm,
+            /// but be careful as this method itself cannot validate the new
+            /// content.
+            ///
+            /// # Safety
+            ///
+            /// The content after modification must be valid.
+            #[inline]
+            #[must_use]
+            // TODO: Use wrapper type to enforce validation on finish?
+            pub(crate) fn as_inner_mut(&mut self) -> &mut alloc::string::String {
+                &mut self.inner
+            }
+
             /// Shrinks the capacity of the inner buffer to match its length.
             #[inline]
             pub fn shrink_to_fit(&mut self) {
@@ -544,6 +549,15 @@ macro_rules! define_custom_string_owned {
             #[must_use]
             pub fn capacity(&self) -> usize {
                 self.inner.capacity()
+            }
+
+            /// Returns the borrowed IRI string slice.
+            ///
+            /// This is equivalent to `&*self`.
+            #[inline]
+            #[must_use]
+            pub fn as_slice(&self) -> &$slice<S> {
+                self.as_ref()
             }
         }
 
@@ -708,12 +722,6 @@ macro_rules! define_custom_string_owned {
             }
         }
 
-        impl AsRef<$slice<crate::spec::IriSpec>> for $ty<crate::spec::UriSpec> {
-            fn as_ref(&self) -> &$slice<crate::spec::IriSpec> {
-                AsRef::<$slice<crate::spec::UriSpec>>::as_ref(self).as_ref()
-            }
-        }
-
         impl_cmp!(str, $slice<S>, alloc::borrow::Cow<'_, str>);
         impl_cmp!(str, &$slice<S>, alloc::borrow::Cow<'_, str>);
         impl_cmp2_as_str!(&$slice<S>, alloc::borrow::Cow<'_, $slice<T>>);
@@ -792,7 +800,7 @@ macro_rules! define_custom_string_owned {
     };
 }
 
-/// Implements infallible conversions and other useful traits between two IRI types.
+/// Implements trivial conversions and other useful traits between two IRI types.
 ///
 /// Implemented traits:
 ///
@@ -836,7 +844,7 @@ macro_rules! define_custom_string_owned {
 ///     + `$from_owned` and `$to_owned`
 ///         - `PartialEq<$from_owned> for $to_owned`
 ///         - `PartialEq<$to_owned> for $from_owned`
-macro_rules! impl_infallible_conv_between_iri {
+macro_rules! impl_trivial_conv_between_iri {
     (
         from_slice: $from_slice:ident,
         from_owned: $from_owned:ident,

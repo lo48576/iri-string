@@ -5,11 +5,13 @@ use alloc::string::String;
 
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::{self, Error};
+use crate::normalize::{Error, NormalizationTask};
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};
@@ -196,15 +198,12 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
@@ -216,8 +215,8 @@ impl<S: Spec> RiStr<S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[inline]
-    pub fn normalize(&self) -> Result<RiString<S>, Error> {
-        normalize::create_task(self).allocate_and_write()
+    pub fn normalize(&self) -> Result<RiString<S>, TaskError<Error>> {
+        NormalizationTask::from(self).allocate_and_write()
     }
 }
 
@@ -490,7 +489,7 @@ impl<S: Spec> RiString<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiStr,
     from_owned: RiString,
     to_slice: RiReferenceStr,

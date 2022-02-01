@@ -1,13 +1,12 @@
 //! Absolute IRI (without fragment part).
 
-#[cfg(feature = "alloc")]
-use alloc::string::String;
-
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::{self, Error};
+use crate::normalize::{Error, NormalizationTask};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiReferenceString, RiString};
@@ -120,15 +119,12 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] enum Error {
-    /// #     Validate(iri_string::validate::Error),
-    /// #     Normalize(iri_string::normalize::Error) }
+    /// # #[derive(Debug)] struct Error;
     /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self::Validate(e) } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self::Normalize(e) } }
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::create_task;
     /// use iri_string::types::IriAbsoluteStr;
     ///
     /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
@@ -140,13 +136,8 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// ```
     #[cfg(feature = "alloc")]
     #[inline]
-    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, Error> {
-        let mut buf = String::new();
-        normalize::create_task(self.as_ref()).append_to_std_string(&mut buf)?;
-        Ok(unsafe {
-            // SAFETY: The normalized IRI must be the absolute and does not get additional fragment.
-            RiAbsoluteString::<S>::new_maybe_unchecked(buf)
-        })
+    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
+        NormalizationTask::from(self).allocate_and_write()
     }
 }
 
@@ -289,14 +280,14 @@ impl<S: Spec> RiAbsoluteStr<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiAbsoluteStr,
     from_owned: RiAbsoluteString,
     to_slice: RiStr,
     to_owned: RiString,
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiAbsoluteStr,
     from_owned: RiAbsoluteString,
     to_slice: RiReferenceStr,

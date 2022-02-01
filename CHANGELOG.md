@@ -1,12 +1,128 @@
 # Change Log
 
+## [0.5.0 (under development)]
+
+This entry describes the changes since the last stable release (v0.4.1).
+v0.5.0 is under active development and not yet released.
+
+* Bump MSRV to 1.58.0.
+* Add more conversions from/to IRI string types.
+    + Implement `TryFrom<&[u8]>` for the IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
+* Add `capacity()` method to the owned string types.
+* Add components getters for borrowed string types.
+* Add IRI normalization API and related types.
+* Add normalizing variations for IRI resolution.
+* Support nostd for IRI resolution.
+* Change IRI resolution API incompatibly.
+    + Change number and types of parameters.
+    + Change return types.
+* Let IRI resolution recognize percent-encoded period during normalization.
+* Drop internal dependency to `nom` crate.
+* Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
+
+### Added
+* Add more conversions from/to IRI string types.
+    + Implement `TryFrom<&[u8]>` for the IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
+* Add `capacity()` method to the owned string types.
+* Add components getters for borrowed string types.
+    + Add getters for major components of IRIs/URIs:
+      `scheme`, `authority`, `path`, and `query`.
+    + Add types and getters for subcomponents of `authority`:
+      `userinfo`, `host`, and `port`.
+        - `components::AuthorityComponents` type and `authority_components` method.
+* Add IRI normalization API and related types.
+    + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
+    + Add `normalize::NormalizationTask`.
+* Add normalizing variations for IRI resolution.
+    + `resolve_normalize` for `resolve`.
+    + `resolve_normalize_against` for `resolve_against`.
+* Support nostd for IRI resolution.
+    + Add `resolve::FixedBaseResolver` to get `normalize::NormalizationTask`.
+    + Users can write the resolution/normalization result to user-provided buffer by `NormalizationTask`.
+
+### Changed (breaking)
+* Bump MSRV to 1.58.0.
+    + Rust 1.58.0 is released at 2022-01-13.
+* Change IRI resolution API incompatibly.
+    + Remove `is_strict: bool` parameter from `resolve::resolve()`.
+    + Make IRI resolution fallible.
+        - Now IRI resolution returns `Result`.
+        - For details about possible resolution/normalization failure, see the
+          documentation for `normalize` module and the issue [How `/..//bar`
+          should be resolved aganst `scheme:`?
+          (#8)](https://github.com/lo48576/iri-string/issues/8).
+
+### Changed (non-breaking)
+* Let IRI resolution recognize percent-encoded period during normalization.
+    + For example, `/%2e%2e/` in the path are now recognized as `/../`, and
+      handled specially as "parent directory".
+* Drop internal dependency to `nom` crate.
+    + Parsers are rewritten manually, and are now much faster than before.
+* Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
+    + Previously, compilation error are intentionally caused when both `serde`
+      and `{alloc,std}` are enabled but corresponding `serde-{alloc,std}` is not.
+    + Note that you still need to enable `serde-alloc` or `serde-std` to use
+      serde support for owned string types.
+        - This change only intends to support the cases when flags are
+          independently enabled from different indirect dependencies.
+
 ## [Unreleased]
+
+## [v0.5.0-beta.4]
+
+* Add more conversions from/to IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
+* Refine task API
+    + Move some methods of `normalize::NormalizationTask` into newly added
+      `task::ProcessAndWrite` trait.
+        - `allocate_and_write`, `write_to_byte_slice`, `append_to_std_string`,
+          and `try_append_to_std_string` is moved.
+    + Change type parameter of `NormalizationTask` from a spec into a string slice type.
+    + Change error type for `NormalizationTask`.
+    + Remove `normalize::create_task()` function.
+
+### Added
+* Add more conversions from/to IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
+
+### Changed (breaking)
+* Move some methods of `normalize::NormalizationTask` into newly added
+  `task::ProcessAndWrite` trait.
+    + `allocate_and_write`, `write_to_byte_slice`, `append_to_std_string`,
+      and `try_append_to_std_string` is moved.
+* Change type parameter of `NormalizationTask` from a spec into a string slice type.
+    + Now `NormalizationTask<S>` should be changed to `NormalizationTask<RiStr<S>>`
+      or `NormalizationTask<RiAbsoluteStr<S>>`.
+    + This enables the task to return more appropriate type. For example,
+      returning `&RiAbsoluteStr<S>` rather than `&RiStr<S>` when the input IRI
+      type is `RiAbsoluteStr<S>`.
+* Change error type for `NormalizationTask`.
+    + Now buffer error and processing error is split to different types.
+* Remove `normalize::create_task()` function.
 
 ## [0.5.0-beta.3]
 
 * Add `normalize` module, and unify it with IRI resolution.
     + Move `resolve::{Error, ErrorKind}` to `normalize` module.
-    + Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+    + Move and rename `resolve::ResolutionTask` to `normalize::NormalizationTask`.
     + Add `normalize::create_task` function.
     + Add `{RiStr, RiAbsoluteStr}::normalize()` methods.
 * Add normalizing variations for IRI resolution.
@@ -21,7 +137,7 @@
 
 ### Changed (breaking)
 * Move `resolve::{Error, ErrorKind}` to `normalize` module.
-* Move and rename `resolve::ResolutionTask` to `normalize::NoramlizationTask`.
+* Move and rename `resolve::ResolutionTask` to `normalize::NormalizationTask`.
     + Now `resolve::FixedBaseResolver::create_task()` returns `NormalizationTask`.
 
 ## [0.5.0-beta.2]
@@ -303,7 +419,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.3...develop>
+[0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.4...develop>
+[0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>

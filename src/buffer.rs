@@ -1,33 +1,14 @@
 //! Buffers.
 
+mod error;
+
 use core::cmp::Ordering;
-use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
-/// An error indicating that the buffer is too small.
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct BufferTooSmallError(());
-
-impl BufferTooSmallError {
-    /// Creates a new error.
-    #[inline]
-    #[must_use]
-    fn new() -> Self {
-        Self(())
-    }
-}
-
-impl fmt::Display for BufferTooSmallError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("destination buffer does not have enough capacity")
-    }
-}
-
-#[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for BufferTooSmallError {}
+pub(crate) use self::error::BufferTooSmallError;
+pub use self::error::Error;
 
 /// A trait for possibly extensible buffer types.
 pub(crate) trait Buffer<'a> {
@@ -65,6 +46,8 @@ pub(crate) trait Buffer<'a> {
         }
         Ok(())
     }
+    /// Expands the internal buffer if possible.
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError>;
 }
 
 #[cfg(feature = "alloc")]
@@ -123,6 +106,10 @@ impl<'a> Buffer<'a> for &'a mut String {
             (**self).push_str(body);
         }
         Ok(())
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError> {
+        (**self).try_reserve(additional)
     }
 }
 
@@ -220,5 +207,14 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
             self.len = body_end;
         }
         Ok(())
+    }
+
+    fn try_reserve(&mut self, additional: usize) -> Result<(), Self::ExtendError> {
+        let rest_len = self.buf.len() - self.len;
+        if additional > rest_len {
+            Err(BufferTooSmallError::new())
+        } else {
+            Ok(())
+        }
     }
 }

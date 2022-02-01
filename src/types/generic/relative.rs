@@ -10,6 +10,8 @@ use crate::raw;
 use crate::resolve::{resolve, resolve_normalize};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
+use crate::task::Error as TaskError;
+#[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiReferenceString, RiString};
 use crate::types::{RiFragmentStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
@@ -133,13 +135,16 @@ impl<S: Spec> RiRelativeStr<S> {
     /// * the IRI referernce is unresolvable against the base.
     ///
     /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve::Error`][`Error`].
+    /// for [`normalize`][`crate::normalize`] module.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn resolve_against(&self, base: &RiAbsoluteStr<S>) -> Result<RiString<S>, Error> {
+    pub fn resolve_against(
+        &self,
+        base: &RiAbsoluteStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
         resolve(self, base)
     }
 
@@ -158,14 +163,14 @@ impl<S: Spec> RiRelativeStr<S> {
     /// * the IRI referernce is unresolvable against the base.
     ///
     /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`resolve`][`crate::resolve`] module.
+    /// for [`normalize`][`crate::normalize`] module.
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
     pub fn resolve_normalize_against(
         &self,
         base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, Error> {
+    ) -> Result<RiString<S>, TaskError<Error>> {
         resolve_normalize(self, base)
     }
 }
@@ -347,7 +352,7 @@ impl<S: Spec> RiRelativeString<S> {
     }
 }
 
-impl_infallible_conv_between_iri! {
+impl_trivial_conv_between_iri! {
     from_slice: RiRelativeStr,
     from_owned: RiRelativeString,
     to_slice: RiReferenceStr,
