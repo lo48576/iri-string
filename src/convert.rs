@@ -6,12 +6,16 @@ use core::fmt;
 use alloc::string::String;
 
 use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
-use crate::spec::{IriSpec, UriSpec};
 use crate::task::{Error, ProcessAndWrite};
-use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr};
+use crate::types::{IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr};
 #[cfg(feature = "alloc")]
 use crate::types::{
-    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
+    IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString,
+};
+use crate::types::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr};
+#[cfg(feature = "alloc")]
+use crate::types::{
+    UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
 };
 
 /// Hexadecimal digits for a nibble.
@@ -63,12 +67,12 @@ pub struct MappedToUri<'a, Src: ?Sized>(&'a Src);
 
 /// Implement conversions for an IRI string type.
 macro_rules! impl_for_iri {
-    ($base_borrowed:ident, $base_owned:ident) => {
+    ($borrowed_uri:ident, $owned_uri:ident, $borrowed_iri:ident, $owned_iri:ident) => {
         // For IRIs.
-        impl<'a> ProcessAndWrite for MappedToUri<'a, $base_borrowed<IriSpec>> {
-            type OutputBorrowed = $base_borrowed<UriSpec>;
+        impl<'a> ProcessAndWrite for MappedToUri<'a, $borrowed_iri> {
+            type OutputBorrowed = $borrowed_uri;
             #[cfg(feature = "alloc")]
-            type OutputOwned = $base_owned<UriSpec>;
+            type OutputOwned = $owned_uri;
             type ProcessError = core::convert::Infallible;
 
             #[cfg(feature = "alloc")]
@@ -146,32 +150,32 @@ macro_rules! impl_for_iri {
             }
         }
 
-        impl<'a> fmt::Display for MappedToUri<'a, $base_borrowed<IriSpec>> {
+        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_iri> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
             }
         }
 
-        impl<'a> From<&'a $base_borrowed<IriSpec>> for MappedToUri<'a, $base_borrowed<IriSpec>> {
+        impl<'a> From<&'a $borrowed_iri> for MappedToUri<'a, $borrowed_iri> {
             #[inline]
-            fn from(iri: &'a $base_borrowed<IriSpec>) -> Self {
+            fn from(iri: &'a $borrowed_iri) -> Self {
                 Self(iri)
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $base_owned<IriSpec>> for MappedToUri<'a, $base_borrowed<IriSpec>> {
+        impl<'a> From<&'a $owned_iri> for MappedToUri<'a, $borrowed_iri> {
             #[inline]
-            fn from(iri: &'a $base_owned<IriSpec>) -> Self {
+            fn from(iri: &'a $owned_iri) -> Self {
                 Self(iri.as_slice())
             }
         }
 
         // For URIs.
-        impl<'a> ProcessAndWrite for MappedToUri<'a, $base_borrowed<UriSpec>> {
-            type OutputBorrowed = $base_borrowed<UriSpec>;
+        impl<'a> ProcessAndWrite for MappedToUri<'a, $borrowed_uri> {
+            type OutputBorrowed = $borrowed_uri;
             #[cfg(feature = "alloc")]
-            type OutputOwned = $base_owned<UriSpec>;
+            type OutputOwned = $owned_uri;
             type ProcessError = core::convert::Infallible;
 
             #[cfg(feature = "alloc")]
@@ -229,34 +233,54 @@ macro_rules! impl_for_iri {
             }
         }
 
-        impl<'a> fmt::Display for MappedToUri<'a, $base_borrowed<UriSpec>> {
+        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_uri> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
             }
         }
 
-        impl<'a> From<&'a $base_borrowed<UriSpec>> for MappedToUri<'a, $base_borrowed<UriSpec>> {
+        impl<'a> From<&'a $borrowed_uri> for MappedToUri<'a, $borrowed_uri> {
             #[inline]
-            fn from(iri: &'a $base_borrowed<UriSpec>) -> Self {
+            fn from(iri: &'a $borrowed_uri) -> Self {
                 Self(iri)
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $base_owned<UriSpec>> for MappedToUri<'a, $base_borrowed<UriSpec>> {
+        impl<'a> From<&'a $owned_uri> for MappedToUri<'a, $borrowed_uri> {
             #[inline]
-            fn from(iri: &'a $base_owned<UriSpec>) -> Self {
+            fn from(iri: &'a $owned_uri) -> Self {
                 Self(iri.as_slice())
             }
         }
     };
 }
 
-impl_for_iri!(RiAbsoluteStr, RiAbsoluteString);
-impl_for_iri!(RiReferenceStr, RiReferenceString);
-impl_for_iri!(RiRelativeStr, RiRelativeString);
-impl_for_iri!(RiStr, RiString);
-impl_for_iri!(RiFragmentStr, RiFragmentString);
+impl_for_iri!(
+    UriAbsoluteStr,
+    UriAbsoluteString,
+    IriAbsoluteStr,
+    IriAbsoluteString
+);
+impl_for_iri!(
+    UriReferenceStr,
+    UriReferenceString,
+    IriReferenceStr,
+    IriReferenceString
+);
+impl_for_iri!(
+    UriRelativeStr,
+    UriRelativeString,
+    IriRelativeStr,
+    IriRelativeString
+);
+impl_for_iri!(UriStr, UriString, IriStr, IriString);
+impl_for_iri!(
+    UriFragmentStr,
+    UriFragmentString,
+    IriFragmentStr,
+    IriFragmentString
+);
 
 /// Percent-encodes and writes the IRI string using the given buffer.
 fn write_percent_encoded<F, E>(mut s: &str, mut f: F) -> Result<(), E>
