@@ -78,7 +78,14 @@ v0.5.0 is under active development and not yet released.
 
 ## [Unreleased]
 
-* Add `as_slice` method to owned string types.
+## [v0.5.0-beta.4]
+
+* Add more conversions from/to IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
 * Refine task API
     + Move some methods of `normalize::NormalizationTask` into newly added
       `task::ProcessAndWrite` trait.
@@ -89,7 +96,12 @@ v0.5.0 is under active development and not yet released.
     + Remove `normalize::create_task()` function.
 
 ### Added
-* Add `as_slice` method to the owned string types.
+* Add more conversions from/to IRI string types.
+    + Implement `From<{owned URI}>` for the owned IRI string types.
+    + Add `as_slice` method to the owned string types.
+    + Add `convert::MappedToUri` type.
+    + Add `encode_to_uri()` method for the IRI string types.
+    + Add `encode_into_uri()` method for the owned IRI string types.
 
 ### Changed (breaking)
 * Move some methods of `normalize::NormalizationTask` into newly added
@@ -408,7 +420,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 Totally rewritten.
 
 [0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.4...develop>
+[0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>
