@@ -82,12 +82,12 @@ macro_rules! impl_encode_to_uri {
             ///
             #[doc = concat!("let iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
             /// // Type annotation here is not necessary.
-            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_into_uri();")]
+            #[doc = concat!("let uri: ", stringify!($ty_owned_uri), " = iri.encode_to_uri();")]
             #[doc = concat!("assert_eq!(uri, ", stringify!($example_uri), ");")]
             /// # }
             /// # Ok::<_, Error>(())
             /// ```
-            pub fn encode_into_uri(&self) -> $ty_owned_uri {
+            pub fn encode_to_uri(&self) -> $ty_owned_uri {
                 MappedToUri::from(self).allocate_and_write().expect("failed to allocate memory")
             }
         }
