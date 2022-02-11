@@ -31,7 +31,6 @@
 //! ### Normalization failure
 //!
 //! ```
-//!
 //! # #[cfg(feature = "alloc")] {
 //! use iri_string::normalize::Error;
 //! use iri_string::task::Error as TaskError;
