@@ -37,7 +37,7 @@
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
-//! assert!(base.normalize().is_err(), "this resolution should fail");
+//! assert!(base.normalize().is_err(), "this normalization should fail");
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
