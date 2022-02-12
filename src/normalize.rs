@@ -902,11 +902,21 @@ mod tests {
     fn normalize() {
         for (expected, sources, different_iris) in CASES {
             let expected = IriStr::new(*expected).expect("must be a valid IRI");
+
+            assert_eq!(
+                expected
+                    .normalize()
+                    .expect("normalized IRI must be normalizable"),
+                expected,
+                "IRI normalization must be idempotent"
+            );
+
             for src in *sources {
                 let src = IriStr::new(*src).expect("must be a valid IRI");
                 let normalized = src.normalize().expect("should be normalizable");
                 assert_eq!(normalized, expected);
             }
+
             for different in *different_iris {
                 let different = IriStr::new(*different).expect("must be a valid IRI");
                 let normalized = different.normalize().expect("should be normalizable");
