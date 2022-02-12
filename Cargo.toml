@@ -68,6 +68,10 @@ name = "flamegraph-resolve"
 required-features = ["alloc"]
 
 [[example]]
+name = "normalize"
+required-features = ["std"]
+
+[[example]]
 name = "parse"
 required-features = ["std"]
 
