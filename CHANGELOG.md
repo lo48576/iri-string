@@ -89,6 +89,10 @@ v0.5.0 is under active development and not yet released.
 
 ## [Unreleased]
 
+## [v0.5.0-rc.0]
+
+No more API changes are planned until v0.5.0.
+
 * Add more conversions from IRI to URI string types.
     + Add `as_uri()` method for the borrowed IRI string types.
     + Add `try_into_uri()` method for the owned IRI string types.
@@ -449,8 +453,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 Totally rewritten.
 
 [0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.4...develop>
-[0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-rc.0...develop>
+[0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
+[0.5.0-beta.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>
