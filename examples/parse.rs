@@ -1,6 +1,6 @@
 //! An example to parse IRI from the CLI argument.
 
-use iri_string::types::RiReferenceStr;
+use iri_string::types::{IriStr, RiReferenceStr, RiStr};
 
 const USAGE: &str = "\
 USAGE:
@@ -100,7 +100,10 @@ fn main() {
     }
 }
 
-fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
+fn parse<S: iri_string::spec::Spec>(opt: &CliOpt)
+where
+    RiStr<S>: AsRef<RiStr<iri_string::spec::IriSpec>>,
+{
     let raw = &opt.iri.as_str();
     let iri = match RiReferenceStr::<S>::new(raw) {
         Ok(v) => v,
@@ -108,14 +111,34 @@ fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
     };
     println!("Successfully parsed: {:?}", iri);
 
-    match iri.to_iri() {
-        Ok(iri) => {
-            println!("IRI is ablolute.");
-            match iri.fragment() {
-                Some(frag) => println!("IRI has a fragment: {:?}.", frag),
-                None => println!("IRI has no fragment."),
-            }
-        }
-        Err(_) => println!("IRI is relative."),
+    let absolute = iri.to_iri().ok();
+    match absolute {
+        Some(_) => println!("IRI is ablolute."),
+        None => println!("IRI is relative."),
+    }
+
+    print_components(iri);
+    if let Some(absolute) = absolute {
+        print_normalized(absolute.as_ref());
+    }
+}
+
+fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
+    println!("scheme:    {:?}", iri.scheme_str());
+    println!("authority: {:?}", iri.authority_str());
+    if let Some(components) = iri.authority_components() {
+        println!("    userinfo: {:?}", components.userinfo());
+        println!("    host:     {:?}", components.host());
+        println!("    port:     {:?}", components.port());
+    }
+    println!("path:      {:?}", iri.path_str());
+    println!("query:     {:?}", iri.query_str());
+    println!("fragment:  {:?}", iri.fragment());
+}
+
+pub fn print_normalized(iri: &IriStr) {
+    match iri.normalize() {
+        Ok(normalized) => println!("normalized: {:?}", normalized),
+        Err(_) => println!("The IRI is not normalizable."),
     }
 }
