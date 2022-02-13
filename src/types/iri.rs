@@ -77,7 +77,7 @@ macro_rules! impl_encode_to_uri {
             ///
             /// ```
             /// # use iri_string::validate::Error;
-            /// #[cfg(feature = "alloc")] {
+            /// # #[cfg(feature = "alloc")] {
             #[doc = concat!("use iri_string::types::{", stringify!($ty_borrowed_iri), ", ", stringify!($ty_owned_uri), "};")]
             ///
             #[doc = concat!("let iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
