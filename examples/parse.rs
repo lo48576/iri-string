@@ -103,12 +103,12 @@ fn main() {
 fn parse_iri(opt: &CliOpt) {
     let iri = parse::<iri_string::spec::IriSpec>(&opt);
     let uri = iri.encode_to_uri();
-    println!("ASCII:     {:?}", uri);
+    println!("ASCII:      {:?}", uri);
 }
 
 fn parse_uri(opt: &CliOpt) {
     let iri = parse::<iri_string::spec::UriSpec>(&opt);
-    println!("ASCII:     {:?}", iri);
+    println!("ASCII:      {:?}", iri);
 }
 
 fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) -> &RiReferenceStr<S>
@@ -137,16 +137,16 @@ where
 }
 
 fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
-    println!("scheme:    {:?}", iri.scheme_str());
-    println!("authority: {:?}", iri.authority_str());
+    println!("scheme:     {:?}", iri.scheme_str());
+    println!("authority:  {:?}", iri.authority_str());
     if let Some(components) = iri.authority_components() {
         println!("    userinfo: {:?}", components.userinfo());
         println!("    host:     {:?}", components.host());
         println!("    port:     {:?}", components.port());
     }
-    println!("path:      {:?}", iri.path_str());
-    println!("query:     {:?}", iri.query_str());
-    println!("fragment:  {:?}", iri.fragment());
+    println!("path:       {:?}", iri.path_str());
+    println!("query:      {:?}", iri.query_str());
+    println!("fragment:   {:?}", iri.fragment());
 }
 
 pub fn print_normalized(iri: &IriStr) {
