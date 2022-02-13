@@ -1,6 +1,9 @@
 //! IRI-specific implementations.
 
 #[cfg(feature = "alloc")]
+use alloc::string::String;
+
+#[cfg(feature = "alloc")]
 use crate::convert::{try_percent_encode_iri_inline, MappedToUri};
 use crate::spec::IriSpec;
 #[cfg(feature = "alloc")]
@@ -134,6 +137,7 @@ macro_rules! impl_conversion_between_uri {
 
         /// Conversion from an IRI into a URI.
         #[cfg(feature = "alloc")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
         impl $ty_owned_iri {
             /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
             ///
@@ -191,6 +195,45 @@ macro_rules! impl_conversion_between_uri {
             /// ```
             pub fn encode_into_uri(self) -> $ty_owned_uri {
                 MappedToUri::from(self.as_slice()).allocate_and_write().expect("failed to allocate memory")
+            }
+
+            /// Converts an IRI into a URI without modification, if possible.
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use iri_string::validate::Error;
+            #[doc = concat!("use iri_string::types::{", stringify!($ty_owned_iri), ", ", stringify!($ty_owned_uri), "};")]
+            ///
+            #[doc = concat!("let ascii_iri = ", stringify!($ty_owned_iri), "::try_from(", stringify!($example_uri), ")?;")]
+            /// assert_eq!(
+            ///     ascii_iri.try_into_uri().map(|uri| uri.to_string()),
+            #[doc = concat!("    Ok(", stringify!($example_uri), ".to_string())")]
+            /// );
+            ///
+            #[doc = concat!("let nonascii_iri = ", stringify!($ty_owned_iri), "::try_from(", stringify!($example_iri), ")?;")]
+            /// assert_eq!(
+            ///     nonascii_iri.try_into_uri().map_err(|iri| iri.to_string()),
+            #[doc = concat!("    Err(", stringify!($example_iri), ".to_string())")]
+            /// );
+            /// # Ok::<_, Error>(())
+            /// ```
+            pub fn try_into_uri(self) -> Result<$ty_owned_uri, $ty_owned_iri> {
+                if !self.as_str().is_ascii() {
+                    return Err(self);
+                }
+                let s: String = self.into();
+                debug_assert!(
+                    <$ty_borrowed_uri>::new(s.as_str()).is_ok(),
+                    "[consistency] the ASCII-only IRI must also be a valid URI"
+                );
+                let uri = unsafe {
+                    // SAFETY: An ASCII-only IRI is a URI.
+                    // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
+                    // and the difference is that URIs can only have ASCII characters.
+                    <$ty_owned_uri>::new_maybe_unchecked(s)
+                };
+                Ok(uri)
             }
         }
     };
