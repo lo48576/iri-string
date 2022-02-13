@@ -10,6 +10,7 @@ use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, 
 use crate::types::{
     RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
 };
+use crate::types::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr};
 #[cfg(feature = "alloc")]
 use crate::types::{
     UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
@@ -56,7 +57,7 @@ pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 pub type IriRelativeString = RiRelativeString<IriSpec>;
 
 /// Implements the conversion from an IRI into a URI.
-macro_rules! impl_encode_to_uri {
+macro_rules! impl_conversion_between_uri {
     (
         $ty_owned_iri:ident,
         $ty_owned_uri:ident,
@@ -66,7 +67,6 @@ macro_rules! impl_encode_to_uri {
         $example_uri:expr
     ) => {
         /// Conversion from an IRI into a URI.
-        #[cfg(feature = "alloc")]
         impl $ty_borrowed_iri {
             /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
             ///
@@ -87,8 +87,48 @@ macro_rules! impl_encode_to_uri {
             /// # }
             /// # Ok::<_, Error>(())
             /// ```
+            #[cfg(feature = "alloc")]
+            #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
             pub fn encode_to_uri(&self) -> $ty_owned_uri {
                 MappedToUri::from(self).allocate_and_write().expect("failed to allocate memory")
+            }
+
+            /// Converts an IRI into a URI without modification, if possible.
+            ///
+            /// This is semantically equivalent to
+            #[doc = concat!("`", stringify!($ty_borrowed_uri), "::new(self.as_str()).ok()`.")]
+            ///
+            /// # Examples
+            ///
+            /// ```
+            /// # use iri_string::validate::Error;
+            #[doc = concat!("use iri_string::types::{", stringify!($ty_borrowed_iri), ", ", stringify!($ty_borrowed_uri), "};")]
+            ///
+            #[doc = concat!("let ascii_iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_uri), ")?;")]
+            /// assert_eq!(
+            ///     ascii_iri.as_uri().map(AsRef::as_ref),
+            #[doc = concat!("    Some(", stringify!($example_uri), ")")]
+            /// );
+            ///
+            #[doc = concat!("let nonascii_iri = ", stringify!($ty_borrowed_iri), "::new(", stringify!($example_iri), ")?;")]
+            /// assert_eq!(nonascii_iri.as_uri(), None);
+            /// # Ok::<_, Error>(())
+            /// ```
+            pub fn as_uri(&self) -> Option<&$ty_borrowed_uri> {
+                if !self.as_str().is_ascii() {
+                    return None;
+                }
+                debug_assert!(
+                    <$ty_borrowed_uri>::new(self.as_str()).is_ok(),
+                    "[consistency] the ASCII-only IRI must also be a valid URI"
+                );
+                let uri = unsafe {
+                    // SAFETY: An ASCII-only IRI is a URI.
+                    // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
+                    // and the difference is that URIs can only have ASCII characters.
+                    <$ty_borrowed_uri>::new_maybe_unchecked(self.as_str())
+                };
+                Some(uri)
             }
         }
 
@@ -156,7 +196,7 @@ macro_rules! impl_encode_to_uri {
     };
 }
 
-impl_encode_to_uri!(
+impl_conversion_between_uri!(
     IriAbsoluteString,
     UriAbsoluteString,
     IriAbsoluteStr,
@@ -164,7 +204,7 @@ impl_encode_to_uri!(
     "http://example.com/?alpha=\u{03B1}",
     "http://example.com/?alpha=%CE%B1"
 );
-impl_encode_to_uri!(
+impl_conversion_between_uri!(
     IriReferenceString,
     UriReferenceString,
     IriReferenceStr,
@@ -172,7 +212,7 @@ impl_encode_to_uri!(
     "http://example.com/?alpha=\u{03B1}",
     "http://example.com/?alpha=%CE%B1"
 );
-impl_encode_to_uri!(
+impl_conversion_between_uri!(
     IriRelativeString,
     UriRelativeString,
     IriRelativeStr,
@@ -180,7 +220,7 @@ impl_encode_to_uri!(
     "../?alpha=\u{03B1}",
     "../?alpha=%CE%B1"
 );
-impl_encode_to_uri!(
+impl_conversion_between_uri!(
     IriString,
     UriString,
     IriStr,
@@ -188,7 +228,7 @@ impl_encode_to_uri!(
     "http://example.com/?alpha=\u{03B1}",
     "http://example.com/?alpha=%CE%B1"
 );
-impl_encode_to_uri!(
+impl_conversion_between_uri!(
     IriFragmentString,
     UriFragmentString,
     IriFragmentStr,
