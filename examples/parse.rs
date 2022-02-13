@@ -95,12 +95,23 @@ fn main() {
     let opt = CliOpt::parse();
 
     match opt.spec {
-        Spec::Iri => parse::<iri_string::spec::IriSpec>(&opt),
-        Spec::Uri => parse::<iri_string::spec::UriSpec>(&opt),
+        Spec::Iri => parse_iri(&opt),
+        Spec::Uri => parse_uri(&opt),
     }
 }
 
-fn parse<S: iri_string::spec::Spec>(opt: &CliOpt)
+fn parse_iri(opt: &CliOpt) {
+    let iri = parse::<iri_string::spec::IriSpec>(&opt);
+    let uri = iri.encode_to_uri();
+    println!("ASCII:     {:?}", uri);
+}
+
+fn parse_uri(opt: &CliOpt) {
+    let iri = parse::<iri_string::spec::UriSpec>(&opt);
+    println!("ASCII:     {:?}", iri);
+}
+
+fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) -> &RiReferenceStr<S>
 where
     RiStr<S>: AsRef<RiStr<iri_string::spec::IriSpec>>,
 {
@@ -121,6 +132,8 @@ where
     if let Some(absolute) = absolute {
         print_normalized(absolute.as_ref());
     }
+
+    iri
 }
 
 fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
