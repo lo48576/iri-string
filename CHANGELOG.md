@@ -13,6 +13,8 @@ v0.5.0 is under active development and not yet released.
     + Add `convert::MappedToUri` type.
     + Add `encode_to_uri()` method for the IRI string types.
     + Add `encode_into_uri()` method for the owned IRI string types.
+    + Add `as_uri()` method for the borrowed IRI string types.
+    + Add `try_into_uri()` method for the owned IRI string types.
 * Add `capacity()` method to the owned string types.
 * Add components getters for borrowed string types.
 * Add IRI normalization API and related types.
@@ -24,6 +26,9 @@ v0.5.0 is under active development and not yet released.
 * Let IRI resolution recognize percent-encoded period during normalization.
 * Drop internal dependency to `nom` crate.
 * Permit `serde`+`{alloc,std}` without `serde-{alloc,std}`.
+* Update examples.
+    + Improve `parse` example to show more information.
+    + Add `normalize` example.
 
 ### Added
 * Add more conversions from/to IRI string types.
@@ -33,6 +38,8 @@ v0.5.0 is under active development and not yet released.
     + Add `convert::MappedToUri` type.
     + Add `encode_to_uri()` method for the IRI string types.
     + Add `encode_into_uri()` method for the owned IRI string types.
+    + Add `as_uri()` method for the borrowed IRI string types.
+    + Add `try_into_uri()` method for the owned IRI string types.
 * Add `capacity()` method to the owned string types.
 * Add components getters for borrowed string types.
     + Add getters for major components of IRIs/URIs:
@@ -49,6 +56,8 @@ v0.5.0 is under active development and not yet released.
 * Support nostd for IRI resolution.
     + Add `resolve::FixedBaseResolver` to get `normalize::NormalizationTask`.
     + Users can write the resolution/normalization result to user-provided buffer by `NormalizationTask`.
+* Update examples.
+    + Add `normalize` example.
 
 ### Changed (breaking)
 * Bump MSRV to 1.58.0.
@@ -75,8 +84,32 @@ v0.5.0 is under active development and not yet released.
       serde support for owned string types.
         - This change only intends to support the cases when flags are
           independently enabled from different indirect dependencies.
+* Update examples.
+    + Improve `parse` example to show more information.
 
 ## [Unreleased]
+
+## [v0.5.0-rc.0]
+
+No more API changes are planned until v0.5.0.
+
+* Add more conversions from IRI to URI string types.
+    + Add `as_uri()` method for the borrowed IRI string types.
+    + Add `try_into_uri()` method for the owned IRI string types.
+* Update examples.
+    + Improve `parse` example to show more information.
+    + Add `normalize` example.
+
+### Added
+* Add more conversions from IRI to URI string types.
+    + Add `as_uri()` method for the borrowed IRI string types.
+    + Add `try_into_uri()` method for the owned IRI string types.
+* Update examples.
+    + Add `normalize` example.
+
+### Changed (non-breaking)
+* Update examples.
+    + Improve `parse` example to show more information.
 
 ## [v0.5.0-beta.4]
 
@@ -420,8 +453,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 Totally rewritten.
 
 [0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-beta.4...develop>
-[0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-rc.0...develop>
+[0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
+[0.5.0-beta.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>
 [0.5.0-beta.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.2>
 [0.5.0-beta.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.1>

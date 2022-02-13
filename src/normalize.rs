@@ -31,14 +31,13 @@
 //! ### Normalization failure
 //!
 //! ```
-//!
 //! # #[cfg(feature = "alloc")] {
 //! use iri_string::normalize::Error;
 //! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
-//! assert!(base.normalize().is_err(), "this resolution should fail");
+//! assert!(base.normalize().is_err(), "this normalization should fail");
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
@@ -843,5 +842,90 @@ fn normalize_pct_encodings(i: &str) -> NormalizeCaseAndPercentEncodings<'_> {
         rest: i,
         rest_pct_encoded: 0,
         normalize_case: false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(feature = "alloc")]
+    use crate::types::IriStr;
+
+    #[cfg(feature = "alloc")]
+    // `&[(expected, &[source_for_expected], &[different_iri])]`
+    const CASES: &[(&str, &[&str], &[&str])] = &[
+        (
+            "https://example.com/pa/th?query#frag",
+            &["https://example.com/pa/th?query#frag"],
+            &[],
+        ),
+        (
+            "https://example.com/pA/Th?Query#Frag",
+            &["HTTPs://EXaMPLE.COM/pA/Th?Query#Frag"],
+            &[
+                "https://example.com/pa/th?Query#Frag",
+                "https://example.com/pA/Th?query#Frag",
+                "https://example.com/pA/Th?Query#frag",
+            ],
+        ),
+        (
+            "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+            &[
+                "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+                "URN:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+            ],
+            &[
+                "urn:UUID:7f1450df-6678-465b-a881-188f9b6ec822",
+                "urn:uuid:7F1450DF-6678-465B-A881-188F9B6EC822",
+            ],
+        ),
+        (
+            "http://example.com/a/b/d/e",
+            &[
+                "http://example.com/a/b/c/%2e%2e/d/e",
+                "http://example.com/a/b/c/%2E%2E/d/e",
+                "http://example.com/a/b/c/../d/e",
+                "http://example.com/a/b/c/%2E%2e/d/e",
+                "http://example.com/a/b/c/.%2e/d/e",
+                "http://example.com/a/./././././b/c/.%2e/d/e",
+            ],
+            &[],
+        ),
+        (
+            "http://example.com/~Ascii%21",
+            &["http://example.com/%7E%41%73%63%69%69%21"],
+            &[],
+        ),
+    ];
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize() {
+        for (expected, sources, different_iris) in CASES {
+            let expected = IriStr::new(*expected).expect("must be a valid IRI");
+
+            assert_eq!(
+                expected
+                    .normalize()
+                    .expect("normalized IRI must be normalizable"),
+                expected,
+                "IRI normalization must be idempotent"
+            );
+
+            for src in *sources {
+                let src = IriStr::new(*src).expect("must be a valid IRI");
+                let normalized = src.normalize().expect("should be normalizable");
+                assert_eq!(normalized, expected);
+            }
+
+            for different in *different_iris {
+                let different = IriStr::new(*different).expect("must be a valid IRI");
+                let normalized = different.normalize().expect("should be normalizable");
+                assert_ne!(
+                    normalized, expected,
+                    "{:?} should not be normalized to {:?}",
+                    different, expected
+                );
+            }
+        }
     }
 }
