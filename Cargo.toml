@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.5.0-rc.0"
+version = "0.5.0"
 authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.58"
@@ -61,7 +61,6 @@ serde_test = "1.0.104"
 
 [badges]
 maintenance = { status = "actively-developed" }
-travis-ci = { repository = "lo48576/iri-string" }
 
 [[example]]
 name = "flamegraph-resolve"

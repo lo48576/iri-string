@@ -1,9 +1,10 @@
 # Change Log
 
-## [0.5.0 (under development)]
+## [Unreleased]
 
-This entry describes the changes since the last stable release (v0.4.1).
-v0.5.0 is under active development and not yet released.
+## [0.5.0]
+
+This entry describes the changes since the previous stable release (v0.4.1).
 
 * Bump MSRV to 1.58.0.
 * Add more conversions from/to IRI string types.
@@ -29,6 +30,8 @@ v0.5.0 is under active development and not yet released.
 * Update examples.
     + Improve `parse` example to show more information.
     + Add `normalize` example.
+* Travis CI is no longer used.
+    + Checks should be run manually. See README for detail.
 
 ### Added
 * Add more conversions from/to IRI string types.
@@ -87,7 +90,10 @@ v0.5.0 is under active development and not yet released.
 * Update examples.
     + Improve `parse` example to show more information.
 
-## [Unreleased]
+## ([v0.5.0] from [v0.5.0-rc.0])
+
+* Travis CI is no longer used.
+    + Checks should be run manually. See README for detail.
 
 ## [v0.5.0-rc.0]
 
@@ -452,8 +458,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[0.5.0 (under development)]: <https://github.com/lo48576/iri-string/compare/v0.4.1...develop>
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0-rc.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0...develop>
+[0.5.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0>
 [0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
 [0.5.0-beta.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
 [0.5.0-beta.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.3>

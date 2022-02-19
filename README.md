@@ -1,6 +1,5 @@
 # iri-string
 
-[![Build Status](https://travis-ci.com/lo48576/iri-string.svg?branch=develop)](https://travis-ci.com/lo48576/iri-string)
 [![Latest version](https://img.shields.io/crates/v/iri-string.svg)](https://crates.io/crates/iri-string)
 [![Documentation](https://docs.rs/iri-string/badge.svg)](https://docs.rs/iri-string)
 ![Minimum rustc version: 1.58](https://img.shields.io/badge/rustc-1.58+-lightgray.svg)
@@ -15,6 +14,7 @@ See the [documentation](https://docs.rs/iri-string) for details.
 * `no_std` support.
 * String types (both owned and borrowed) for IRIs.
 * IRI reference resolution algorithm.
+* IRI normalization algorithm.
 
 ### Feature flags
 
@@ -47,6 +47,14 @@ See the [documentation](https://docs.rs/iri-string) for details.
     + Enables deriving serialization and deserialization impls which requires std stuff.
     + If you enable `std` and `serde` features at the same time, you should also enable `serde-std` feature.
     + This automatically enables `std` feature.
+
+## CI
+
+CI must pass on `develop` and `master` branches.
+No automated online CI is set up (since they consumes credit too fast), so run
+`cargo make manual-ci-all` locally before committing to these branches.
+On other branches, tests and some lints (such as `dead_code`) are allowed to
+fail, but all commits must be successfully compilable and must be formatted.
 
 ## License
 
