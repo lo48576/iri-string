@@ -14,6 +14,7 @@ See the [documentation](https://docs.rs/iri-string) for details.
 * `no_std` support.
 * String types (both owned and borrowed) for IRIs.
 * IRI reference resolution algorithm.
+* IRI normalization algorithm.
 
 ### Feature flags
 
