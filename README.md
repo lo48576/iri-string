@@ -47,6 +47,14 @@ See the [documentation](https://docs.rs/iri-string) for details.
     + If you enable `std` and `serde` features at the same time, you should also enable `serde-std` feature.
     + This automatically enables `std` feature.
 
+## CI
+
+CI must pass on `develop` and `master` branches.
+No automated online CI is set up (since they consumes credit too fast), so run
+`cargo make manual-ci-all` locally before committing to these branches.
+On other branches, tests and some lints (such as `dead_code`) are allowed to
+fail, but all commits must be successfully compilable and must be formatted.
+
 ## License
 
 Licensed under either of
