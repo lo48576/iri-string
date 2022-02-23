@@ -90,12 +90,12 @@ This entry describes the changes since the previous stable release (v0.4.1).
 * Update examples.
     + Improve `parse` example to show more information.
 
-## ([v0.5.0] from [v0.5.0-rc.0])
+## ([0.5.0] from [0.5.0-rc.0])
 
 * Travis CI is no longer used.
     + Checks should be run manually. See README for detail.
 
-## [v0.5.0-rc.0]
+## [0.5.0-rc.0]
 
 No more API changes are planned until v0.5.0.
 
@@ -117,7 +117,7 @@ No more API changes are planned until v0.5.0.
 * Update examples.
     + Improve `parse` example to show more information.
 
-## [v0.5.0-beta.4]
+## [0.5.0-beta.4]
 
 * Add more conversions from/to IRI string types.
     + Implement `From<{owned URI}>` for the owned IRI string types.
