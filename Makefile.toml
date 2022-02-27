@@ -242,8 +242,8 @@ args = ["update"]
 
 [tasks.check-rustfmt]
 run_task = [
-    { name = "check-rustfmt-ignore-errors", condition = { channels = ["beta", "nightly" ] } },
-    { name = "check-rustfmt-strict" },
+    { name = "check-rustfmt-strict", condition = { rust_version = { equal = "MSRV" } } },
+    { name = "check-rustfmt-ignore-errors" },
 ]
 
 [tasks.check-rustfmt-strict]
@@ -262,8 +262,8 @@ args = ["fmt", "--version"]
 
 [tasks.check-clippy]
 run_task = [
-    { name = "check-clippy-ignore-errors", condition = { channels = ["beta", "nightly" ] } },
-    { name = "check-clippy-strict" },
+    { name = "check-clippy-strict", condition = { rust_version = { equal = "MSRV" } } },
+    { name = "check-clippy-ignore-errors" },
 ]
 
 [tasks.check-clippy-strict]
