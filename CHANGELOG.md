@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Add `FixedBaseResolver::base()` method.
+
+### Added
+* Add `FixedBaseResolver::base()` method.
+
 ## [0.5.0]
 
 This entry describes the changes since the previous stable release (v0.4.1).
