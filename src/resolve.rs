@@ -249,6 +249,28 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             base_components: RiReferenceComponents::from(base.as_ref()),
         }
     }
+
+    /// Returns the base.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// assert_eq!(resolver.base(), base);
+    /// # Ok::<_, iri_string::validate::Error>(())
+    /// ```
+    #[must_use]
+    pub fn base(&self) -> &'a RiAbsoluteStr<S> {
+        unsafe {
+            // SAFETY: `base_components` can only be created from `&RiAbsoluteStr<S>`.
+            RiAbsoluteStr::new_maybe_unchecked(self.base_components.iri().as_str())
+        }
+    }
 }
 
 impl<'a, S: Spec> FixedBaseResolver<'a, S> {
