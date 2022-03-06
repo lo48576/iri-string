@@ -146,6 +146,8 @@ cargo +stable make --profile feat-all ci
 cargo +stable make --profile minimal-deps-feat-all ci
 cargo +beta make --profile feat-all ci
 cargo +nightly make --profile feat-all ci
+cargo +nightly make --profile default check-miri
+cargo +nightly make --profile feat-none check-miri
 '''
 ]
 
@@ -188,6 +190,7 @@ dependencies = [
     "ci-check",
     "ci-build",
     "ci-test",
+    { name = "check-miri", condition = { channels = ["nightly"] } },
 ]
 
 [tasks.ci-once-check]
@@ -240,6 +243,10 @@ args = ["update", "-Z", "minimal-versions"]
 command = "cargo"
 args = ["update"]
 
+[tasks.cargo-clean]
+command = "cargo"
+args = ["clean"]
+
 [tasks.check-rustfmt]
 run_task = [
     { name = "check-rustfmt-strict", condition = { rust_version = { equal = "$MSRV" } } },
@@ -257,8 +264,27 @@ command = "cargo"
 args = ["fmt", "--all", "--", "--check"]
 
 [tasks.print-rustfmt-version]
+install_crate = { rustup_component_name = "rustfmt" }
 command = "cargo"
 args = ["fmt", "--version"]
+
+[tasks.check-miri]
+dependencies = ["print-miri-version", "cargo-clean"]
+toolchain = "nightly"
+command = "cargo"
+args = [
+    "miri",
+    "test",
+    "@@decode(NO_DEFAULT_FEATURES,true,--no-default-features,)",
+    "@@decode(ALL_FEATURES,true,--all-features,)",
+    "@@decode(FEATURES,,,--features=${FEATURES})",
+]
+
+[tasks.print-miri-version]
+install_crate = { rustup_component_name = "miri" }
+toolchain = "nightly"
+command = "cargo"
+args = ["miri", "--version"]
 
 [tasks.check-clippy]
 run_task = [
@@ -291,6 +317,7 @@ args = [
 ignore_errors = true
 
 [tasks.print-clippy-version]
+install_crate = { rustup_component_name = "clippy" }
 command = "cargo"
 args = ["clippy", "--version"]
 
