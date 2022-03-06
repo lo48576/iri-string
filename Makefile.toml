@@ -242,7 +242,7 @@ args = ["update"]
 
 [tasks.check-rustfmt]
 run_task = [
-    { name = "check-rustfmt-strict", condition = { rust_version = { equal = "MSRV" } } },
+    { name = "check-rustfmt-strict", condition = { rust_version = { equal = "$MSRV" } } },
     { name = "check-rustfmt-ignore-errors" },
 ]
 
@@ -262,7 +262,7 @@ args = ["fmt", "--version"]
 
 [tasks.check-clippy]
 run_task = [
-    { name = "check-clippy-strict", condition = { rust_version = { equal = "MSRV" } } },
+    { name = "check-clippy-strict", condition = { rust_version = { equal = "$MSRV" } } },
     { name = "check-clippy-ignore-errors" },
 ]
 
