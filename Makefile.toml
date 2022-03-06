@@ -264,6 +264,7 @@ command = "cargo"
 args = ["fmt", "--all", "--", "--check"]
 
 [tasks.print-rustfmt-version]
+install_crate = { rustup_component_name = "rustfmt" }
 command = "cargo"
 args = ["fmt", "--version"]
 
@@ -316,6 +317,7 @@ args = [
 ignore_errors = true
 
 [tasks.print-clippy-version]
+install_crate = { rustup_component_name = "clippy" }
 command = "cargo"
 args = ["clippy", "--version"]
 
