@@ -1,6 +1,6 @@
 [package]
 name = "iri-string"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.58"
@@ -42,13 +42,11 @@ memchr-std = ["std", "memchr/std"]
 #
 # If users want to enable `serde` and `alloc` at the same time, then they should
 # also enable `serde-alloc` feature.
-# Not doing so results in compile error.
 serde-alloc = ["alloc", "serde/alloc"]
 # Enable `std` feature for `serde` crate.
 #
 # If users want to enable `serde` and `std` at the same time, then they should
 # also enable `serde-std` feature.
-# Not doing so results in compile error.
 serde-std = ["serde-alloc", "serde/std", "std"]
 
 [dependencies]

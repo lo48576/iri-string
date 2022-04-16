@@ -117,10 +117,7 @@ fn split_v6_addr_part(i: &str) -> Result<(&str, V6AddrPart), Error> {
 fn validate_ipv6address(mut i: &str) -> Result<(), Error> {
     let mut h16_count = 0;
     let mut is_omitted = false;
-    loop {
-        if i.is_empty() {
-            break;
-        }
+    while !i.is_empty() {
         let (rest, part) = split_v6_addr_part(i)?;
         match part {
             V6AddrPart::H16Omit => {
@@ -130,7 +127,13 @@ fn validate_ipv6address(mut i: &str) -> Result<(), Error> {
                     return Err(Error::new());
                 }
             }
-            V6AddrPart::H16Cont => h16_count += 1,
+            V6AddrPart::H16Cont => {
+                h16_count += 1;
+                if rest.is_empty() {
+                    // `H16Cont` cannot be the last part of an IPv6 address.
+                    return Err(Error::new());
+                }
+            }
             V6AddrPart::H16End => {
                 h16_count += 1;
                 break;
@@ -190,7 +193,10 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
     match get_wrapped_inner(maybe_host, b'[', b']') {
         Some(maybe_addr) => {
             // `IP-literal`.
-            if let Some(maybe_addr_rest) = strip_ascii_char_prefix(maybe_addr, b'v') {
+            // Note that `v` here is case insensitive. See RFC 3987 section 3.2.2.
+            if let Some(maybe_addr_rest) = strip_ascii_char_prefix(maybe_addr, b'v')
+                .or_else(|| strip_ascii_char_prefix(maybe_addr, b'V'))
+            {
                 // `IPvFuture`.
                 let (maybe_ver, maybe_addr) =
                     find_split_hole(maybe_addr_rest, b'.').ok_or_else(Error::new)?;

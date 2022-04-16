@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.5.1]
+
+* Add `FixedBaseResolver::base()` method.
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
+
+### Added
+* Add `FixedBaseResolver::base()` method.
+
+### Fixed
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
+
 ## [0.5.0]
 
 This entry describes the changes since the previous stable release (v0.4.1).
@@ -90,12 +101,12 @@ This entry describes the changes since the previous stable release (v0.4.1).
 * Update examples.
     + Improve `parse` example to show more information.
 
-## ([v0.5.0] from [v0.5.0-rc.0])
+## ([0.5.0] from [0.5.0-rc.0])
 
 * Travis CI is no longer used.
     + Checks should be run manually. See README for detail.
 
-## [v0.5.0-rc.0]
+## [0.5.0-rc.0]
 
 No more API changes are planned until v0.5.0.
 
@@ -117,7 +128,7 @@ No more API changes are planned until v0.5.0.
 * Update examples.
     + Improve `parse` example to show more information.
 
-## [v0.5.0-beta.4]
+## [0.5.0-beta.4]
 
 * Add more conversions from/to IRI string types.
     + Implement `From<{owned URI}>` for the owned IRI string types.
@@ -458,7 +469,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.1...develop>
+[0.5.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.1>
 [0.5.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0>
 [0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
 [0.5.0-beta.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>

@@ -68,6 +68,13 @@ impl<'a, S: Spec> RiReferenceComponents<'a, S> {
         let path = &s[next_of_authority..end_of_path];
         (scheme, authority, path, query, fragment)
     }
+
+    /// Returns the IRI reference.
+    #[inline]
+    #[must_use]
+    pub(crate) fn iri(&self) -> &'a RiReferenceStr<S> {
+        self.iri
+    }
 }
 
 impl<'a, S: Spec> From<&'a RiReferenceStr<S>> for RiReferenceComponents<'a, S> {
