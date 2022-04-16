@@ -24,4 +24,20 @@ mod issue_17 {
         assert!(UriReferenceStr::new("//[v0.0]").is_ok());
         assert!(UriReferenceStr::new("//[V0.0]").is_ok());
     }
+
+    #[test]
+    fn ipvfuture_empty_part() {
+        assert!(
+            UriReferenceStr::new("//[v0.]").is_err(),
+            "address should not be empty"
+        );
+        assert!(
+            UriReferenceStr::new("//[v.0]").is_err(),
+            "version should not be empty"
+        );
+        assert!(
+            UriReferenceStr::new("//[v.]").is_err(),
+            "neither address nor version should be empty"
+        );
+    }
 }
