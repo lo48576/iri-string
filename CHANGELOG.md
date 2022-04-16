@@ -3,9 +3,13 @@
 ## [Unreleased]
 
 * Add `FixedBaseResolver::base()` method.
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
 
 ### Added
 * Add `FixedBaseResolver::base()` method.
+
+### Fixed
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
 
 ## [0.5.0]
 
