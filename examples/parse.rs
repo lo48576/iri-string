@@ -101,13 +101,13 @@ fn main() {
 }
 
 fn parse_iri(opt: &CliOpt) {
-    let iri = parse::<iri_string::spec::IriSpec>(&opt);
+    let iri = parse::<iri_string::spec::IriSpec>(opt);
     let uri = iri.encode_to_uri();
     println!("ASCII:      {:?}", uri);
 }
 
 fn parse_uri(opt: &CliOpt) {
-    let iri = parse::<iri_string::spec::UriSpec>(&opt);
+    let iri = parse::<iri_string::spec::UriSpec>(opt);
     println!("ASCII:      {:?}", iri);
 }
 
