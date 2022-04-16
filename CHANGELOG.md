@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
+
+### Fixed
+* Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
+
 ## [0.5.1]
 
 * Add `FixedBaseResolver::base()` method.
