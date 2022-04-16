@@ -130,7 +130,13 @@ fn validate_ipv6address(mut i: &str) -> Result<(), Error> {
                     return Err(Error::new());
                 }
             }
-            V6AddrPart::H16Cont => h16_count += 1,
+            V6AddrPart::H16Cont => {
+                h16_count += 1;
+                if rest.is_empty() {
+                    // `H16Cont` cannot be the last part of an IPv6 address.
+                    return Err(Error::new());
+                }
+            }
             V6AddrPart::H16End => {
                 h16_count += 1;
                 break;
