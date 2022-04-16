@@ -117,10 +117,7 @@ fn split_v6_addr_part(i: &str) -> Result<(&str, V6AddrPart), Error> {
 fn validate_ipv6address(mut i: &str) -> Result<(), Error> {
     let mut h16_count = 0;
     let mut is_omitted = false;
-    loop {
-        if i.is_empty() {
-            break;
-        }
+    while !i.is_empty() {
         let (rest, part) = split_v6_addr_part(i)?;
         match part {
             V6AddrPart::H16Omit => {
