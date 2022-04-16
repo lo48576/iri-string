@@ -201,11 +201,12 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
                 let (maybe_ver, maybe_addr) =
                     find_split_hole(maybe_addr_rest, b'.').ok_or_else(Error::new)?;
                 // Validate version.
-                if !maybe_ver.bytes().all(|b| b.is_ascii_hexdigit()) {
+                if maybe_ver.is_empty() || !maybe_ver.bytes().all(|b| b.is_ascii_hexdigit()) {
                     return Err(Error::new());
                 }
                 // Validate address.
-                if maybe_addr.is_ascii()
+                if !maybe_addr.is_empty()
+                    && maybe_addr.is_ascii()
                     && maybe_addr
                         .bytes()
                         .all(char::is_ascii_userinfo_ipvfutureaddr)
