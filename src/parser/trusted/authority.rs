@@ -1,7 +1,7 @@
 //! Parsers for trusted `authority` string.
 
 use crate::components::AuthorityComponents;
-use crate::parser::str::{find_split_hole, rfind_split};
+use crate::parser::str::{find_split_hole, rfind_split2};
 
 /// Decomposes the authority into `(userinfo, host, port)`.
 ///
@@ -18,10 +18,11 @@ pub(crate) fn decompose_authority(authority: &str) -> AuthorityComponents<'_> {
         Some((userinfo, rest)) => (rest, userinfo.len() + 1),
         None => (authority, 0),
     };
-    let (_i, host_end) = match rfind_split(i, b':') {
-        Some((colon_port, rest)) => (rest, host_start + colon_port.len()),
-        None => (i, authority.len()),
+    let colon_port_len = match rfind_split2(i, b':', b']') {
+        Some((_, suffix)) if suffix.starts_with(':') => suffix.len(),
+        _ => 0,
     };
+    let host_end = authority.len() - colon_port_len;
 
     AuthorityComponents {
         authority,
