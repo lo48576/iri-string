@@ -190,7 +190,10 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
     match get_wrapped_inner(maybe_host, b'[', b']') {
         Some(maybe_addr) => {
             // `IP-literal`.
-            if let Some(maybe_addr_rest) = strip_ascii_char_prefix(maybe_addr, b'v') {
+            // Note that `v` here is case insensitive. See RFC 3987 section 3.2.2.
+            if let Some(maybe_addr_rest) = strip_ascii_char_prefix(maybe_addr, b'v')
+                .or_else(|| strip_ascii_char_prefix(maybe_addr, b'V'))
+            {
                 // `IPvFuture`.
                 let (maybe_ver, maybe_addr) =
                     find_split_hole(maybe_addr_rest, b'.').ok_or_else(Error::new)?;
