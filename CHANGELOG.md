@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [0.5.2]
+
+* Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
+
+### Fixed
+* Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
+
 ## [0.5.1]
 
 * Add `FixedBaseResolver::base()` method.
@@ -469,7 +476,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.2...develop>
+[0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>
 [0.5.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.1>
 [0.5.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0>
 [0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
