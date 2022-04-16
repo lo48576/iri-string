@@ -2,10 +2,16 @@
 
 ## [Unreleased]
 
+## [0.5.1]
+
 * Add `FixedBaseResolver::base()` method.
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
 
 ### Added
 * Add `FixedBaseResolver::base()` method.
+
+### Fixed
+* Fix IP literal parsing and decomposition (<https://github.com/lo48576/iri-string/issues/17>).
 
 ## [0.5.0]
 
@@ -463,7 +469,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.1...develop>
+[0.5.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.1>
 [0.5.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0>
 [0.5.0-rc.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-rc.0>
 [0.5.0-beta.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0-beta.4>
