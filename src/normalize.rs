@@ -848,7 +848,7 @@ fn normalize_pct_encodings(i: &str) -> NormalizeCaseAndPercentEncodings<'_> {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "alloc")]
-    use crate::types::IriStr;
+    use crate::types::{IriStr, UriStr};
 
     #[cfg(feature = "alloc")]
     // `&[(expected, &[source_for_expected], &[different_iri])]`
@@ -927,5 +927,26 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_percent_encoded_non_ascii_in_uri() {
+        let uri = UriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
+            .expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(normalized, "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1");
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_percent_encoded_non_ascii_in_iri() {
+        let iri = IriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
+            .expect("must be a valid IRI");
+        let normalized = iri.normalize().expect("should be normalizable");
+        assert_eq!(
+            normalized, "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
+            "U+03B1 is an unreserved character"
+        );
     }
 }
