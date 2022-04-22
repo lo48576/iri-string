@@ -180,6 +180,17 @@ pub(crate) const fn is_ascii_unreserved(c: u8) -> bool {
     (TABLE[c as usize] & MASK_UNRESERVED) != 0
 }
 
+/// Returns true if the character is unreserved.
+#[inline]
+#[must_use]
+pub(crate) fn is_unreserved<S: Spec>(c: char) -> bool {
+    if c.is_ascii() {
+        is_ascii_unreserved(c as u8)
+    } else {
+        S::is_nonascii_char_unreserved(c)
+    }
+}
+
 ///// Returns `true` if the given ASCII character matches `gen-delims`.
 //#[inline]
 //#[must_use]
@@ -287,4 +298,19 @@ pub(crate) fn is_ucschar(c: char) -> bool {
         0xD_0000..=0xD_FFFD |
         0xE_1000..=0xE_FFFD
     )
+}
+
+/// Returns true if the given value is a continue byte of UTF-8.
+#[inline(always)]
+#[must_use]
+pub(crate) fn is_utf8_byte_continue(byte: u8) -> bool {
+    // `0x80..=0xbf` (i.e. `0b_1000_0000..=0b_1011_1111`) is not the first byte,
+    // and `0xc0..=0xc1` (i.e. `0b_1100_0000..=0b_1100_0001` shouldn't appear
+    // anywhere in UTF-8 byte sequence.
+    // `0x80 as i8` is -128, and `0xc0 as i8` is -96.
+    //
+    // The first byte of the UTF-8 character is not `0b10xx_xxxx`, and
+    // the continue bytes is `0b10xx_xxxx`.
+    // `0b1011_1111 as i8` is -65, and `0b1000_0000 as i8` is -128.
+    (byte as i8) < -64
 }
