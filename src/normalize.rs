@@ -209,14 +209,14 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let max_size = task.estimate_max_buf_size_for_resolution();
     /// let mut buf = vec![0_u8; max_size];
     /// let resolved = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(resolved, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(resolved, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
@@ -271,12 +271,12 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// assert_eq!(
     ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
+    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
     /// );
     /// # Ok::<_, Error>(())
     /// ```
@@ -311,14 +311,14 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
     /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     ///
@@ -414,15 +414,15 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
     /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
     /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
+    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// }
     /// # }
     /// # Ok::<_, iri_string::validate::Error>(())
@@ -471,12 +471,12 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// assert_eq!(
     ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
+    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
     /// );
     /// # Ok::<_, Error>(())
     /// ```
@@ -511,14 +511,14 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
     /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     ///
@@ -615,15 +615,15 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
     /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
     /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
+    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// }
     /// # }
     /// # Ok::<_, iri_string::validate::Error>(())
