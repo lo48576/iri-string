@@ -848,7 +848,7 @@ fn normalize_pct_encodings(i: &str) -> NormalizeCaseAndPercentEncodings<'_> {
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "alloc")]
-    use crate::types::{IriStr, UriStr};
+    use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
 
     #[cfg(feature = "alloc")]
     // `&[(expected, &[source_for_expected], &[different_iri])]`
@@ -947,6 +947,38 @@ mod tests {
         assert_eq!(
             normalized, "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
             "U+03B1 is an unreserved character"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn resolution_without_normalization() {
+        let iri_base =
+            IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
+                .expect("must be a valid IRI");
+        let iri: &IriReferenceStr = iri_base.as_ref();
+        let normalized = iri
+            .resolve_against(iri_base)
+            .expect("should produce valid result");
+        assert_eq!(
+            &*normalized,
+            "HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn resolution_with_normalization() {
+        let iri_base =
+            IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
+                .expect("must be a valid IRI");
+        let iri: &IriReferenceStr = iri_base.as_ref();
+        let normalized = iri
+            .resolve_normalize_against(iri_base)
+            .expect("should produce valid result");
+        assert_eq!(
+            &*normalized,
+            "http://User:Pass@example.com/path/PATH/\u{03B1}%FF"
         );
     }
 }
