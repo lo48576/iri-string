@@ -4,10 +4,12 @@
 
 pub(crate) mod authority;
 
+use core::cmp::Ordering;
 use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
+use crate::normalize::normalize_case_and_pct_encodings;
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
@@ -313,4 +315,164 @@ pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
 #[must_use]
 pub(crate) fn extract_fragment(iri: &str) -> Option<&str> {
     split_fragment(iri).1
+}
+
+/// Returns `Ok(_)` if the string is normalized.
+///
+/// If this function returns `true`, normalization input and output will be identical.
+///
+/// In this function, "normalized" means that any of the normalization below
+/// won't change the input on normalization:
+///
+/// * syntax-based normalization,
+/// * case normalization,
+/// * percent-encoding normalization, and
+/// * path segment normalizaiton.
+///
+/// Note that scheme-based normalization is not considered.
+#[must_use]
+pub(crate) fn is_normalized<S: Spec>(i: &str) -> bool {
+    let (i, scheme) = scheme_colon(i);
+    let (after_authority, authority) = slash_slash_authority_opt(i);
+    let (_after_path, path) = until_query(after_authority);
+
+    // Syntax-based normalization: uppercase chars in `scheme` should be
+    // converted to lowercase.
+    if scheme.bytes().any(|b| b.is_ascii_uppercase()) {
+        return false;
+    }
+
+    // Case normalization: ASCII alphabets in US-ASCII only `host` should be
+    // normalized to lowercase.
+    // Case normalization: ASCII alphabets in percent-encoding triplet should be
+    // normalized to uppercase.
+    // Percent-encoding normalization: unresreved characters should be decoded
+    // in `userinfo`, `host`, `path`, `query`, and `fragments`.
+    // Path segment normalization: the path should not have dot segments (`.`
+    // and/or `..`).
+    //
+    // Note that `authority` can have percent-encoded `userinfo`.
+    if let Some(authority) = authority {
+        let authority_components = authority::decompose_authority(authority);
+
+        // Check `host`.
+        let host = authority_components.host();
+        let host_is_normalized = if is_ascii_only_host(host) {
+            // Note that percent-encoding triplets in US-ASCII only
+            // host should be uppercase. For example, `plus%2bplus`
+            // is wrong and `plus%2Bplus` is correct.
+            let normalized_host_chars =
+                normalize_case_and_pct_encodings::<S>(host).scan(3, |after_percent, c| {
+                    // after_percent: 0 is `%`, 1 is upper hexdigit, 2 is lower
+                    // hexdigit, and 3 is plain character.
+                    Some(if c == '%' {
+                        *after_percent = 0;
+                        c
+                    } else if *after_percent < 2 {
+                        *after_percent += 1;
+                        c
+                    } else {
+                        *after_percent = 3;
+                        c.to_ascii_lowercase()
+                    })
+                });
+            normalized_host_chars.eq(host.chars())
+        } else {
+            // If the host is not ASCII-only, conversion to lowercase is not performed.
+            normalize_case_and_pct_encodings::<S>(host).eq(host.chars())
+        };
+        if !host_is_normalized {
+            return false;
+        }
+
+        // Check pencent encodings in `userinfo`.
+        if let Some(userinfo) = authority_components.userinfo() {
+            if !userinfo
+                .chars()
+                .eq(normalize_case_and_pct_encodings::<S>(userinfo))
+            {
+                return false;
+            }
+        }
+    }
+
+    // Check `path`.
+    // Syntax normalization:
+    // Percent-encoding normalization: unresreved characters should be decoded
+    // in `path`, `query`, and `fragments`.
+
+    // Syntax-based normalization: Dot segments should be removed.
+    // Note that we don't have to care `%2e` and `%2E` since `.` is unreserved
+    // and they will be decoded if not normalized.
+    if path.split('/').any(|segment| matches!(segment, "." | "..")) {
+        return false;
+    }
+    normalize_case_and_pct_encodings::<S>(after_authority).eq(after_authority.chars())
+}
+
+/// Decodes two hexdigits into a byte.
+///
+/// # Preconditions
+///
+/// The parameters `upper` and `lower` should be an ASCII hexadecimal digit.
+#[must_use]
+fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
+    let i_upper = match (upper & 0xf0).cmp(&0x40) {
+        Ordering::Less => upper - b'0',
+        Ordering::Equal => upper - (b'A' - 10),
+        Ordering::Greater => upper - (b'a' - 10),
+    };
+    let i_lower = match (lower & 0xf0).cmp(&0x40) {
+        Ordering::Less => lower - b'0',
+        Ordering::Equal => lower - (b'A' - 10),
+        Ordering::Greater => lower - (b'a' - 10),
+    };
+    (i_upper << 4) + i_lower
+}
+
+/// Converts the first two hexdigit bytes in the buffer into a byte.
+///
+/// # Panics
+///
+/// Panics if the string does not start with two hexdigits.
+#[must_use]
+pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
+    let mut bytes = s.bytes();
+    let upper_xdigit = bytes
+        .next()
+        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
+    let lower_xdigit = bytes
+        .next()
+        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
+    let v = hexdigits_to_byte([upper_xdigit, lower_xdigit]);
+    (v, &s[2..])
+}
+
+/// Returns true if the given `host`/`ihost` string consists of only US-ASCII characters.
+///
+/// # Precondition
+///
+/// The given string should be valid `host` or `host ":" port` string.
+#[must_use]
+pub(crate) fn is_ascii_only_host(mut host: &str) -> bool {
+    while let Some((i, c)) = host
+        .char_indices()
+        .find(|(_i, c)| !c.is_ascii() || *c == '%')
+    {
+        if c != '%' {
+            // Non-ASCII character found.
+            debug_assert!(!c.is_ascii());
+            return false;
+        }
+        // Percent-encoded character found.
+        let after_pct = &host[(i + 1)..];
+        let (byte, rest) = take_xdigits2(after_pct);
+        if !byte.is_ascii() {
+            return false;
+        }
+        host = rest;
+    }
+
+    // Neither non-ASCII characters nor percent-encoded characters found.
+    true
 }
