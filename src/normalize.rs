@@ -711,11 +711,31 @@ impl<'a> NormalizationTaskCommon<'a> {
                     // Optional `":" port` part only consists of an ASCII colon
                     // and ASCII digit, so this won't affect to the test result.
                     if is_ascii_only_host(host_port) {
-                        // Lowercase ASCII alphabets.
-                        buf.extend_chars(
-                            normalize_case_and_pct_encodings::<S>(host_port)
-                                .map(|c| c.to_ascii_lowercase()),
-                        )?;
+                        let mut chars = normalize_case_and_pct_encodings::<S>(host_port);
+                        loop {
+                            buf.extend_chars(
+                                chars
+                                    .by_ref()
+                                    .take_while(|c| *c != '%')
+                                    .map(|c| c.to_ascii_lowercase()),
+                            )?;
+                            let pct_upper = match chars.next() {
+                                Some(v) => v,
+                                None => break,
+                            };
+                            let pct_lower = chars.next().expect(
+                                "[validity] valid IRI must have following two hexxdigits after `%`",
+                            );
+                            debug_assert!(
+                                !pct_upper.is_ascii_lowercase() && !pct_lower.is_ascii_lowercase(),
+                                "[consistency] percent-encoded triplets should not be \
+                                 normalized to uppercase"
+                            );
+                            // Note that percent-encoding triplets in US-ASCII only
+                            // host should be uppercase. For example, `plus%2bplus`
+                            // is wrong and `plus%2Bplus` is correct.
+                            buf.extend_chars(['%', pct_upper, pct_lower])?;
+                        }
                     } else {
                         buf.extend_chars(normalize_case_and_pct_encodings::<S>(host_port))?;
                     }
