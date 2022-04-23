@@ -137,6 +137,7 @@ macro_rules! impl_cmp2_as_str {
 /// * type conversion
 ///     + `AsRef<&str> for $ty`
 ///     + `AsRef<&$ty> for $ty`
+///     + `From<&$ty>` for Cow<$ty>`
 ///     + `From<&$ty>` for Arc<$ty>`
 ///     + `From<&$ty>` for Box<$ty>`
 ///     + `From<&$ty>` for Rc<$ty>`
@@ -291,6 +292,14 @@ macro_rules! define_custom_string_slice {
             }
         }
 
+        #[cfg(feature = "alloc")]
+        impl<'a, S: crate::spec::Spec> From<&'a $ty<S>> for alloc::borrow::Cow<'a, $ty<S>> {
+            #[inline]
+            fn from(s: &'a $ty<S>) -> Self {
+                alloc::borrow::Cow::Borrowed(s)
+            }
+        }
+
         impl_from_slice_into_smartptr! {
             ty: $ty,
             smartptr: alloc::sync::Arc,
@@ -426,6 +435,8 @@ macro_rules! define_custom_string_slice {
 ///     + `ToOwned<Owned = $ty> for $slice`
 ///     + `From<&$slice> for $ty`
 ///     + `From<$ty> for String`
+///     + `From<$ty> for Cow<'_, $slice>`
+///     + `From<$ty> for Box<$slice>`
 ///     + `TryFrom<&str> for $ty`
 ///     + `TryFrom<&[u8]> for $ty`
 ///     + `TryFrom<String> for $ty`
@@ -465,6 +476,11 @@ macro_rules! define_custom_string_slice {
 /// * serde
 ///     + `serde::Serialize`
 ///     + `serde::Deserialize`
+// Note that `From<$ty> for {Arc,Rc}<$slice>` is currently not implemented since
+// this won't reuse allocated memory and hides internal memory reallocation. See
+// <https://github.com/lo48576/iri-string/issues/20#issuecomment-1105207849>.
+// However, this is not decided with firm belief or opinion, so there would be
+// a chance that they are implemented in future.
 #[cfg(feature = "alloc")]
 macro_rules! define_custom_string_owned {
     (
@@ -663,6 +679,25 @@ macro_rules! define_custom_string_owned {
             #[inline]
             fn from(s: $ty<S>) -> Self {
                 s.inner
+            }
+        }
+
+        impl<'a, S: crate::spec::Spec> From<$ty<S>> for alloc::borrow::Cow<'a, $slice<S>> {
+            #[inline]
+            fn from(s: $ty<S>) -> alloc::borrow::Cow<'a, $slice<S>> {
+                alloc::borrow::Cow::Owned(s)
+            }
+        }
+
+        impl<S: crate::spec::Spec> From<$ty<S>> for alloc::boxed::Box<$slice<S>> {
+            #[inline]
+            fn from(s: $ty<S>) -> alloc::boxed::Box<$slice<S>> {
+                let inner: alloc::string::String = s.into();
+                let buf = alloc::boxed::Box::<str>::from(inner);
+                unsafe {
+                    let raw: *mut str = alloc::boxed::Box::into_raw(buf);
+                    alloc::boxed::Box::<$slice<S>>::from_raw(raw as *mut $slice<S>)
+                }
             }
         }
 

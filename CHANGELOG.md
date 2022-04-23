@@ -4,10 +4,20 @@
 
 * Decode percent-encoded unreserved characters on normalizaiton.
 * Add `is_normalized` method to absolute URI/IRI types.
+* Implement more conversion traits from string types to `Cow`, `Box`, `Rc`, and `Arc`.
+* Improve documents.
 
 ### Added
 * Add `is_normalized` method to absolute URI/IRI types.
     + They don't heap-allocate.
+* Implement more conversion traits from string types to `Cow`, `Box`, `Rc`, and `Arc`.
+    + List of added conversions:
+        - `From<&'a $slice> for Cow<'a, $slice>`
+        - `From<&'_ $slice> for Box<$slice>`
+        - `From<&'_ $slice> for Rc<$slice>`
+        - `From<&'_ $slice> for Arc<$slice>`
+        - `From<$owned> for Cow<'_, $owned>`
+        - `From<$owned> for Box<$owned>`
 
 ### Fixed
 * Decode percent-encoded unreserved characters on normalizaiton.
