@@ -988,4 +988,23 @@ mod tests {
             "http://User:Pass@example.com/path/PATH/\u{03B1}%FF"
         );
     }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_non_ascii_only_host() {
+        let uri = UriStr::new("SCHEME://Alpha%ce%b1/").expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(normalized, "scheme://Alpha%CE%B1/");
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_host_with_sub_delims() {
+        let uri = UriStr::new("SCHEME://PLUS%2bPLUS/").expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(
+            normalized, "scheme://plus%2Bplus/",
+            "hexdigits in percent-encoding triplets should be normalized to uppercase"
+        );
+    }
 }
