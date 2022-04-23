@@ -2,6 +2,31 @@
 
 ## [Unreleased]
 
+## [0.5.3]
+
+* Decode percent-encoded unreserved characters on normalizaiton.
+* Add `is_normalized` method to absolute URI/IRI types.
+* Implement more conversion traits from string types to `Cow`, `Box`, `Rc`, and `Arc`.
+* Improve documents.
+
+### Added
+* Add `is_normalized` method to absolute URI/IRI types.
+    + They don't heap-allocate.
+* Implement more conversion traits from string types to `Cow`, `Box`, `Rc`, and `Arc`.
+    + List of added conversions:
+        - `From<&'a $slice> for Cow<'a, $slice>`
+        - `From<&'_ $slice> for Box<$slice>`
+        - `From<&'_ $slice> for Rc<$slice>`
+        - `From<&'_ $slice> for Arc<$slice>`
+        - `From<$owned> for Cow<'_, $owned>`
+        - `From<$owned> for Box<$owned>`
+
+### Fixed
+* Decode percent-encoded unreserved characters on normalizaiton.
+    + Previous implementation incorrectly leave unreserved percent-encoded
+      characters as is, but now this is fixed.
+
+
 ## [0.5.2]
 
 * Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
@@ -476,7 +501,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.2...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.3...develop>
+[0.5.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.3>
 [0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>
 [0.5.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.1>
 [0.5.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.0>

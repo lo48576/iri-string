@@ -121,6 +121,67 @@
 //! `IriFooStr{,ing}` are aliases of `RiFooStr{,ing}<IriSpec>`, and `UriFooStr{,ing}` are aliases
 //! of `RiFooStr{,ing}<UriSpec>`.
 //!
+//! # Wrapped string types
+//!
+//! Similar to string types in std (such as `str`, `std::path::Path`, and `std::ffi::OsStr`),
+//! IRI string types in this crate provides convenient conversions to:
+//!
+//! * `std::box::Box`,
+//! * `std::borrow::Cow`,
+//! * `std::rc::Rc`, and
+//! * `std::sync::Arc`.
+//!
+//! ```
+//! # use iri_string::validate::Error;
+//! # #[cfg(feature = "std")] {
+//! use std::borrow::Cow;
+//! use std::rc::Rc;
+//! use std::sync::Arc;
+//!
+//! use iri_string::types::IriStr;
+//!
+//! let iri = IriStr::new("http://example.com/")?;
+//! let iri_owned = iri.to_owned();
+//!
+//! // From slice.
+//! let cow_1_1: Cow<'_, IriStr> = iri.into();
+//! let cow_1_2 = Cow::<'_, IriStr>::from(iri);
+//! assert!(matches!(cow_1_1, Cow::Borrowed(_)));
+//! assert!(matches!(cow_1_2, Cow::Borrowed(_)));
+//! // From owned.
+//! let cow_2_1: Cow<'_, IriStr> = iri_owned.clone().into();
+//! let cow_2_2 = Cow::<'_, IriStr>::from(iri_owned.clone());
+//! assert!(matches!(cow_2_1, Cow::Owned(_)));
+//! assert!(matches!(cow_2_2, Cow::Owned(_)));
+//!
+//! // From slice.
+//! let box_1_1: Box<IriStr> = iri.into();
+//! let box_1_2 = Box::<IriStr>::from(iri);
+//! // From owned.
+//! let box_2_1: Box<IriStr> = iri_owned.clone().into();
+//! let box_2_2 = Box::<IriStr>::from(iri_owned.clone());
+//!
+//! // From slice.
+//! let rc_1_1: Rc<IriStr> = iri.into();
+//! let rc_1_2 = Rc::<IriStr>::from(iri);
+//! // From owned.
+//! // Note that `From<owned> for Rc<borrowed>` is not implemented for now.
+//! // Get borrowed string by `.as_slice()` and convert it.
+//! let rc_2_1: Rc<IriStr> = iri_owned.clone().as_slice().into();
+//! let rc_2_2 = Rc::<IriStr>::from(iri_owned.clone().as_slice());
+//!
+//! // From slice.
+//! let arc_1_1: Arc<IriStr> = iri.into();
+//! let arc_1_2 = Arc::<IriStr>::from(iri);
+//! // From owned.
+//! // Note that `From<owned> for Arc<borrowed>` is not implemented for now.
+//! // Get borrowed string by `.as_slice()` and convert it.
+//! let arc_2_1: Arc<IriStr> = iri_owned.clone().as_slice().into();
+//! let arc_2_2 = Arc::<IriStr>::from(iri_owned.clone().as_slice());
+//! # }
+//! # Ok::<_, Error>(())
+//! ```
+//!
 //! [RFC 3986]: https://tools.ietf.org/html/rfc3986
 //! [RFC 3987]: https://tools.ietf.org/html/rfc3987
 //! [`RiStr`]: struct.RiStr.html

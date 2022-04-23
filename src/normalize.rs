@@ -72,6 +72,7 @@
 
 mod error;
 mod path;
+mod percent_encoding;
 
 use core::marker::PhantomData;
 
@@ -80,7 +81,8 @@ use alloc::string::String;
 
 use crate::buffer::{Buffer, ByteSliceBuf};
 use crate::components::RiReferenceComponents;
-use crate::parser::char;
+use crate::parser::str::rfind_split_hole;
+use crate::parser::trusted::is_ascii_only_host;
 use crate::spec::Spec;
 use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiAbsoluteStr, RiStr};
@@ -180,11 +182,11 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     }
 
     /// Resolves the IRI, and writes it to the buffer.
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, buf: B) -> Result<&'b [u8], TaskError<Error>>
+    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(&self, buf: B) -> Result<&'b [u8], TaskError<Error>>
     where
         TaskError<Error>: From<B::ExtendError>,
     {
-        self.common.write_to_buf(buf).map_err(Into::into)
+        self.common.write_to_buf::<B, S>(buf).map_err(Into::into)
     }
 
     /// Returns the estimated maximum size required for IRI normalization/resolution.
@@ -207,14 +209,14 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let max_size = task.estimate_max_buf_size_for_resolution();
     /// let mut buf = vec![0_u8; max_size];
     /// let resolved = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(resolved, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(resolved, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
@@ -269,19 +271,19 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// assert_eq!(
     ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
+    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
     /// );
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
     fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
         let mut s = String::new();
-        self.write_to_buf(&mut s)?;
+        self.write_to_buf::<_, S>(&mut s)?;
         Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
     }
 
@@ -309,14 +311,14 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
     /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     ///
@@ -360,7 +362,7 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
         buf: &mut [u8],
     ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
         let buf = ByteSliceBuf::new(buf);
-        let s = self.write_to_buf(buf)?;
+        let s = self.write_to_buf::<_, S>(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
@@ -412,15 +414,15 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
     /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
     /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
+    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// }
     /// # }
     /// # Ok::<_, iri_string::validate::Error>(())
@@ -430,7 +432,7 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
         self,
         buf: &mut String,
     ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let s = self.write_to_buf(buf)?;
+        let s = self.write_to_buf::<_, S>(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
@@ -469,19 +471,19 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// assert_eq!(
     ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}%CE%B1"
+    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
     /// );
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
     fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
         let mut s = String::new();
-        self.write_to_buf(&mut s)?;
+        self.write_to_buf::<_, S>(&mut s)?;
         Ok(RiAbsoluteString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
     }
 
@@ -509,14 +511,14 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// // Long enough!
     /// let mut buf = [0_u8; 128];
     /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
     ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// # Ok::<_, Error>(())
     /// ```
     ///
@@ -560,7 +562,7 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
         buf: &mut [u8],
     ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
         let buf = ByteSliceBuf::new(buf);
-        let s = self.write_to_buf(buf)?;
+        let s = self.write_to_buf::<_, S>(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
@@ -613,15 +615,15 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// use iri_string::task::ProcessAndWrite;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1")?;
+    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
     /// let task = NormalizationTask::from(iri);
     ///
     /// let mut buf = String::from("Result: ");
     ///
     /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
     /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}%CE%B1");
+    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
+    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
     /// }
     /// # }
     /// # Ok::<_, iri_string::validate::Error>(())
@@ -631,7 +633,7 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
         self,
         buf: &mut String,
     ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let s = self.write_to_buf(buf)?;
+        let s = self.write_to_buf::<_, S>(buf)?;
         // Convert the type.
         // This should never fail (unless the crate has bugs), but do the
         // validation here for extra safety.
@@ -666,7 +668,10 @@ impl<'a> NormalizationTaskCommon<'a> {
     // [RFC 3986 section 5.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.3
     // [RFC 3986 section 6.2]: https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2
     // [RFC 3987 section 5.3.2]: https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2
-    fn write_to_buf<'b, B: Buffer<'b>>(&self, mut buf: B) -> Result<&'b [u8], TaskError<Error>>
+    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(
+        &self,
+        mut buf: B,
+    ) -> Result<&'b [u8], TaskError<Error>>
     where
         TaskError<Error>: From<B::ExtendError>,
     {
@@ -693,8 +698,47 @@ impl<'a> NormalizationTaskCommon<'a> {
             buf.push_str("//")?;
             match self.op {
                 NormalizationType::Full => {
-                    // Apply case normalization and percent-encoding normalization.
-                    buf.extend_chars(normalize_case_and_pct_encodings(authority))?;
+                    let host_port = match rfind_split_hole(authority, b'@') {
+                        Some((userinfo, host_port)) => {
+                            // Don't lowercase `userinfo` even if it is ASCII only.
+                            buf.extend_chars(normalize_case_and_pct_encodings::<S>(userinfo))?;
+                            buf.push_str("@")?;
+                            host_port
+                        }
+                        None => authority,
+                    };
+                    // Apply case normalization and percent-encoding normalization to `host`.
+                    // Optional `":" port` part only consists of an ASCII colon
+                    // and ASCII digit, so this won't affect to the test result.
+                    if is_ascii_only_host(host_port) {
+                        let mut chars = normalize_case_and_pct_encodings::<S>(host_port);
+                        loop {
+                            buf.extend_chars(
+                                chars
+                                    .by_ref()
+                                    .take_while(|c| *c != '%')
+                                    .map(|c| c.to_ascii_lowercase()),
+                            )?;
+                            let pct_upper = match chars.next() {
+                                Some(v) => v,
+                                None => break,
+                            };
+                            let pct_lower = chars.next().expect(
+                                "[validity] valid IRI must have following two hexxdigits after `%`",
+                            );
+                            debug_assert!(
+                                !pct_upper.is_ascii_lowercase() && !pct_lower.is_ascii_lowercase(),
+                                "[consistency] percent-encoded triplets should not be \
+                                 normalized to uppercase"
+                            );
+                            // Note that percent-encoding triplets in US-ASCII only
+                            // host should be uppercase. For example, `plus%2bplus`
+                            // is wrong and `plus%2Bplus` is correct.
+                            buf.extend_chars(['%', pct_upper, pct_lower])?;
+                        }
+                    } else {
+                        buf.extend_chars(normalize_case_and_pct_encodings::<S>(host_port))?;
+                    }
                 }
                 NormalizationType::RemoveDotSegments => {
                     buf.push_str(authority)?;
@@ -710,7 +754,7 @@ impl<'a> NormalizationTaskCommon<'a> {
                 buf.push_str(s)?;
             }
             Path::NeedsProcessing(path) => {
-                path.normalize(&mut buf, self.op)?;
+                path.normalize::<_, S>(&mut buf, self.op)?;
             }
         }
 
@@ -725,7 +769,7 @@ impl<'a> NormalizationTaskCommon<'a> {
             match self.op {
                 NormalizationType::Full => {
                     // Apply percent-encoding normalization.
-                    buf.extend_chars(normalize_pct_encodings(query))?;
+                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(query))?;
                 }
                 NormalizationType::RemoveDotSegments => {
                     buf.push_str(query)?;
@@ -739,7 +783,7 @@ impl<'a> NormalizationTaskCommon<'a> {
             match self.op {
                 NormalizationType::Full => {
                     // Apply percent-encoding normalization.
-                    buf.extend_chars(normalize_pct_encodings(fragment))?;
+                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(fragment))?;
                 }
                 NormalizationType::RemoveDotSegments => {
                     buf.push_str(fragment)?;
@@ -751,104 +795,21 @@ impl<'a> NormalizationTaskCommon<'a> {
     }
 }
 
-/// A state for case normalization and percent-encoding normalization.
-#[derive(Debug, Clone)]
-struct NormalizeCaseAndPercentEncodings<'a> {
-    /// The rest of the input.
-    rest: &'a str,
-    /// Number of the rest ASCII characters in a percent-encoded character.
-    rest_pct_encoded: u8,
-    /// Whether to normalize the case.
-    normalize_case: bool,
-}
-
-impl NormalizeCaseAndPercentEncodings<'_> {
-    /// Removes the first character in the buffer.
-    fn consume_char(&mut self) -> Option<char> {
-        let mut iter = self.rest.chars();
-        let next = iter.next()?;
-        let advanced = self.rest.len() - iter.as_str().len();
-        self.rest = &self.rest[advanced..];
-        Some(next)
-    }
-}
-
-impl Iterator for NormalizeCaseAndPercentEncodings<'_> {
-    type Item = char;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let first_char = self.consume_char()?;
-
-        if let Some(new_rest_pct) = self.rest_pct_encoded.checked_sub(1) {
-            self.rest_pct_encoded = new_rest_pct;
-            return Some(first_char.to_ascii_uppercase());
-        }
-
-        if first_char != '%' {
-            if self.normalize_case && first_char.is_ascii_uppercase() {
-                return Some(first_char.to_ascii_lowercase());
-            }
-            return Some(first_char);
-        }
-
-        let decoded = {
-            let bytes = self.rest.as_bytes();
-            let upper_hex = match bytes[0] {
-                c @ b'0'..=b'9' => c - b'0',
-                c @ b'a'..=b'f' => c - b'a' + 10,
-                c @ b'A'..=b'F' => c - b'A' + 10,
-                _ => {
-                    unreachable!("valid IRIs must not have incomplete or invalid percent encodings")
-                }
-            };
-            let lower_hex = match bytes[1] {
-                c @ b'0'..=b'9' => c - b'0',
-                c @ b'a'..=b'f' => c - b'a' + 10,
-                c @ b'A'..=b'F' => c - b'A' + 10,
-                _ => {
-                    unreachable!("valid IRIs must not have incomplete or invalid percent encodings")
-                }
-            };
-            let code = (upper_hex << 4) | lower_hex;
-            if self.normalize_case && code.is_ascii_uppercase() {
-                code.to_ascii_lowercase()
-            } else {
-                code
-            }
-        };
-        if decoded.is_ascii() && char::is_ascii_unreserved(decoded) {
-            self.consume_char();
-            self.consume_char();
-            return Some(decoded as char);
-        }
-
-        self.rest_pct_encoded = 2;
-        Some(first_char)
-    }
-}
-
-/// Returns an iterator to apply case normalization and percent encodings normalization.
-fn normalize_case_and_pct_encodings(i: &str) -> NormalizeCaseAndPercentEncodings<'_> {
-    NormalizeCaseAndPercentEncodings {
-        rest: i,
-        rest_pct_encoded: 0,
-        normalize_case: true,
-    }
-}
-
-/// Returns an iterator to apply only percent encodings normalization.
-fn normalize_pct_encodings(i: &str) -> NormalizeCaseAndPercentEncodings<'_> {
-    NormalizeCaseAndPercentEncodings {
-        rest: i,
-        rest_pct_encoded: 0,
-        normalize_case: false,
-    }
+/// Returns an iterator to apply percent encodings normalization and case normalization.
+///
+/// # Precondition
+///
+/// The given string should be a valid IRI reference with the spec `S`.
+pub(crate) fn normalize_case_and_pct_encodings<S: Spec>(
+    i: &str,
+) -> core::iter::Flatten<percent_encoding::PctNormalizedFragments<'_, S>> {
+    percent_encoding::PctNormalizedFragments::new(i).flatten()
 }
 
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "alloc")]
-    use crate::types::IriStr;
+    use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
 
     #[cfg(feature = "alloc")]
     // `&[(expected, &[source_for_expected], &[different_iri])]`
@@ -927,5 +888,77 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_percent_encoded_non_ascii_in_uri() {
+        let uri = UriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
+            .expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(normalized, "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1");
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_percent_encoded_non_ascii_in_iri() {
+        let iri = IriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
+            .expect("must be a valid IRI");
+        let normalized = iri.normalize().expect("should be normalizable");
+        assert_eq!(
+            normalized, "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
+            "U+03B1 is an unreserved character"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn resolution_without_normalization() {
+        let iri_base =
+            IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
+                .expect("must be a valid IRI");
+        let iri: &IriReferenceStr = iri_base.as_ref();
+        let normalized = iri
+            .resolve_against(iri_base)
+            .expect("should produce valid result");
+        assert_eq!(
+            &*normalized,
+            "HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn resolution_with_normalization() {
+        let iri_base =
+            IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
+                .expect("must be a valid IRI");
+        let iri: &IriReferenceStr = iri_base.as_ref();
+        let normalized = iri
+            .resolve_normalize_against(iri_base)
+            .expect("should produce valid result");
+        assert_eq!(
+            &*normalized,
+            "http://User:Pass@example.com/path/PATH/\u{03B1}%FF"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_non_ascii_only_host() {
+        let uri = UriStr::new("SCHEME://Alpha%ce%b1/").expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(normalized, "scheme://Alpha%CE%B1/");
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn normalize_host_with_sub_delims() {
+        let uri = UriStr::new("SCHEME://PLUS%2bPLUS/").expect("must be a valid URI");
+        let normalized = uri.normalize().expect("should be normalizable");
+        assert_eq!(
+            normalized, "scheme://plus%2Bplus/",
+            "hexdigits in percent-encoding triplets should be normalized to uppercase"
+        );
     }
 }

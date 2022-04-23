@@ -3,8 +3,9 @@
 use core::mem;
 
 use crate::buffer::Buffer;
-use crate::normalize::{normalize_pct_encodings, NormalizationType};
+use crate::normalize::{normalize_case_and_pct_encodings, NormalizationType};
 use crate::parser::str::{find_split, rfind};
+use crate::spec::Spec;
 
 /// Path that is (possibly) not yet processed or being processed.
 #[derive(Debug, Clone, Copy)]
@@ -171,12 +172,12 @@ impl<'a> PathToNormalize<'a> {
     ///
     /// [RFC 3986 section 5.2.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3
     /// [RFC 3986 section 5.2.4]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
-    pub(super) fn normalize<'b, B: Buffer<'b>>(
+    pub(super) fn normalize<'b, B: Buffer<'b>, S: Spec>(
         &self,
         buf: &mut B,
         op_norm: NormalizationType,
     ) -> Result<(), B::ExtendError> {
-        (*self).normalize_impl(buf, op_norm)
+        (*self).normalize_impl::<_, S>(buf, op_norm)
     }
 
     /// Runs path normalization.
@@ -186,7 +187,7 @@ impl<'a> PathToNormalize<'a> {
     ///
     /// [RFC 3986 section 5.2.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3
     /// [RFC 3986 section 5.2.4]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
-    fn normalize_impl<'b, B: Buffer<'b>>(
+    fn normalize_impl<'b, B: Buffer<'b>, S: Spec>(
         mut self,
         buf: &mut B,
         op_norm: NormalizationType,
@@ -238,7 +239,7 @@ impl<'a> PathToNormalize<'a> {
                     if !last_seg.has_leading_slash() {
                         assert_eq!(buf.as_bytes().len(), path_start);
                     }
-                    last_seg.write_to(buf, op_norm)?;
+                    last_seg.write_to::<_, S>(buf, op_norm)?;
                 }
                 // Store the last segment.
                 last_seg_buf = Some(next_seg);
@@ -250,7 +251,7 @@ impl<'a> PathToNormalize<'a> {
             if !seg.has_leading_slash() {
                 assert_eq!(buf.as_bytes().len(), path_start);
             }
-            seg.write_to(buf, op_norm)?;
+            seg.write_to::<_, S>(buf, op_norm)?;
         }
 
         Ok(())
@@ -340,7 +341,7 @@ impl<'a> PathSegment<'a> {
     }
 
     /// Writes the segment to the buffer.
-    fn write_to<'b, B: Buffer<'b>>(
+    fn write_to<'b, B: Buffer<'b>, S: Spec>(
         &self,
         buf: &mut B,
         op_norm: NormalizationType,
@@ -349,7 +350,9 @@ impl<'a> PathSegment<'a> {
             buf.push_str("/")?;
         }
         match op_norm {
-            NormalizationType::Full => buf.extend_chars(normalize_pct_encodings(self.segment())),
+            NormalizationType::Full => {
+                buf.extend_chars(normalize_case_and_pct_encodings::<S>(self.segment()))
+            }
             NormalizationType::RemoveDotSegments => buf.push_str(self.segment()),
         }
     }

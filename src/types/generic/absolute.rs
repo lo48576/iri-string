@@ -114,6 +114,38 @@ define_custom_string_owned! {
 }
 
 impl<S: Spec> RiAbsoluteStr<S> {
+    /// Returns `true` if the IRI is already normalized.
+    ///
+    /// This returns the same result as
+    /// `self.normalize.map_or(false, |normalized| normalized == self))`, but
+    /// does this more efficiently without heap allocation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
+    /// assert!(!iri.is_normalized());
+    ///
+    /// let normalized = iri.normalize()?;
+    /// assert_eq!(normalized, "http://example.com/baz?query");
+    /// assert!(normalized.is_normalized());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    #[inline]
+    pub fn is_normalized(&self) -> bool {
+        trusted_parser::is_normalized::<S>(self.as_str())
+    }
+
     /// Returns the normalized IRI.
     ///
     /// # Examples
