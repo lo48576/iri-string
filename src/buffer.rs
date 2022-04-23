@@ -7,6 +7,8 @@ use core::cmp::Ordering;
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
+use crate::parser::char::is_utf8_byte_continue;
+
 pub(crate) use self::error::BufferTooSmallError;
 pub use self::error::Error;
 
@@ -172,7 +174,7 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
         // The first byte of the UTF-8 character is not `0b10xx_xxxx`, and
         // the continue bytes is `0b10xx_xxxx`.
         // `0b1011_1111 as i8` is -65, and `0b1000_0000 as i8` is -128.
-        let is_byte_continue = (last_byte as i8) < -64;
+        let is_byte_continue = is_utf8_byte_continue(last_byte);
         if is_byte_continue {
             panic!("[precondition] `new_len` should lie on a `char` boundary");
         }

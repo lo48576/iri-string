@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+* Decode percent-encoded unreserved characters on normalizaiton.
+
+### Fixed
+* Decode percent-encoded unreserved characters on normalizaiton.
+    + Previous implementation incorrectly leave unreserved percent-encoded
+      characters as is, but now this is fixed.
+
+
 ## [0.5.2]
 
 * Fix IPvFuture literal parsing again (<https://github.com/lo48576/iri-string/issues/17>).
