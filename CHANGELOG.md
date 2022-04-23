@@ -3,6 +3,11 @@
 ## [Unreleased]
 
 * Decode percent-encoded unreserved characters on normalizaiton.
+* Add `is_normalized` method to absolute URI/IRI types.
+
+### Added
+* Add `is_normalized` method to absolute URI/IRI types.
+    + They don't heap-allocate.
 
 ### Fixed
 * Decode percent-encoded unreserved characters on normalizaiton.
