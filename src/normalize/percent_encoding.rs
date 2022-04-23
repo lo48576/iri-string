@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 use crate::parser::char::{is_ascii_unreserved, is_unreserved, is_utf8_byte_continue};
 use crate::spec::Spec;
 
-use super::take_xdigits2;
+use crate::parser::trusted::take_xdigits2;
 
 /// Percent-encoding normalized and case normalized string fragment.
 ///

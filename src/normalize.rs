@@ -74,7 +74,6 @@ mod error;
 mod path;
 mod percent_encoding;
 
-use core::cmp::Ordering;
 use core::marker::PhantomData;
 
 #[cfg(feature = "alloc")]
@@ -83,6 +82,7 @@ use alloc::string::String;
 use crate::buffer::{Buffer, ByteSliceBuf};
 use crate::components::RiReferenceComponents;
 use crate::parser::str::rfind_split_hole;
+use crate::parser::trusted::is_ascii_only_host;
 use crate::spec::Spec;
 use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiAbsoluteStr, RiStr};
@@ -800,76 +800,10 @@ impl<'a> NormalizationTaskCommon<'a> {
 /// # Precondition
 ///
 /// The given string should be a valid IRI reference with the spec `S`.
-fn normalize_case_and_pct_encodings<S: Spec>(
+pub(crate) fn normalize_case_and_pct_encodings<S: Spec>(
     i: &str,
 ) -> core::iter::Flatten<percent_encoding::PctNormalizedFragments<'_, S>> {
     percent_encoding::PctNormalizedFragments::new(i).flatten()
-}
-
-/// Decodes two hexdigits into a byte.
-///
-/// # Preconditions
-///
-/// The parameters `upper` and `lower` should be an ASCII hexadecimal digit.
-#[must_use]
-fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
-    let i_upper = match (upper & 0xf0).cmp(&0x40) {
-        Ordering::Less => upper - b'0',
-        Ordering::Equal => upper - (b'A' - 10),
-        Ordering::Greater => upper - (b'a' - 10),
-    };
-    let i_lower = match (lower & 0xf0).cmp(&0x40) {
-        Ordering::Less => lower - b'0',
-        Ordering::Equal => lower - (b'A' - 10),
-        Ordering::Greater => lower - (b'a' - 10),
-    };
-    (i_upper << 4) + i_lower
-}
-
-/// Converts the first two hexdigit bytes in the buffer into a byte.
-///
-/// # Panics
-///
-/// Panics if the string does not start with two hexdigits.
-#[must_use]
-fn take_xdigits2(s: &str) -> (u8, &str) {
-    let mut bytes = s.bytes();
-    let upper_xdigit = bytes
-        .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
-    let lower_xdigit = bytes
-        .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
-    let v = hexdigits_to_byte([upper_xdigit, lower_xdigit]);
-    (v, &s[2..])
-}
-
-/// Returns true if the given `host`/`ihost` string consists of only US-ASCII characters.
-///
-/// # Precondition
-///
-/// The given string should be valid `host` or `host ":" port` string.
-fn is_ascii_only_host(mut host: &str) -> bool {
-    while let Some((i, c)) = host
-        .char_indices()
-        .find(|(_i, c)| !c.is_ascii() || *c == '%')
-    {
-        if c != '%' {
-            // Non-ASCII character found.
-            debug_assert!(!c.is_ascii());
-            return false;
-        }
-        // Percent-encoded character found.
-        let after_pct = &host[(i + 1)..];
-        let (byte, rest) = take_xdigits2(after_pct);
-        if !byte.is_ascii() {
-            return false;
-        }
-        host = rest;
-    }
-
-    // Neither non-ASCII characters nor percent-encoded characters found.
-    true
 }
 
 #[cfg(test)]
