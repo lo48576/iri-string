@@ -30,6 +30,9 @@
 //! failure. Currently no cases are known to fail when at least one of the base
 //! IRI or the relative IRI contains authorities.
 //!
+//! If you want this kind of abnormal IRI resolution to succeed and to be
+//! idempotent, use WHATWG variation of resolution and normalization.
+//!
 //! ## Examples
 //!
 //! ```
@@ -39,20 +42,30 @@
 //!
 //! let base = IriAbsoluteStr::new("scheme:")?;
 //! {
-//!     let reference = IriReferenceStr::new(".///bar")?;
+//!     let reference = IriReferenceStr::new(".///not-a-host")?;
 //!     let err = reference.resolve_against(base)
 //!         .expect_err("this resolution should fail");
 //!     assert!(matches!(err, TaskError::Process(_)), "normalization error");
+//!
+//!     // WHATWG version.
+//!     let resolved_whatwg = reference.resolve_whatwg_against(base)
+//!         .expect("memory allocation failed");
+//!     assert_eq!(*resolved_whatwg, "scheme:/.//not-a-host");
 //! }
 //!
 //! {
-//!     let reference2 = IriReferenceStr::new("/..//bar")?;
-//!     // Resulting string will be `scheme://bar`, but `bar` should be a path
-//!     // segment, not a host. So, the semantically correct target IRI cannot
-//!     // be represented.
+//!     let reference2 = IriReferenceStr::new("/..//not-a-host")?;
+//!     // Resulting string will be `scheme://not-a-host`, but `not-a-host`
+//!     // should be a path segment, not a host. So, the semantically correct
+//!     // target IRI cannot be represented by RFC 3986 IRI resolution.
 //!     let err2 = reference2.resolve_against(base)
 //!         .expect_err("this resolution should fail");
 //!     assert!(matches!(err2, TaskError::Process(_)), "normalization error");
+//!
+//!     // Algorithm defined in WHATWG URL Standard addresses this case.
+//!     let resolved_whatwg2 = reference2.resolve_whatwg_against(base)
+//!         .expect("memory allocation failed");
+//!     assert_eq!(*resolved_whatwg2, "scheme:/.//not-a-host");
 //! }
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
@@ -60,6 +73,9 @@
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "alloc")]
+use core::convert::Infallible;
 
 use crate::components::RiReferenceComponents;
 #[cfg(feature = "alloc")]
@@ -136,6 +152,59 @@ pub fn resolve<S: Spec>(
     FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
 }
 
+/// Resolves the IRI reference.
+///
+/// It is recommended to use methods such as [`RiReferenceStr::resolve_whatwg_against()`]
+/// and [`RiRelativeStr::resolve_whatwg_against()`], rather than this freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if memory allocation failed.
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{resolve_whatwg, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("scheme:/path")?;
+/// let reference = IriReferenceStr::new("..//not-a-host")?;
+///
+/// // Resolve `reference` against `base`.
+/// let resolved = resolve_whatwg(reference, base)?;
+/// // Note that the result is not `scheme://not-a-host`.
+/// assert_eq!(resolved, "scheme:/.//not-a-host");
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [`RiReferenceStr::resolve_whatwg_against()`]: `RiReferenceStr::resolve_whatwg_against`
+/// [`RiRelativeStr::resolve_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::resolve_whatwg_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub fn resolve_whatwg<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Infallible>> {
+    let mut task = FixedBaseResolver::new(base.as_ref()).create_task(reference.as_ref());
+    task.enable_whatwg_serialization();
+    task.allocate_and_write().map_err(|e| match e {
+        TaskError::Buffer(e) => TaskError::Buffer(e),
+        TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
+    })
+}
+
 /// Resolves and normalizes the IRI reference.
 ///
 /// It is recommended to use methods such as [`RiReferenceStr::resolve_normalize_against()`]
@@ -201,6 +270,63 @@ pub fn resolve_normalize<S: Spec>(
     base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, TaskError<Error>> {
     FixedBaseResolver::new(base.as_ref()).resolve_normalize(reference.as_ref())
+}
+
+/// Resolves and normalizes the IRI reference.
+///
+/// It is recommended to use methods such as
+/// [`RiReferenceStr::resolve_normalize_whatwg_against()`] and
+/// [`RiRelativeStr::resolve_normalize_whatwg_against()`], rather than this
+/// freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if memory allocation failed.
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{resolve_normalize_whatwg, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("scheme:/path")?;
+/// let reference = IriReferenceStr::new("..//not-a-host")?;
+///
+/// // Resolve and normalize `reference` against `base`.
+/// let resolved = resolve_normalize_whatwg(reference, base)?;
+/// assert_eq!(resolved, "scheme:/.//not-a-host");
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
+/// [`RiReferenceStr::resolve_normalize_whatwg_against()`]:
+///     `RiReferenceStr::resolve_normalize_whatwg_against`
+/// [`RiRelativeStr::resolve_normalize_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::resolve_normalize_whatwg_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub fn resolve_normalize_whatwg<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Infallible>> {
+    let mut task =
+        FixedBaseResolver::new(base.as_ref()).create_normalizing_task(reference.as_ref());
+    task.enable_whatwg_serialization();
+    task.allocate_and_write().map_err(|e| match e {
+        TaskError::Buffer(e) => TaskError::Buffer(e),
+        TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
+    })
 }
 
 /// A resolver against the fixed base.
@@ -420,7 +546,14 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// result. However, note that `..` and `.` is recognized even when they
     /// are percent-encoded.
     ///
-    /// If you don't want to normalize the result, use [`create_task`] instead.
+    /// If you want to normalize the result, use
+    /// [`create_normalizing_task`][`Self::create_normalizing_task`]
+    /// method instead, or call [`NormalizationTask::enable_normalization`] for
+    /// the returned task.
+    ///
+    /// If you want to avoid resolution failure by using resolution described in
+    /// WHATWG URL Standard, call
+    /// [`NormalizationTask::enable_whatwg_serialization`] for the returned task.
     ///
     /// # Examples
     ///
@@ -550,6 +683,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// [`resolve_normalize`][`Self::resolve_normalize`] method, use this.
     ///
     /// The task returned by this method normalizes the resolution result.
+    /// If you don't want to normalize the result, use
+    /// [`create_task`][`Self::create_task`] instead.
+    ///
+    /// If you want to avoid resolution and normalization failure by using
+    /// resolution described in WHATWG URL Standard, call
+    /// [`NormalizationTask::enable_whatwg_serialization`] for the returned task.
     ///
     /// # Examples
     ///
