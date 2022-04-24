@@ -92,13 +92,17 @@ use crate::types::{RiAbsoluteString, RiString};
 pub use self::error::Error;
 pub(crate) use self::path::{Path, PathToNormalize};
 
-/// Normalization type.
+/// Normalization operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum NormalizationType {
-    /// Full generic syntax-based normalization.
-    Full,
-    /// Only `remove_dot_segments` algorithm.
-    RemoveDotSegments,
+pub(crate) struct NormalizationOp {
+    /// Whether to apply case normalization and percent-encoding normalization.
+    ///
+    /// Note that even when this option is `true`, plain US-ASCII characters
+    /// won't be automatically lowered. Users should apply case normalization
+    /// for US-ASCII only `host` component by themselves.
+    pub(crate) case_pct_normalization: bool,
+    /// Whether to apply serialization described in WHATWG URL Standard.
+    pub(crate) whatwg_serialization: bool,
 }
 
 /// IRI normalization/resolution task.
@@ -127,7 +131,10 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
             path,
             query,
             fragment,
-            op: NormalizationType::Full,
+            op: NormalizationOp {
+                case_pct_normalization: true,
+                whatwg_serialization: false,
+            },
         };
         common.into()
     }
@@ -154,7 +161,10 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationTask<'a, RiAbsolut
             path,
             query,
             fragment,
-            op: NormalizationType::Full,
+            op: NormalizationOp {
+                case_pct_normalization: true,
+                whatwg_serialization: false,
+            },
         };
         common.into()
     }
@@ -170,15 +180,15 @@ impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationTask<'a, RiAbso
 
 impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// Enables normalization for the task.
-    pub(crate) fn enable_normalization(&mut self) {
-        debug_assert!(
-            matches!(
-                self.common.op,
-                NormalizationType::Full | NormalizationType::RemoveDotSegments
-            ),
-            "No cases should be overlooked"
-        );
-        self.common.op = NormalizationType::Full;
+    #[inline]
+    pub fn enable_normalization(&mut self) {
+        self.common.op.case_pct_normalization = true;
+    }
+
+    /// Enables WHATWG URL Standard serialization for the task.
+    #[inline]
+    pub fn enable_whatwg_serialization(&mut self) {
+        self.common.op.whatwg_serialization = true;
     }
 
     /// Resolves the IRI, and writes it to the buffer.
@@ -657,7 +667,7 @@ pub(crate) struct NormalizationTaskCommon<'a> {
     /// Target fragment.
     pub(crate) fragment: Option<&'a str>,
     /// Normalization type.
-    pub(crate) op: NormalizationType,
+    pub(crate) op: NormalizationOp,
 }
 
 impl<'a> NormalizationTaskCommon<'a> {
@@ -677,72 +687,66 @@ impl<'a> NormalizationTaskCommon<'a> {
     {
         let buf_offset = buf.as_bytes().len();
         // Write the scheme.
-        match self.op {
-            NormalizationType::Full => {
-                // Apply case normalization.
-                //
-                // > namely, that the scheme and US-ASCII only host are case
-                // > insensitive and therefore should be normalized to lowercase.
-                // >
-                // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
-                buf.extend_chars(self.scheme.chars().map(|c| c.to_ascii_lowercase()))?;
-            }
-            NormalizationType::RemoveDotSegments => {
-                buf.push_str(self.scheme)?;
-            }
+        if self.op.case_pct_normalization {
+            // Apply case normalization.
+            //
+            // > namely, that the scheme and US-ASCII only host are case
+            // > insensitive and therefore should be normalized to lowercase.
+            // >
+            // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
+            buf.extend_chars(self.scheme.chars().map(|c| c.to_ascii_lowercase()))?;
+        } else {
+            buf.push_str(self.scheme)?;
         }
         buf.push_str(":")?;
 
         // Write the authority if available.
         if let Some(authority) = self.authority {
             buf.push_str("//")?;
-            match self.op {
-                NormalizationType::Full => {
-                    let host_port = match rfind_split_hole(authority, b'@') {
-                        Some((userinfo, host_port)) => {
-                            // Don't lowercase `userinfo` even if it is ASCII only.
-                            buf.extend_chars(normalize_case_and_pct_encodings::<S>(userinfo))?;
-                            buf.push_str("@")?;
-                            host_port
-                        }
-                        None => authority,
-                    };
-                    // Apply case normalization and percent-encoding normalization to `host`.
-                    // Optional `":" port` part only consists of an ASCII colon
-                    // and ASCII digit, so this won't affect to the test result.
-                    if is_ascii_only_host(host_port) {
-                        let mut chars = normalize_case_and_pct_encodings::<S>(host_port);
-                        loop {
-                            buf.extend_chars(
-                                chars
-                                    .by_ref()
-                                    .take_while(|c| *c != '%')
-                                    .map(|c| c.to_ascii_lowercase()),
-                            )?;
-                            let pct_upper = match chars.next() {
-                                Some(v) => v,
-                                None => break,
-                            };
-                            let pct_lower = chars.next().expect(
-                                "[validity] valid IRI must have following two hexxdigits after `%`",
-                            );
-                            debug_assert!(
-                                !pct_upper.is_ascii_lowercase() && !pct_lower.is_ascii_lowercase(),
-                                "[consistency] percent-encoded triplets should not be \
-                                 normalized to uppercase"
-                            );
-                            // Note that percent-encoding triplets in US-ASCII only
-                            // host should be uppercase. For example, `plus%2bplus`
-                            // is wrong and `plus%2Bplus` is correct.
-                            buf.extend_chars(['%', pct_upper, pct_lower])?;
-                        }
-                    } else {
-                        buf.extend_chars(normalize_case_and_pct_encodings::<S>(host_port))?;
+            if self.op.case_pct_normalization {
+                let host_port = match rfind_split_hole(authority, b'@') {
+                    Some((userinfo, host_port)) => {
+                        // Don't lowercase `userinfo` even if it is ASCII only.
+                        buf.extend_chars(normalize_case_and_pct_encodings::<S>(userinfo))?;
+                        buf.push_str("@")?;
+                        host_port
                     }
+                    None => authority,
+                };
+                // Apply case normalization and percent-encoding normalization to `host`.
+                // Optional `":" port` part only consists of an ASCII colon
+                // and ASCII digit, so this won't affect to the test result.
+                if is_ascii_only_host(host_port) {
+                    let mut chars = normalize_case_and_pct_encodings::<S>(host_port);
+                    loop {
+                        buf.extend_chars(
+                            chars
+                                .by_ref()
+                                .take_while(|c| *c != '%')
+                                .map(|c| c.to_ascii_lowercase()),
+                        )?;
+                        let pct_upper = match chars.next() {
+                            Some(v) => v,
+                            None => break,
+                        };
+                        let pct_lower = chars.next().expect(
+                            "[validity] valid IRI must have following two hexxdigits after `%`",
+                        );
+                        debug_assert!(
+                            !pct_upper.is_ascii_lowercase() && !pct_lower.is_ascii_lowercase(),
+                            "[consistency] percent-encoded triplets should not be \
+                                 normalized to uppercase"
+                        );
+                        // Note that percent-encoding triplets in US-ASCII only
+                        // host should be uppercase. For example, `plus%2bplus`
+                        // is wrong and `plus%2Bplus` is correct.
+                        buf.extend_chars(['%', pct_upper, pct_lower])?;
+                    }
+                } else {
+                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(host_port))?;
                 }
-                NormalizationType::RemoveDotSegments => {
-                    buf.push_str(authority)?;
-                }
+            } else {
+                buf.push_str(authority)?;
             }
         }
 
@@ -759,35 +763,32 @@ impl<'a> NormalizationTaskCommon<'a> {
         }
 
         // If authority is absent, the path should never start with `//`.
-        if self.authority.is_none() && buf.as_bytes()[path_start_pos..].starts_with(b"//") {
+        if self.authority.is_none()
+            && buf.as_bytes()[path_start_pos..].starts_with(b"//")
+            && !self.op.whatwg_serialization
+        {
             return Err(TaskError::Process(Error::new()));
         }
 
         // Write the query if available.
         if let Some(query) = self.query {
             buf.push_str("?")?;
-            match self.op {
-                NormalizationType::Full => {
-                    // Apply percent-encoding normalization.
-                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(query))?;
-                }
-                NormalizationType::RemoveDotSegments => {
-                    buf.push_str(query)?;
-                }
+            if self.op.case_pct_normalization {
+                // Apply percent-encoding normalization.
+                buf.extend_chars(normalize_case_and_pct_encodings::<S>(query))?;
+            } else {
+                buf.push_str(query)?;
             }
         }
 
         // Write the fragment if available.
         if let Some(fragment) = self.fragment {
             buf.push_str("#")?;
-            match self.op {
-                NormalizationType::Full => {
-                    // Apply percent-encoding normalization.
-                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(fragment))?;
-                }
-                NormalizationType::RemoveDotSegments => {
-                    buf.push_str(fragment)?;
-                }
+            if self.op.case_pct_normalization {
+                // Apply percent-encoding normalization.
+                buf.extend_chars(normalize_case_and_pct_encodings::<S>(fragment))?;
+            } else {
+                buf.push_str(fragment)?;
             }
         }
 
@@ -960,5 +961,20 @@ mod tests {
             normalized, "scheme://plus%2Bplus/",
             "hexdigits in percent-encoding triplets should be normalized to uppercase"
         );
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn whatwg_normalization() {
+        let uri = UriStr::new("scheme:..///not-a-host").expect("must be a valid URI");
+        assert!(!uri.is_normalized_whatwg());
+
+        let normalized = uri.normalize_whatwg().expect("cannot allocate memory");
+        assert_eq!(normalized, "scheme:/.//not-a-host");
+        assert!(normalized.is_normalized_whatwg());
+
+        let normalized_again = uri.normalize_whatwg().expect("cannot allocate memory");
+        assert_eq!(normalized_again, normalized);
+        assert!(normalized_again.is_normalized_whatwg());
     }
 }

@@ -65,7 +65,7 @@ use crate::components::RiReferenceComponents;
 #[cfg(feature = "alloc")]
 use crate::normalize::Error;
 use crate::normalize::{
-    NormalizationTask, NormalizationTaskCommon, NormalizationType, Path, PathToNormalize,
+    NormalizationOp, NormalizationTask, NormalizationTaskCommon, Path, PathToNormalize,
 };
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
@@ -534,7 +534,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             path,
             query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
             fragment: r_fragment,
-            op: NormalizationType::RemoveDotSegments,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+                whatwg_serialization: false,
+            },
         }
         .into()
     }
