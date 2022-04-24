@@ -170,6 +170,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
     pub fn normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
         NormalizationTask::from(self).allocate_and_write()
@@ -232,6 +233,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
     pub fn normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
         let mut task = NormalizationTask::from(self);
