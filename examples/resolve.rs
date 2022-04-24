@@ -1,5 +1,6 @@
 //! An example to parse IRI from the CLI argument.
 
+use iri_string::task::Error as TaskError;
 use iri_string::types::{RiAbsoluteStr, RiReferenceStr};
 
 const USAGE: &str = "\
@@ -10,6 +11,7 @@ FLAGS:
     -h, --help      Prints this help
     -i, --iri       Handle the input as an IRI (RFC 3987)
     -u, --uri       Handle the input as an URI (RFC 3986)
+    -w, --whatwg    Serialize normalization result according to WHATWG URL Standard.
 
 ARGS:
     <BASE>          Base IRI or URI to resolve REFERENCE against
@@ -57,6 +59,8 @@ struct CliOpt {
     reference: String,
     /// Syntax spec.
     spec: Spec,
+    /// Whether to serialize in WHATWG URL Standard way.
+    whatwg_serialization: bool,
 }
 
 impl CliOpt {
@@ -68,11 +72,13 @@ impl CliOpt {
         let mut base = None;
         let mut reference = None;
         let mut spec = None;
+        let mut whatwg_serialization = false;
 
         for arg in args.by_ref() {
             match arg.as_str() {
                 "--iri" | "-i" => spec = Some(Spec::Iri),
                 "--uri" | "-u" => spec = Some(Spec::Uri),
+                "--whatwg" | "-w" => whatwg_serialization = true,
                 "--help" | "-h" => help_and_exit(),
                 opt if opt.starts_with('-') => die(format_args!("Unknown option: {}", opt)),
                 _ => {
@@ -104,6 +110,7 @@ impl CliOpt {
             base,
             reference,
             spec,
+            whatwg_serialization,
         }
     }
 }
@@ -135,7 +142,15 @@ fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
         )),
     };
 
-    match reference.resolve_against(base) {
+    let resolved = if opt.whatwg_serialization {
+        reference.resolve_whatwg_against(base).map_err(|e| match e {
+            TaskError::Buffer(e) => TaskError::Buffer(e),
+            TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
+        })
+    } else {
+        reference.resolve_against(base)
+    };
+    match resolved {
         Ok(resolved) => println!("{}", resolved),
         Err(e) => die(format_args!(
             "Failed to resolve {:?} against {:?}: {}",
