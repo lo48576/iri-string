@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+* Implement IRI resolution and normalization that uses serialization algorithm
+  [described in WHATWG URL Standard](https://url.spec.whatwg.org/#url-serializing).
+
+### Added
+* Implement IRI resolution and normalization that uses serialization algorithm
+  [described in WHATWG URL Standard](https://url.spec.whatwg.org/#url-serializing).
+    + They won't fail even when the input or result is abnormal (but of course
+      they may still fail on memory shortage).
+    + The difference between RFC 3986/3987 versions and WHATWG versions is,
+      handling of absent host and path starting with `//`. The RFC versions fail
+      since `scheme://not-a-host` is invalid, but WHATWG versions serializes the
+      result as `scheme:/.//not-a-host`.
+    + List of added functions:
+        - `resolve::resolve_whatwg()`
+        - `resolve::resolve_normalize_whatwg()`
+        - `normalize::NormalizationTask::enable_normalization()`
+        - `normalize::NormalizationTask::enable_whatwg_serialization()`
+        - `types::RiStr::is_normalized_whatwg()`
+        - `types::RiStr::normalize_whatwg()`
+        - `types::RiAbsoluteStr::is_normalized_whatwg()`
+        - `types::RiAbsoluteStr::normalize_whatwg()`
+        - `types::RiReferenceStr::resolve_normalize_whatwg_against()`
+        - `types::RiReferenceStr::resolve_whatwg_against()`
+        - `types::RiRelativeStr::resolve_normalize_whatwg_against()`
+        - `types::RiRelativeStr::resolve_whatwg_against()`
+
 ## [0.5.3]
 
 * Decode percent-encoded unreserved characters on normalizaiton.
