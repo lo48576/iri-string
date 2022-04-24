@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.4]
+
 * Implement IRI resolution and normalization that uses serialization algorithm
   [described in WHATWG URL Standard](https://url.spec.whatwg.org/#url-serializing).
 
@@ -527,7 +529,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.4...develop>
+[0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
 [0.5.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.3>
 [0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>
 [0.5.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.1>
