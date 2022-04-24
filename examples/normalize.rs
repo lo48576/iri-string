@@ -1,5 +1,6 @@
 //! An example to normalize an IRI from the CLI argument.
 
+use iri_string::task::Error as TaskError;
 use iri_string::types::{RiStr, RiString};
 
 const USAGE: &str = "\
@@ -11,6 +12,7 @@ FLAGS:
     -i, --iri       Handle the input as an IRI (RFC 3987)
     -u, --uri       Handle the input as an URI (RFC 3986)
     -a, --ascii     Converts the output to an URI (RFC 3986)
+    -w, --whatwg    Serialize normalization result according to WHATWG URL Standard.
 
 ARGS:
     <IRI>           IRI
@@ -57,6 +59,8 @@ struct CliOpt {
     spec: Spec,
     /// Whether to convert output to ASCII URI or not.
     output_ascii: bool,
+    /// Whether to serialize in WHATWG URL Standard way.
+    whatwg_serialization: bool,
 }
 
 impl CliOpt {
@@ -68,12 +72,14 @@ impl CliOpt {
         let mut iri = None;
         let mut spec = None;
         let mut output_ascii = false;
+        let mut whatwg_serialization = false;
 
         for arg in args.by_ref() {
             match arg.as_str() {
                 "--ascii" | "-a" => output_ascii = true,
                 "--iri" | "-i" => spec = Some(Spec::Iri),
                 "--uri" | "-u" => spec = Some(Spec::Uri),
+                "--whatwg" | "-w" => whatwg_serialization = true,
                 "--help" | "-h" => help_and_exit(),
                 opt if opt.starts_with('-') => die(format_args!("Unknown option: {opt}")),
                 _ => {
@@ -96,6 +102,7 @@ impl CliOpt {
             iri,
             spec,
             output_ascii,
+            whatwg_serialization,
         }
     }
 }
@@ -128,7 +135,15 @@ fn normalize<S: iri_string::spec::Spec>(opt: &CliOpt) -> RiString<S> {
         Ok(v) => v,
         Err(e) => die(format_args!("Failed to parse {raw:?}: {e:?}")),
     };
-    match iri.normalize() {
+    let normalized = if opt.whatwg_serialization {
+        iri.normalize_whatwg().map_err(|e| match e {
+            TaskError::Buffer(e) => TaskError::Buffer(e),
+            TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
+        })
+    } else {
+        iri.normalize()
+    };
+    match normalized {
         Ok(v) => v,
         Err(e) => die(format_args!("Failed to normalize: {e:?}")),
     }

@@ -331,7 +331,7 @@ pub(crate) fn extract_fragment(iri: &str) -> Option<&str> {
 ///
 /// Note that scheme-based normalization is not considered.
 #[must_use]
-pub(crate) fn is_normalized<S: Spec>(i: &str) -> bool {
+pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> bool {
     let (i, scheme) = scheme_colon(i);
     let (after_authority, authority) = slash_slash_authority_opt(i);
     let (_after_path, path) = until_query(after_authority);
@@ -397,14 +397,21 @@ pub(crate) fn is_normalized<S: Spec>(i: &str) -> bool {
     }
 
     // Check `path`.
-    // Syntax normalization:
-    // Percent-encoding normalization: unresreved characters should be decoded
-    // in `path`, `query`, and `fragments`.
-
     // Syntax-based normalization: Dot segments should be removed.
     // Note that we don't have to care `%2e` and `%2E` since `.` is unreserved
     // and they will be decoded if not normalized.
-    if path.split('/').any(|segment| matches!(segment, "." | "..")) {
+    // Also note that WHATWG serialization will use `/.//` as a path prefix.
+    // Percent-encoding normalization: unresreved characters should be decoded
+    // in `path`, `query`, and `fragments`.
+    let path_span_no_dot_segments = if whatwg_serialization {
+        path.strip_prefix("/.//").unwrap_or(path)
+    } else {
+        path
+    };
+    if path_span_no_dot_segments
+        .split('/')
+        .any(|segment| matches!(segment, "." | ".."))
+    {
         return false;
     }
     normalize_case_and_pct_encodings::<S>(after_authority).eq(after_authority.chars())

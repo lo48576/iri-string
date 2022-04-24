@@ -1,5 +1,7 @@
 //! IRI reference.
 
+#[cfg(feature = "alloc")]
+use core::convert::Infallible;
 use core::convert::TryFrom;
 
 #[cfg(feature = "alloc")]
@@ -12,7 +14,7 @@ use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 #[cfg(feature = "alloc")]
-use crate::resolve::{resolve, resolve_normalize};
+use crate::resolve::{resolve, resolve_normalize, resolve_normalize_whatwg, resolve_whatwg};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::task::Error as TaskError;
@@ -185,6 +187,30 @@ impl<S: Spec> RiReferenceStr<S> {
         }
     }
 
+    /// Returns normalized and resolved IRI against the base IRI, using
+    /// algorithm in WHATWG URL Standard.
+    ///
+    /// This returns the normalized result of
+    /// [`resolve_whatwg_against`][`Self::resolve_whatwg_against`] method.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Failures
+    ///
+    /// This fails if memory allocation failed.
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[inline]
+    pub fn resolve_whatwg_against(
+        &self,
+        base: &RiAbsoluteStr<S>,
+    ) -> Result<Cow<'_, RiStr<S>>, TaskError<Infallible>> {
+        match self.to_iri() {
+            Ok(iri) => Ok(Cow::Borrowed(iri)),
+            Err(relative) => resolve_whatwg(relative, base).map(Cow::Owned),
+        }
+    }
+
     /// Returns normalized and resolved IRI against the given base IRI.
     ///
     /// This returns the normalized result of
@@ -209,6 +235,27 @@ impl<S: Spec> RiReferenceStr<S> {
         base: &RiAbsoluteStr<S>,
     ) -> Result<RiString<S>, TaskError<Error>> {
         resolve_normalize(self, base)
+    }
+
+    /// Returns normalized and resolved IRI against the base IRI, using
+    /// algorithm in WHATWG URL Standard.
+    ///
+    /// This returns the normalized result of
+    /// [`resolve_whatwg_against`][`Self::resolve_whatwg_against`] method.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// # Failures
+    ///
+    /// This fails if memory allocation failed.
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[inline]
+    pub fn resolve_normalize_whatwg_against(
+        &self,
+        base: &RiAbsoluteStr<S>,
+    ) -> Result<RiString<S>, TaskError<Infallible>> {
+        resolve_normalize_whatwg(self, base)
     }
 }
 

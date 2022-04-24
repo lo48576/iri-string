@@ -3,7 +3,7 @@
 use core::mem;
 
 use crate::buffer::Buffer;
-use crate::normalize::{normalize_case_and_pct_encodings, NormalizationType};
+use crate::normalize::{normalize_case_and_pct_encodings, NormalizationOp};
 use crate::parser::str::{find_split, rfind};
 use crate::spec::Spec;
 
@@ -175,7 +175,7 @@ impl<'a> PathToNormalize<'a> {
     pub(super) fn normalize<'b, B: Buffer<'b>, S: Spec>(
         &self,
         buf: &mut B,
-        op_norm: NormalizationType,
+        op_norm: NormalizationOp,
     ) -> Result<(), B::ExtendError> {
         (*self).normalize_impl::<_, S>(buf, op_norm)
     }
@@ -190,7 +190,7 @@ impl<'a> PathToNormalize<'a> {
     fn normalize_impl<'b, B: Buffer<'b>, S: Spec>(
         mut self,
         buf: &mut B,
-        op_norm: NormalizationType,
+        op_norm: NormalizationOp,
     ) -> Result<(), B::ExtendError> {
         let path_start = buf.as_bytes().len();
 
@@ -239,7 +239,7 @@ impl<'a> PathToNormalize<'a> {
                     if !last_seg.has_leading_slash() {
                         assert_eq!(buf.as_bytes().len(), path_start);
                     }
-                    last_seg.write_to::<_, S>(buf, op_norm)?;
+                    last_seg.write_to::<_, S>(buf, op_norm, path_start)?;
                 }
                 // Store the last segment.
                 last_seg_buf = Some(next_seg);
@@ -251,7 +251,7 @@ impl<'a> PathToNormalize<'a> {
             if !seg.has_leading_slash() {
                 assert_eq!(buf.as_bytes().len(), path_start);
             }
-            seg.write_to::<_, S>(buf, op_norm)?;
+            seg.write_to::<_, S>(buf, op_norm, path_start)?;
         }
 
         Ok(())
@@ -344,16 +344,32 @@ impl<'a> PathSegment<'a> {
     fn write_to<'b, B: Buffer<'b>, S: Spec>(
         &self,
         buf: &mut B,
-        op_norm: NormalizationType,
+        op_norm: NormalizationOp,
+        path_start_pos: usize,
     ) -> Result<(), B::ExtendError> {
         if self.has_leading_slash() {
-            buf.push_str("/")?;
-        }
-        match op_norm {
-            NormalizationType::Full => {
-                buf.extend_chars(normalize_case_and_pct_encodings::<S>(self.segment()))
+            if (buf.as_bytes().get(path_start_pos..) == Some(b"/")) && op_norm.whatwg_serialization
+            {
+                // Consider combining scheme `a`, no host, and path `//p`.
+                // Naive implementation will generate result string `a://p`, but
+                // it is not intended result since it is an IRI that consists of
+                // scheme `a`, host `p`, and path ``.
+                //
+                // To prevent such errors but still to keep normalization
+                // idempotent, WHATWG URL Standard spec requires the
+                // normalization result for such cases to be `a:/.//p`.
+                //
+                // See <https://url.spec.whatwg.org/#url-serializing> (archive:
+                // <https://web.archive.org/web/20220204115552/https://url.spec.whatwg.org/#url-serializing>).
+                buf.push_str(".//")?;
+            } else {
+                buf.push_str("/")?;
             }
-            NormalizationType::RemoveDotSegments => buf.push_str(self.segment()),
+        }
+        if op_norm.case_pct_normalization {
+            buf.extend_chars(normalize_case_and_pct_encodings::<S>(self.segment()))
+        } else {
+            buf.push_str(self.segment())
         }
     }
 }
