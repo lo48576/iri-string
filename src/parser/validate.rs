@@ -33,7 +33,7 @@ fn validate_scheme(i: &str) -> Result<(), Error> {
 }
 
 /// Returns `Ok(_)` if the string matches `query` or `iquery`.
-fn validate_query<S: Spec>(i: &str) -> Result<(), Error> {
+pub(crate) fn validate_query<S: Spec>(i: &str) -> Result<(), Error> {
     let is_valid =
         satisfy_chars_with_pct_encoded(i, char::is_ascii_frag_query, char::is_nonascii_query::<S>);
     if is_valid {

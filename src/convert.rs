@@ -7,15 +7,21 @@ use alloc::string::String;
 
 use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
 use crate::task::{Error, ProcessAndWrite};
-use crate::types::{IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr};
-#[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString,
+    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
 };
-use crate::types::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr};
 #[cfg(feature = "alloc")]
 use crate::types::{
-    UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
+    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
+    IriString,
+};
+use crate::types::{
+    UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr,
+};
+#[cfg(feature = "alloc")]
+use crate::types::{
+    UriAbsoluteString, UriFragmentString, UriQueryString, UriReferenceString, UriRelativeString,
+    UriString,
 };
 
 /// Hexadecimal digits for a nibble.
@@ -275,6 +281,7 @@ impl_for_iri!(
     IriRelativeString
 );
 impl_for_iri!(UriStr, UriString, IriStr, IriString);
+impl_for_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString);
 impl_for_iri!(
     UriFragmentStr,
     UriFragmentString,

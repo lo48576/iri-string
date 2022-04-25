@@ -35,13 +35,13 @@
 //!     + Slice, owned, `Cow`, reference, etc...
 
 pub use self::{
-    absolute::RiAbsoluteStr, fragment::RiFragmentStr, normal::RiStr, reference::RiReferenceStr,
-    relative::RiRelativeStr,
+    absolute::RiAbsoluteStr, fragment::RiFragmentStr, normal::RiStr, query::RiQueryStr,
+    reference::RiReferenceStr, relative::RiRelativeStr,
 };
 #[cfg(feature = "alloc")]
 pub use self::{
     absolute::RiAbsoluteString, error::CreationError, fragment::RiFragmentString, normal::RiString,
-    reference::RiReferenceString, relative::RiRelativeString,
+    query::RiQueryString, reference::RiReferenceString, relative::RiRelativeString,
 };
 
 #[macro_use]
@@ -52,5 +52,6 @@ mod absolute;
 mod error;
 mod fragment;
 mod normal;
+mod query;
 mod reference;
 mod relative;
