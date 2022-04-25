@@ -11,42 +11,42 @@ use crate::types::{
     RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
 };
 
-/// A borrowed string type for an absolute URI.
+/// A type alias for [`RiAbsoluteStr`]`<`[`UriSpec`]`>`.
 pub type UriAbsoluteStr = RiAbsoluteStr<UriSpec>;
 
-/// An owned string type for an absolute URI.
+/// A type alias for [`RiAbsoluteString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriAbsoluteString = RiAbsoluteString<UriSpec>;
 
-/// A borrowed string type for a fragment part of an URI.
+/// A type alias for [`RiFragmentStr`]`<`[`UriSpec`]`>`.
 pub type UriFragmentStr = RiFragmentStr<UriSpec>;
 
-/// An owned string type for a fragment part of an URI.
+/// A type alias for [`RiFragmentString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriFragmentString = RiFragmentString<UriSpec>;
 
-/// A borrowed string type for an URI.
+/// A type alias for [`RiStr`]`<`[`UriSpec`]`>`.
 pub type UriStr = RiStr<UriSpec>;
 
-/// An owned string type for an URI.
+/// A type alias for [`RiString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriString = RiString<UriSpec>;
 
-/// A borrowed string type for an URI reference.
+/// A type alias for [`RiReferenceStr`]`<`[`UriSpec`]`>`.
 pub type UriReferenceStr = RiReferenceStr<UriSpec>;
 
-/// An owned string type for an URI reference.
+/// A type alias for [`RiReferenceString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriReferenceString = RiReferenceString<UriSpec>;
 
-/// A borrowed string type for a relative URI reference.
+/// A type alias for [`RiRelativeStr`]`<`[`UriSpec`]`>`.
 pub type UriRelativeStr = RiRelativeStr<UriSpec>;
 
-/// An owned string type for a relative URI reference.
+/// A type alias for [`RiRelativeString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriRelativeString = RiRelativeString<UriSpec>;

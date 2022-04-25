@@ -19,42 +19,42 @@ use crate::types::{
     UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
 };
 
-/// A borrowed string type for an absolute IRI.
+/// A type alias for [`RiAbsoluteStr`]`<`[`IriSpec`]`>`.
 pub type IriAbsoluteStr = RiAbsoluteStr<IriSpec>;
 
-/// An owned string type for an absolute IRI.
+/// A type alias for [`RiAbsoluteString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriAbsoluteString = RiAbsoluteString<IriSpec>;
 
-/// A borrowed string type for a fragment part of an IRI.
+/// A type alias for [`RiFragmentStr`]`<`[`IriSpec`]`>`.
 pub type IriFragmentStr = RiFragmentStr<IriSpec>;
 
-/// An owned string type for a fragment part of an IRI.
+/// A type alias for [`RiFragmentString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriFragmentString = RiFragmentString<IriSpec>;
 
-/// A borrowed string type for an IRI.
+/// A type alias for [`RiStr`]`<`[`IriSpec`]`>`.
 pub type IriStr = RiStr<IriSpec>;
 
-/// An owned string type for an IRI.
+/// A type alias for [`RiString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriString = RiString<IriSpec>;
 
-/// A borrowed string type for an IRI reference.
+/// A type alias for [`RiReferenceStr`]`<`[`IriSpec`]`>`.
 pub type IriReferenceStr = RiReferenceStr<IriSpec>;
 
-/// An owned string type for an IRI reference.
+/// A type alias for [`RiReferenceString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriReferenceString = RiReferenceString<IriSpec>;
 
-/// A borrowed string type for a relative IRI reference.
+/// A type alias for [`RiRelativeStr`]`<`[`IriSpec`]`>`.
 pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 
-/// An owned string type for a relative IRI reference.
+/// A type alias for [`RiRelativeString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriRelativeString = RiRelativeString<IriSpec>;
