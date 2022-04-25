@@ -20,7 +20,7 @@ use crate::spec::Spec;
 use crate::task::Error as TaskError;
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
-use crate::types::{RiFragmentStr, RiRelativeStr, RiStr};
+use crate::types::{RiFragmentStr, RiQueryStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::validate::iri;
 use crate::validate::iri_reference;
@@ -365,6 +365,50 @@ impl<S: Spec> RiReferenceStr<S> {
     }
 
     /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::{IriQueryStr, IriReferenceStr};
+    ///
+    /// let iri = IriReferenceStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// let query = IriQueryStr::new("queryquery")?;
+    /// assert_eq!(iri.query(), Some(query));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let iri = IriReferenceStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.query(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::{IriQueryStr, IriReferenceStr};
+    ///
+    /// let iri = IriReferenceStr::new("foo/bar:baz?")?;
+    /// let query = IriQueryStr::new("")?;
+    /// assert_eq!(iri.query(), Some(query));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query(&self) -> Option<&RiQueryStr<S>> {
+        trusted_parser::extract_query(self.as_str()).map(|query| unsafe {
+            // This is safe because `extract_query` returns the query part of an IRI, and the
+            // returned string is substring of the source IRI.
+            RiQueryStr::new_maybe_unchecked(query)
+        })
+    }
+
+    /// Returns the query as a raw string slice.
     ///
     /// The leading question mark (`?`) is truncated.
     ///

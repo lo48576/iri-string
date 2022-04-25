@@ -8,15 +8,21 @@ use crate::convert::{try_percent_encode_iri_inline, MappedToUri};
 use crate::spec::IriSpec;
 #[cfg(feature = "alloc")]
 use crate::task::ProcessAndWrite;
-use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr};
-#[cfg(feature = "alloc")]
 use crate::types::{
-    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
+    RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr,
 };
-use crate::types::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr};
 #[cfg(feature = "alloc")]
 use crate::types::{
-    UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
+    RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString, RiRelativeString,
+    RiString,
+};
+use crate::types::{
+    UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr,
+};
+#[cfg(feature = "alloc")]
+use crate::types::{
+    UriAbsoluteString, UriFragmentString, UriQueryString, UriReferenceString, UriRelativeString,
+    UriString,
 };
 
 /// A type alias for [`RiAbsoluteStr`]`<`[`IriSpec`]`>`.
@@ -58,6 +64,14 @@ pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriRelativeString = RiRelativeString<IriSpec>;
+
+/// A type alias for [`RiQueryStr`]`<`[`IriSpec`]`>`.
+pub type IriQueryStr = RiQueryStr<IriSpec>;
+
+/// A type alias for [`RiQueryString`]`<`[`IriSpec`]`>`.
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub type IriQueryString = RiQueryString<IriSpec>;
 
 /// Implements the conversion from an IRI into a URI.
 macro_rules! impl_conversion_between_uri {
@@ -270,6 +284,14 @@ impl_conversion_between_uri!(
     UriStr,
     "http://example.com/?alpha=\u{03B1}",
     "http://example.com/?alpha=%CE%B1"
+);
+impl_conversion_between_uri!(
+    IriQueryString,
+    UriQueryString,
+    IriQueryStr,
+    UriQueryStr,
+    "alpha-is-\u{03B1}",
+    "alpha-is-%CE%B1"
 );
 impl_conversion_between_uri!(
     IriFragmentString,

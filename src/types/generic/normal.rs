@@ -15,7 +15,7 @@ use crate::raw;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::task::{Error as TaskError, ProcessAndWrite};
-use crate::types::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr};
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};
 use crate::validate::iri;
@@ -427,6 +427,36 @@ impl<S: Spec> RiStr<S> {
     }
 
     /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::{IriQueryStr, IriStr};
+    ///
+    /// let iri = IriStr::new("http://example.com/pathpath?queryquery#fragfrag")?;
+    /// let query = IriQueryStr::new("queryquery")?;
+    /// assert_eq!(iri.query(), Some(query));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("urn:uuid:10db315b-fcd1-4428-aca8-15babc9a2da2")?;
+    /// assert_eq!(iri.query(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query(&self) -> Option<&RiQueryStr<S>> {
+        AsRef::<RiReferenceStr<S>>::as_ref(self).query()
+    }
+
+    /// Returns the query in a raw string slice.
     ///
     /// The leading question mark (`?`) is truncated.
     ///

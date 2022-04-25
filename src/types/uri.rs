@@ -2,13 +2,14 @@
 
 use crate::spec::UriSpec;
 use crate::types::{
-    IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr, RiAbsoluteStr,
-    RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr,
+    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
+    RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString,
-    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
+    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
+    IriString, RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString,
+    RiRelativeString, RiString,
 };
 
 /// A type alias for [`RiAbsoluteStr`]`<`[`UriSpec`]`>`.
@@ -50,6 +51,14 @@ pub type UriRelativeStr = RiRelativeStr<UriSpec>;
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriRelativeString = RiRelativeString<UriSpec>;
+
+/// A type alias for [`RiQueryStr`]`<`[`UriSpec`]`>`.
+pub type UriQueryStr = RiQueryStr<UriSpec>;
+
+/// A type alias for [`RiQueryString`]`<`[`UriSpec`]`>`.
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub type UriQueryString = RiQueryString<UriSpec>;
 
 /// Implements the trivial conversions between a URI and an IRI.
 macro_rules! impl_conversions_between_iri {
@@ -107,6 +116,7 @@ impl_conversions_between_iri!(
     IriRelativeString,
 );
 impl_conversions_between_iri!(UriStr, UriString, IriStr, IriString,);
+impl_conversions_between_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString,);
 impl_conversions_between_iri!(
     UriFragmentStr,
     UriFragmentString,

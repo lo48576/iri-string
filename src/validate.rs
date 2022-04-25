@@ -273,6 +273,51 @@ pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_path::<S>(s)
 }
 
+/// Validates [IRI query][query].
+///
+/// This validator corresponds to [`RiQueryStr`] and [`RiQueryString`] types.
+///
+/// Note that the first `?` character in an IRI is not a part of a query.
+/// For example, `https://example.com/?foo#bar` has a query `foo`, **not** `?foo`.
+///
+/// # Examples
+///
+/// This type can have an IRI query.
+/// Note that the IRI `foo://bar/baz?qux#quux` has the query `qux`, **not** `?qux`.
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::query};
+/// assert!(query::<UriSpec>("").is_ok());
+/// assert!(query::<UriSpec>("foo").is_ok());
+/// assert!(query::<UriSpec>("foo/bar").is_ok());
+/// assert!(query::<UriSpec>("/foo/bar").is_ok());
+/// assert!(query::<UriSpec>("//foo/bar").is_ok());
+/// assert!(query::<UriSpec>("https://user:pass@example.com:8080").is_ok());
+/// assert!(query::<UriSpec>("https://example.com/").is_ok());
+/// // Question sign `?` can appear in an IRI query.
+/// assert!(query::<UriSpec>("query?again").is_ok());
+/// ```
+///
+/// Some characters and sequences cannot used in a query.
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::query};
+/// // `<` and `>` cannot directly appear in an IRI reference.
+/// assert!(query::<UriSpec>("<not allowed>").is_err());
+/// // Broken percent encoding cannot appear in an IRI reference.
+/// assert!(query::<UriSpec>("%").is_err());
+/// assert!(query::<UriSpec>("%GG").is_err());
+/// // Hash sign `#` cannot appear in an IRI query.
+/// assert!(query::<UriSpec>("#hash").is_err());
+/// ```
+///
+/// [query]: https://tools.ietf.org/html/rfc3986#section-3.4
+/// [`RiQueryStr`]: ../types/struct.RiQueryStr.html
+/// [`RiQueryString`]: ../types/struct.RiQueryString.html
+pub fn query<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_query::<S>(s)
+}
+
 /// Validates [IRI fragment][fragment].
 ///
 /// This validator corresponds to [`RiFragmentStr`] and [`RiFragmentString`] types.
