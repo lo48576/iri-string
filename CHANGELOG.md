@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Add `RiQueryStr` and `RiQueryString` types for query.
+
+### Added
+* Add `RiQueryStr` and `RiQueryString` types for query.
+
 ## [0.5.4]
 
 * Implement IRI resolution and normalization that uses serialization algorithm
