@@ -3,25 +3,49 @@
 ## [Unreleased]
 
 * Add `RiQueryStr` and `RiQueryString` types for query.
-* Add functions with `try_` prefix are introduced for normalization, and
-  deprecate non-`try` versions.
+* Add functions with `try_` prefix are introduced for normalization and
+  IRI resolution, and deprecate non-`try` versions.
 
 ### Added
 * Add `RiQueryStr` and `RiQueryString` types for query.
-* Add functions with `try_` prefix are introduced for normalization.
+* Add functions with `try_` prefix are introduced for normalization and resolution.
     + List of added functions:
         - `types::RiStr::try_normalize()`
         - `types::RiStr::try_normalize_whatwg()`
         - `types::RiAbsoluteStr::try_normalize()`
         - `types::RiAbsoluteStr::try_normalize_whatwg()`
+        - `resolve::try_resolve()`
+        - `resolve::try_resolve_whatwg()`
+        - `resolve::try_resolve_normalize()`
+        - `resolve::try_resolve_normalize_whatwg()`
+        - `types::RiReferenceStr::try_resolve_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_against()`
+        - `types::RiReferenceStr::try_resolve_whatwg_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_whatwg_against()`
+        - `types::RiRelativeStr::try_resolve_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_against()`
+        - `types::RiRelativeStr::try_resolve_whatwg_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_whatwg_against()`
 
 ### Changed (non-breaking)
-* Deprecate non-`try` normalization functions.
+* Deprecate non-`try` function names for normalization and resolution.
     + List of deprecated functions:
         - `types::RiStr::normalize()`
         - `types::RiStr::normalize_whatwg()`
         - `types::RiAbsoluteStr::normalize()`
         - `types::RiAbsoluteStr::normalize_whatwg()`
+        - `resolve::resolve()`
+        - `resolve::resolve_whatwg()`
+        - `resolve::resolve_normalize()`
+        - `resolve::resolve_normalize_whatwg()`
+        - `types::RiReferenceStr::resolve_against()`
+        - `types::RiReferenceStr::resolve_normalize_against()`
+        - `types::RiReferenceStr::resolve_whatwg_against()`
+        - `types::RiReferenceStr::resolve_normalize_whatwg_against()`
+        - `types::RiRiAblosuteStrStr::resolve_against()`
+        - `types::RiRiAblosuteStrStr::resolve_normalize_against()`
+        - `types::RiRiAblosuteStrStr::resolve_whatwg_against()`
+        - `types::RiRiAblosuteStrStr::resolve_normalize_whatwg_against()`
     + Use functions with `try_` prefix instead.
 
 
