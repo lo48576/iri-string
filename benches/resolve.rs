@@ -15,7 +15,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("resolve (new task, new buf)", |b| {
         b.iter(|| {
-            rel.resolve_against(base)
+            rel.try_resolve_against(base)
                 .expect("resolvable inputs should be passed")
         })
     });

@@ -43,12 +43,12 @@
 //! let base = IriAbsoluteStr::new("scheme:")?;
 //! {
 //!     let reference = IriReferenceStr::new(".///not-a-host")?;
-//!     let err = reference.resolve_against(base)
+//!     let err = reference.try_resolve_against(base)
 //!         .expect_err("this resolution should fail");
 //!     assert!(matches!(err, TaskError::Process(_)), "normalization error");
 //!
 //!     // WHATWG version.
-//!     let resolved_whatwg = reference.resolve_whatwg_against(base)
+//!     let resolved_whatwg = reference.try_resolve_whatwg_against(base)
 //!         .expect("memory allocation failed");
 //!     assert_eq!(*resolved_whatwg, "scheme:/.//not-a-host");
 //! }
@@ -58,12 +58,12 @@
 //!     // Resulting string will be `scheme://not-a-host`, but `not-a-host`
 //!     // should be a path segment, not a host. So, the semantically correct
 //!     // target IRI cannot be represented by RFC 3986 IRI resolution.
-//!     let err2 = reference2.resolve_against(base)
+//!     let err2 = reference2.try_resolve_against(base)
 //!         .expect_err("this resolution should fail");
 //!     assert!(matches!(err2, TaskError::Process(_)), "normalization error");
 //!
 //!     // Algorithm defined in WHATWG URL Standard addresses this case.
-//!     let resolved_whatwg2 = reference2.resolve_whatwg_against(base)
+//!     let resolved_whatwg2 = reference2.try_resolve_whatwg_against(base)
 //!         .expect("memory allocation failed");
 //!     assert_eq!(*resolved_whatwg2, "scheme:/.//not-a-host");
 //! }
@@ -92,8 +92,8 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 
 /// Resolves the IRI reference.
 ///
-/// It is recommended to use methods such as [`RiReferenceStr::resolve_against()`] and
-/// [`RiRelativeStr::resolve_against()`], rather than this freestanding function.
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_against()`] and
+/// [`RiRelativeStr::try_resolve_against()`], rather than this freestanding function.
 ///
 /// If you are going to resolve multiple references against the common base,
 /// consider using [`FixedBaseResolver`].
@@ -118,7 +118,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-/// use iri_string::resolve::{resolve, FixedBaseResolver};
+/// use iri_string::resolve::{try_resolve, FixedBaseResolver};
 /// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
@@ -126,12 +126,12 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 /// let reference = IriReferenceStr::new("../there")?;
 ///
 /// // Resolve `reference` against `base`.
-/// let resolved = resolve(reference, base)?;
+/// let resolved = try_resolve(reference, base)?;
 /// assert_eq!(resolved, "http://example.com/there");
 ///
 /// // These two produces the same result with the same type.
 /// assert_eq!(
-///     FixedBaseResolver::new(base).resolve(reference)?,
+///     FixedBaseResolver::new(base).try_resolve(reference)?,
 ///     "http://example.com/there"
 /// );
 /// assert_eq!(
@@ -141,21 +141,88 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 /// # Ok::<_, Error>(())
 /// ```
 ///
-/// [`RiReferenceStr::resolve_against()`]: `RiReferenceStr::resolve_against`
-/// [`RiRelativeStr::resolve_against()`]: `crate::types::RiRelativeStr::resolve_against`
+/// [`RiReferenceStr::try_resolve_against()`]: `RiReferenceStr::try_resolve_against`
+/// [`RiRelativeStr::try_resolve_against()`]: `crate::types::RiRelativeStr::try_resolve_against`
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-pub fn resolve<S: Spec>(
+pub fn try_resolve<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, TaskError<Error>> {
-    FixedBaseResolver::new(base.as_ref()).resolve(reference.as_ref())
+    FixedBaseResolver::new(base.as_ref()).try_resolve(reference.as_ref())
 }
 
 /// Resolves the IRI reference.
 ///
-/// It is recommended to use methods such as [`RiReferenceStr::resolve_whatwg_against()`]
-/// and [`RiRelativeStr::resolve_whatwg_against()`], rather than this freestanding function.
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_against()`] and
+/// [`RiRelativeStr::try_resolve_against()`], rather than this freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if
+///
+/// * memory allocation failed, or
+/// * the IRI referernce is unresolvable against the base.
+///
+/// To see examples of unresolvable IRIs, visit the documentation
+/// for [`normalize::Error`][`crate::normalize::Error`].
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{try_resolve, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+/// let reference = IriReferenceStr::new("../there")?;
+///
+/// // Resolve `reference` against `base`.
+/// let resolved = try_resolve(reference, base)?;
+/// assert_eq!(resolved, "http://example.com/there");
+///
+/// // These two produces the same result with the same type.
+/// assert_eq!(
+///     FixedBaseResolver::new(base).try_resolve(reference)?,
+///     "http://example.com/there"
+/// );
+/// assert_eq!(
+///     FixedBaseResolver::new(base).create_task(reference).allocate_and_write()?,
+///     "http://example.com/there"
+/// );
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [`RiReferenceStr::try_resolve_against()`]: `RiReferenceStr::try_resolve_against`
+/// [`RiRelativeStr::try_resolve_against()`]: `crate::types::RiRelativeStr::try_resolve_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[deprecated(
+    since = "0.5.5",
+    note = "Use `try_resolve()` for non-panicking normalization"
+)]
+#[inline]
+pub fn resolve<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Error>> {
+    try_resolve(reference.as_ref(), base.as_ref())
+}
+
+/// Resolves the IRI reference.
+///
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_whatwg_against()`]
+/// and [`RiRelativeStr::try_resolve_whatwg_against()`], rather than this freestanding function.
 ///
 /// If you are going to resolve multiple references against the common base,
 /// consider using [`FixedBaseResolver`].
@@ -174,7 +241,7 @@ pub fn resolve<S: Spec>(
 /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-/// use iri_string::resolve::{resolve_whatwg, FixedBaseResolver};
+/// use iri_string::resolve::{try_resolve_whatwg, FixedBaseResolver};
 /// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
@@ -182,18 +249,18 @@ pub fn resolve<S: Spec>(
 /// let reference = IriReferenceStr::new("..//not-a-host")?;
 ///
 /// // Resolve `reference` against `base`.
-/// let resolved = resolve_whatwg(reference, base)?;
+/// let resolved = try_resolve_whatwg(reference, base)?;
 /// // Note that the result is not `scheme://not-a-host`.
 /// assert_eq!(resolved, "scheme:/.//not-a-host");
 /// # Ok::<_, Error>(())
 /// ```
 ///
-/// [`RiReferenceStr::resolve_whatwg_against()`]: `RiReferenceStr::resolve_whatwg_against`
-/// [`RiRelativeStr::resolve_whatwg_against()`]:
-///     `crate::types::RiRelativeStr::resolve_whatwg_against`
+/// [`RiReferenceStr::try_resolve_whatwg_against()`]: `RiReferenceStr::try_resolve_whatwg_against`
+/// [`RiRelativeStr::try_resolve_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_whatwg_against`
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-pub fn resolve_whatwg<S: Spec>(
+pub fn try_resolve_whatwg<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, TaskError<Infallible>> {
@@ -205,10 +272,63 @@ pub fn resolve_whatwg<S: Spec>(
     })
 }
 
+/// Resolves the IRI reference.
+///
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_whatwg_against()`]
+/// and [`RiRelativeStr::try_resolve_whatwg_against()`], rather than this freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if memory allocation failed.
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{try_resolve_whatwg, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("scheme:/path")?;
+/// let reference = IriReferenceStr::new("..//not-a-host")?;
+///
+/// // Resolve `reference` against `base`.
+/// let resolved = try_resolve_whatwg(reference, base)?;
+/// // Note that the result is not `scheme://not-a-host`.
+/// assert_eq!(resolved, "scheme:/.//not-a-host");
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [`RiReferenceStr::try_resolve_whatwg_against()`]: `RiReferenceStr::try_resolve_whatwg_against`
+/// [`RiRelativeStr::try_resolve_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_whatwg_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[deprecated(
+    since = "0.5.5",
+    note = "Use `try_resolve_whatwg()` for non-panicking normalization"
+)]
+#[inline]
+pub fn resolve_whatwg<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Infallible>> {
+    try_resolve_whatwg(reference.as_ref(), base.as_ref())
+}
+
 /// Resolves and normalizes the IRI reference.
 ///
-/// It is recommended to use methods such as [`RiReferenceStr::resolve_normalize_against()`]
-/// and [`RiRelativeStr::resolve_normalize_against()`], rather than this
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_normalize_against()`]
+/// and [`RiRelativeStr::try_resolve_normalize_against()`], rather than this
 /// freestanding function.
 ///
 /// If you are going to resolve multiple references against the common base,
@@ -234,7 +354,7 @@ pub fn resolve_whatwg<S: Spec>(
 /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-/// use iri_string::resolve::{resolve_normalize, FixedBaseResolver};
+/// use iri_string::resolve::{try_resolve_normalize, FixedBaseResolver};
 /// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
@@ -242,12 +362,12 @@ pub fn resolve_whatwg<S: Spec>(
 /// let reference = IriReferenceStr::new("../there")?;
 ///
 /// // Resolve and normalize `reference` against `base`.
-/// let resolved = resolve_normalize(reference, base)?;
+/// let resolved = try_resolve_normalize(reference, base)?;
 /// assert_eq!(resolved, "http://example.com/there");
 ///
 /// // These two produces the same result with the same type.
 /// assert_eq!(
-///     FixedBaseResolver::new(base).resolve(reference)?,
+///     FixedBaseResolver::new(base).try_resolve(reference)?,
 ///     "http://example.com/there"
 /// );
 /// assert_eq!(
@@ -261,22 +381,96 @@ pub fn resolve_whatwg<S: Spec>(
 /// ```
 ///
 /// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
-/// [`RiReferenceStr::resolve_normalize_against()`]: `RiReferenceStr::resolve_normalize_against`
-/// [`RiRelativeStr::resolve_normalize_against()`]: `crate::types::RiRelativeStr::resolve_normalize_against`
+/// [`RiReferenceStr::try_resolve_normalize_against()`]: `RiReferenceStr::try_resolve_normalize_against`
+/// [`RiRelativeStr::try_resolve_normalize_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_normalize_against`
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub fn try_resolve_normalize<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Error>> {
+    FixedBaseResolver::new(base.as_ref()).try_resolve_normalize(reference.as_ref())
+}
+
+/// Resolves and normalizes the IRI reference.
+///
+/// It is recommended to use methods such as [`RiReferenceStr::try_resolve_normalize_against()`]
+/// and [`RiRelativeStr::try_resolve_normalize_against()`], rather than this
+/// freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if
+///
+/// * memory allocation failed, or
+/// * the IRI referernce is unresolvable against the base.
+///
+/// To see examples of unresolvable IRIs, visit the
+/// [module documentation][`self`].
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{try_resolve_normalize, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+/// let reference = IriReferenceStr::new("../there")?;
+///
+/// // Resolve and normalize `reference` against `base`.
+/// let resolved = try_resolve_normalize(reference, base)?;
+/// assert_eq!(resolved, "http://example.com/there");
+///
+/// // These two produces the same result with the same type.
+/// assert_eq!(
+///     FixedBaseResolver::new(base).try_resolve(reference)?,
+///     "http://example.com/there"
+/// );
+/// assert_eq!(
+///     FixedBaseResolver::new(base)
+///         .create_normalizing_task(reference)
+///         .allocate_and_write()?,
+///     "http://example.com/there"
+/// );
+///
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
+/// [`RiReferenceStr::try_resolve_normalize_against()`]: `RiReferenceStr::try_resolve_normalize_against`
+/// [`RiRelativeStr::try_resolve_normalize_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_normalize_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[deprecated(
+    since = "0.5.5",
+    note = "Use `try_resolve_normalize()` for non-panicking normalization"
+)]
+#[inline]
 pub fn resolve_normalize<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, TaskError<Error>> {
-    FixedBaseResolver::new(base.as_ref()).resolve_normalize(reference.as_ref())
+    try_resolve_normalize(reference.as_ref(), base.as_ref())
 }
 
 /// Resolves and normalizes the IRI reference.
 ///
 /// It is recommended to use methods such as
-/// [`RiReferenceStr::resolve_normalize_whatwg_against()`] and
-/// [`RiRelativeStr::resolve_normalize_whatwg_against()`], rather than this
+/// [`RiReferenceStr::try_resolve_normalize_whatwg_against()`] and
+/// [`RiRelativeStr::try_resolve_normalize_whatwg_against()`], rather than this
 /// freestanding function.
 ///
 /// If you are going to resolve multiple references against the common base,
@@ -296,7 +490,7 @@ pub fn resolve_normalize<S: Spec>(
 /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
 /// # impl<T> From<iri_string::task::Error<T>> for Error {
 /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-/// use iri_string::resolve::{resolve_normalize_whatwg, FixedBaseResolver};
+/// use iri_string::resolve::{try_resolve_normalize_whatwg, FixedBaseResolver};
 /// use iri_string::task::ProcessAndWrite;
 /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 ///
@@ -304,19 +498,19 @@ pub fn resolve_normalize<S: Spec>(
 /// let reference = IriReferenceStr::new("..//not-a-host")?;
 ///
 /// // Resolve and normalize `reference` against `base`.
-/// let resolved = resolve_normalize_whatwg(reference, base)?;
+/// let resolved = try_resolve_normalize_whatwg(reference, base)?;
 /// assert_eq!(resolved, "scheme:/.//not-a-host");
 /// # Ok::<_, Error>(())
 /// ```
 ///
 /// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
-/// [`RiReferenceStr::resolve_normalize_whatwg_against()`]:
-///     `RiReferenceStr::resolve_normalize_whatwg_against`
-/// [`RiRelativeStr::resolve_normalize_whatwg_against()`]:
-///     `crate::types::RiRelativeStr::resolve_normalize_whatwg_against`
+/// [`RiReferenceStr::try_resolve_normalize_whatwg_against()`]:
+///     `RiReferenceStr::try_resolve_normalize_whatwg_against`
+/// [`RiRelativeStr::try_resolve_normalize_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_normalize_whatwg_against`
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-pub fn resolve_normalize_whatwg<S: Spec>(
+pub fn try_resolve_normalize_whatwg<S: Spec>(
     reference: impl AsRef<RiReferenceStr<S>>,
     base: impl AsRef<RiAbsoluteStr<S>>,
 ) -> Result<RiString<S>, TaskError<Infallible>> {
@@ -327,6 +521,62 @@ pub fn resolve_normalize_whatwg<S: Spec>(
         TaskError::Buffer(e) => TaskError::Buffer(e),
         TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
     })
+}
+
+/// Resolves and normalizes the IRI reference.
+///
+/// It is recommended to use methods such as
+/// [`RiReferenceStr::try_resolve_normalize_whatwg_against()`] and
+/// [`RiRelativeStr::try_resolve_normalize_whatwg_against()`], rather than this
+/// freestanding function.
+///
+/// If you are going to resolve multiple references against the common base,
+/// consider using [`FixedBaseResolver`].
+///
+/// Enabled by `alloc` or `std` feature.
+///
+/// # Failures
+///
+/// This fails if memory allocation failed.
+///
+/// # Examples
+///
+/// ```
+/// # #[derive(Debug)] struct Error;
+/// # impl From<iri_string::validate::Error> for Error {
+/// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+/// # impl<T> From<iri_string::task::Error<T>> for Error {
+/// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+/// use iri_string::resolve::{try_resolve_normalize_whatwg, FixedBaseResolver};
+/// use iri_string::task::ProcessAndWrite;
+/// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+///
+/// let base = IriAbsoluteStr::new("scheme:/path")?;
+/// let reference = IriReferenceStr::new("..//not-a-host")?;
+///
+/// // Resolve and normalize `reference` against `base`.
+/// let resolved = try_resolve_normalize_whatwg(reference, base)?;
+/// assert_eq!(resolved, "scheme:/.//not-a-host");
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [RFC 3986 section 5.2]: https://tools.ietf.org/html/rfc3986#section-5.2
+/// [`RiReferenceStr::try_resolve_normalize_whatwg_against()`]:
+///     `RiReferenceStr::try_resolve_normalize_whatwg_against`
+/// [`RiRelativeStr::try_resolve_normalize_whatwg_against()`]:
+///     `crate::types::RiRelativeStr::try_resolve_normalize_whatwg_against`
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+#[deprecated(
+    since = "0.5.5",
+    note = "Use `try_resolve_normalize_whatwg()` for non-panicking normalization"
+)]
+#[inline]
+pub fn resolve_normalize_whatwg<S: Spec>(
+    reference: impl AsRef<RiReferenceStr<S>>,
+    base: impl AsRef<RiAbsoluteStr<S>>,
+) -> Result<RiString<S>, TaskError<Infallible>> {
+    try_resolve_normalize_whatwg(reference.as_ref(), base.as_ref())
 }
 
 /// A resolver against the fixed base.
@@ -357,13 +607,13 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
     ///
     /// # #[cfg(feature = "alloc")] {
-    /// # // `FixedBaseResolver::resolve()` is available only when
+    /// # // `FixedBaseResolver::try_resolve()` is available only when
     /// # // `alloc` feature is enabled.
     /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
-    /// let resolved = resolver.resolve(reference)?;
+    /// let resolved = resolver.try_resolve(reference)?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # }
@@ -433,7 +683,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// let resolver = FixedBaseResolver::new(base);
     ///
     /// let reference = IriReferenceStr::new("../there")?;
-    /// let resolved = resolver.resolve(reference)?;
+    /// let resolved = resolver.try_resolve(reference)?;
     ///
     /// assert_eq!(resolved, "http://example.com/there");
     /// # Ok::<_, Error>(())
@@ -473,8 +723,149 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// [`create_normalizing_task`]: `Self::create_normalizing_task`
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, TaskError<Error>> {
+    pub fn try_resolve(
+        &self,
+        reference: &RiReferenceStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
         self.create_task(reference).allocate_and_write()
+    }
+    /// Resolves the given reference against the fixed base.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// The task returned by this method does **not** normalize the resolution
+    /// result. However, `..` and `.` are recognized even when they are
+    /// percent-encoded.
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the
+    /// [module documentation][`self`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// let base = IriAbsoluteStr::new("http://example.com/base/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// let reference = IriReferenceStr::new("../there")?;
+    /// let resolved = resolver.try_resolve(reference)?;
+    ///
+    /// assert_eq!(resolved, "http://example.com/there");
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Note that `..` and `.` path segments are recognized even when they are
+    /// percent-encoded.
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// # #[cfg(feature = "alloc")] {
+    /// # // `ResolutionTask::allocate_and_write()` is available only when
+    /// # // `alloc` feature is enabled.
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// // `%2e%2e` is recognized as `..`.
+    /// // However, `dot%2edot` is NOT normalized into `dot.dot`.
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_task(reference);
+    ///
+    /// let resolved = task.allocate_and_write()?;
+    /// // Resolved but not normalized.
+    /// assert_eq!(resolved, "HTTP://example.COM/dot%2edot");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [`create_normalizing_task`]: `Self::create_normalizing_task`
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[deprecated(
+        since = "0.5.5",
+        note = "Use `try_resolve()` for non-panicking normalization"
+    )]
+    pub fn resolve(&self, reference: &RiReferenceStr<S>) -> Result<RiString<S>, TaskError<Error>> {
+        self.try_resolve(reference)
+    }
+
+    /// Resolves the given reference against the fixed base, and normalizes the result.
+    ///
+    /// Enabled by `alloc` or `std` feature.
+    ///
+    /// The task returned by this method is normalized.
+    ///
+    /// If you don't want the result to be normalized, use [`create_task`] method.
+    ///
+    /// # Failures
+    ///
+    /// This fails if
+    ///
+    /// * memory allocation failed, or
+    /// * the IRI referernce is unresolvable against the base.
+    ///
+    /// To see examples of unresolvable IRIs, visit the
+    /// [module documentation][`self`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::task::ProcessAndWrite;
+    /// use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
+    ///
+    /// # #[cfg(feature = "alloc")] {
+    /// # // `ResolutionTask::allocate_and_write()` is available only when
+    /// # // `alloc` feature is enabled.
+    /// let base = IriAbsoluteStr::new("HTTP://example.COM/base/base2/")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// // `%2e%2e` is recognized as `..`.
+    /// let reference = IriReferenceStr::new("%2e%2e/../dot%2edot")?;
+    /// let task = resolver.create_normalizing_task(reference);
+    ///
+    /// let resolved = task.allocate_and_write()?;
+    /// // Not only resolved, but also normalized.
+    /// assert_eq!(resolved, "http://example.com/dot.dot");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [`create_task`]: `Self::create_task`
+    /// [`unreserved` characters]: https://datatracker.ietf.org/doc/html/rfc3986#section-2.3
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    pub fn try_resolve_normalize(
+        &self,
+        reference: &RiReferenceStr<S>,
+    ) -> Result<RiString<S>, TaskError<Error>> {
+        self.create_normalizing_task(reference).allocate_and_write()
     }
 
     /// Resolves the given reference against the fixed base, and normalizes the result.
@@ -532,7 +923,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
         &self,
         reference: &RiReferenceStr<S>,
     ) -> Result<RiString<S>, TaskError<Error>> {
-        self.create_normalizing_task(reference).allocate_and_write()
+        self.try_resolve_normalize(reference)
     }
 
     /// Creates a resolution task.
@@ -680,7 +1071,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// The returned [`NormalizationTask`] allows you to resolve the IRI without
     /// memory allocation, resolve to existing buffers, estimate required
     /// memory size, etc. If you need more control than
-    /// [`resolve_normalize`][`Self::resolve_normalize`] method, use this.
+    /// [`try_resolve_normalize`][`Self::try_resolve_normalize`] method, use this.
     ///
     /// The task returned by this method normalizes the resolution result.
     /// If you don't want to normalize the result, use

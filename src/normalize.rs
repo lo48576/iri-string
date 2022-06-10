@@ -920,7 +920,7 @@ mod tests {
                 .expect("must be a valid IRI");
         let iri: &IriReferenceStr = iri_base.as_ref();
         let normalized = iri
-            .resolve_against(iri_base)
+            .try_resolve_against(iri_base)
             .expect("should produce valid result");
         assert_eq!(
             &*normalized,
@@ -936,7 +936,7 @@ mod tests {
                 .expect("must be a valid IRI");
         let iri: &IriReferenceStr = iri_base.as_ref();
         let normalized = iri
-            .resolve_normalize_against(iri_base)
+            .try_resolve_normalize_against(iri_base)
             .expect("should produce valid result");
         assert_eq!(
             &*normalized,

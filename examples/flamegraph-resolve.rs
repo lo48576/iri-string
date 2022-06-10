@@ -1,5 +1,5 @@
 #![cfg(feature = "alloc")]
-use iri_string::resolve::resolve;
+use iri_string::resolve::try_resolve;
 use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
     ))
     .expect("should be valid IRI");
     for _ in 0..1000000 {
-        let resolved = resolve(rel, base);
+        let resolved = try_resolve(rel, base);
         drop(resolved);
     }
 }

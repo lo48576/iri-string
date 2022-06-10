@@ -143,12 +143,16 @@ fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
     };
 
     let resolved = if opt.whatwg_serialization {
-        reference.resolve_whatwg_against(base).map_err(|e| match e {
-            TaskError::Buffer(e) => TaskError::Buffer(e),
-            TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
-        })
+        reference
+            .try_resolve_whatwg_against(base)
+            .map_err(|e| match e {
+                TaskError::Buffer(e) => TaskError::Buffer(e),
+                TaskError::Process(_) => {
+                    unreachable!("WHATWG normaliation algorithm should not fail")
+                }
+            })
     } else {
-        reference.resolve_against(base)
+        reference.try_resolve_against(base)
     };
     match resolved {
         Ok(resolved) => println!("{}", resolved),
