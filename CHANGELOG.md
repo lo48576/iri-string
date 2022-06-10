@@ -3,9 +3,27 @@
 ## [Unreleased]
 
 * Add `RiQueryStr` and `RiQueryString` types for query.
+* Add functions with `try_` prefix are introduced for normalization, and
+  deprecate non-`try` versions.
 
 ### Added
 * Add `RiQueryStr` and `RiQueryString` types for query.
+* Add functions with `try_` prefix are introduced for normalization.
+    + List of added functions:
+        - `types::RiStr::try_normalize()`
+        - `types::RiStr::try_normalize_whatwg()`
+        - `types::RiAbsoluteStr::try_normalize()`
+        - `types::RiAbsoluteStr::try_normalize_whatwg()`
+
+### Changed (non-breaking)
+* Deprecate non-`try` normalization functions.
+    + List of deprecated functions:
+        - `types::RiStr::normalize()`
+        - `types::RiStr::normalize_whatwg()`
+        - `types::RiAbsoluteStr::normalize()`
+        - `types::RiAbsoluteStr::normalize_whatwg()`
+    + Use functions with `try_` prefix instead.
+
 
 ## [0.5.4]
 

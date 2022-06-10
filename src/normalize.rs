@@ -37,7 +37,7 @@
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
-//! assert!(base.normalize().is_err(), "this normalization should fail");
+//! assert!(base.try_normalize().is_err(), "this normalization should fail");
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
@@ -867,7 +867,7 @@ mod tests {
 
             assert_eq!(
                 expected
-                    .normalize()
+                    .try_normalize()
                     .expect("normalized IRI must be normalizable"),
                 expected,
                 "IRI normalization must be idempotent"
@@ -875,13 +875,13 @@ mod tests {
 
             for src in *sources {
                 let src = IriStr::new(*src).expect("must be a valid IRI");
-                let normalized = src.normalize().expect("should be normalizable");
+                let normalized = src.try_normalize().expect("should be normalizable");
                 assert_eq!(normalized, expected);
             }
 
             for different in *different_iris {
                 let different = IriStr::new(*different).expect("must be a valid IRI");
-                let normalized = different.normalize().expect("should be normalizable");
+                let normalized = different.try_normalize().expect("should be normalizable");
                 assert_ne!(
                     normalized, expected,
                     "{:?} should not be normalized to {:?}",
@@ -896,7 +896,7 @@ mod tests {
     fn normalize_percent_encoded_non_ascii_in_uri() {
         let uri = UriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid URI");
-        let normalized = uri.normalize().expect("should be normalizable");
+        let normalized = uri.try_normalize().expect("should be normalizable");
         assert_eq!(normalized, "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1");
     }
 
@@ -905,7 +905,7 @@ mod tests {
     fn normalize_percent_encoded_non_ascii_in_iri() {
         let iri = IriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid IRI");
-        let normalized = iri.normalize().expect("should be normalizable");
+        let normalized = iri.try_normalize().expect("should be normalizable");
         assert_eq!(
             normalized, "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
             "U+03B1 is an unreserved character"
@@ -948,7 +948,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     fn normalize_non_ascii_only_host() {
         let uri = UriStr::new("SCHEME://Alpha%ce%b1/").expect("must be a valid URI");
-        let normalized = uri.normalize().expect("should be normalizable");
+        let normalized = uri.try_normalize().expect("should be normalizable");
         assert_eq!(normalized, "scheme://Alpha%CE%B1/");
     }
 
@@ -956,7 +956,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     fn normalize_host_with_sub_delims() {
         let uri = UriStr::new("SCHEME://PLUS%2bPLUS/").expect("must be a valid URI");
-        let normalized = uri.normalize().expect("should be normalizable");
+        let normalized = uri.try_normalize().expect("should be normalizable");
         assert_eq!(
             normalized, "scheme://plus%2Bplus/",
             "hexdigits in percent-encoding triplets should be normalized to uppercase"
@@ -969,11 +969,11 @@ mod tests {
         let uri = UriStr::new("scheme:..///not-a-host").expect("must be a valid URI");
         assert!(!uri.is_normalized_whatwg());
 
-        let normalized = uri.normalize_whatwg().expect("cannot allocate memory");
+        let normalized = uri.try_normalize_whatwg().expect("cannot allocate memory");
         assert_eq!(normalized, "scheme:/.//not-a-host");
         assert!(normalized.is_normalized_whatwg());
 
-        let normalized_again = uri.normalize_whatwg().expect("cannot allocate memory");
+        let normalized_again = uri.try_normalize_whatwg().expect("cannot allocate memory");
         assert_eq!(normalized_again, normalized);
         assert!(normalized_again.is_normalized_whatwg());
     }
