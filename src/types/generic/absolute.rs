@@ -117,7 +117,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// Returns `true` if the IRI is already normalized.
     ///
     /// This returns the same result as
-    /// `self.normalize.map_or(false, |normalized| normalized == self))`, but
+    /// `self.try_normalize.map_or(false, |normalized| normalized == self))`, but
     /// does this more efficiently without heap allocation.
     ///
     /// # Examples
@@ -134,7 +134,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
     /// assert!(!iri.is_normalized());
     ///
-    /// let normalized = iri.normalize()?;
+    /// let normalized = iri.try_normalize()?;
     /// assert_eq!(normalized, "http://example.com/baz?query");
     /// assert!(normalized.is_normalized());
     /// # }
@@ -164,7 +164,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     ///
     /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
     ///
-    /// let normalized = iri.normalize()?;
+    /// let normalized = iri.try_normalize()?;
     /// assert_eq!(normalized, "http://example.com/baz?query");
     /// # }
     /// # Ok::<_, Error>(())
@@ -172,14 +172,48 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
-    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
+    pub fn try_normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
         NormalizationTask::from(self).allocate_and_write()
+    }
+
+    /// Returns the normalized IRI.
+    ///
+    /// If you want to avoid serialization errors (except for memory allocation
+    /// failure), use [`normalize_whatwg`][`Self::normalize_whatwg`] method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
+    ///
+    /// let normalized = iri.try_normalize()?;
+    /// assert_eq!(normalized, "http://example.com/baz?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[deprecated(
+        since = "0.5.5",
+        note = "Use `try_normalize()` for non-panicking normalization"
+    )]
+    #[inline]
+    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
+        self.try_normalize()
     }
 
     /// Returns `true` if the IRI is already normalized in the sense of WHATWG spec.
     ///
     /// This returns the same result as
-    /// `self.normalize_whatwg.map_or(false, |normalized| normalized == self))`,
+    /// `self.try_normalize_whatwg.map_or(false, |normalized| normalized == self))`,
     /// but does this more efficiently without heap allocation.
     ///
     /// # Examples
@@ -196,7 +230,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// let iri = IriAbsoluteStr::new("scheme:a/..//not-a-host")?;
     /// assert!(!iri.is_normalized_whatwg());
     ///
-    /// let normalized = iri.normalize_whatwg()?;
+    /// let normalized = iri.try_normalize_whatwg()?;
     /// assert_eq!(normalized, "scheme:/.//not-a-host");
     /// assert!(normalized.is_normalized_whatwg());
     /// assert!(!normalized.is_normalized(), "not normalized in the sense of RFC 3987");
@@ -223,22 +257,56 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// use iri_string::types::IriAbsoluteStr;
     ///
     /// let iri1 = IriAbsoluteStr::new("scheme:/..//bar")?;
-    /// assert!(iri1.normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri1.normalize_whatwg()?, "scheme:/.//bar");
+    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
+    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
     ///
     /// let iri2 = IriAbsoluteStr::new("scheme:..///bar")?;
-    /// assert!(iri2.normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri2.normalize_whatwg()?, "scheme:/.//bar");
+    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
+    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
-    pub fn normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
+    pub fn try_normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
         let mut task = NormalizationTask::from(self);
         task.enable_whatwg_serialization();
         task.allocate_and_write()
+    }
+
+    /// Returns the normalized IRI serialized using WHATWG URL Standard.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[derive(Debug)] struct Error;
+    /// # impl From<iri_string::validate::Error> for Error {
+    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
+    /// # impl<T> From<iri_string::task::Error<T>> for Error {
+    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri1 = IriAbsoluteStr::new("scheme:/..//bar")?;
+    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
+    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
+    ///
+    /// let iri2 = IriAbsoluteStr::new("scheme:..///bar")?;
+    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
+    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    #[deprecated(
+        since = "0.5.5",
+        note = "Use `try_normalize_whatwg()` for non-panicking normalization"
+    )]
+    #[inline]
+    pub fn normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
+        self.try_normalize_whatwg()
     }
 }
 

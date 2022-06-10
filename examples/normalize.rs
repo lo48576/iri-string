@@ -136,12 +136,12 @@ fn normalize<S: iri_string::spec::Spec>(opt: &CliOpt) -> RiString<S> {
         Err(e) => die(format_args!("Failed to parse {raw:?}: {e:?}")),
     };
     let normalized = if opt.whatwg_serialization {
-        iri.normalize_whatwg().map_err(|e| match e {
+        iri.try_normalize_whatwg().map_err(|e| match e {
             TaskError::Buffer(e) => TaskError::Buffer(e),
             TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
         })
     } else {
-        iri.normalize()
+        iri.try_normalize()
     };
     match normalized {
         Ok(v) => v,
