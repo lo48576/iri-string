@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.5]
+
 * Add `RiQueryStr` and `RiQueryString` types for query.
 * Add functions with `try_` prefix are introduced for normalization and
   IRI resolution, and deprecate non-`try` versions.
@@ -53,7 +55,6 @@
         - `types::RiRiAblosuteStrStr::resolve_whatwg_against()`
         - `types::RiRiAblosuteStrStr::resolve_normalize_whatwg_against()`
     + Use functions with `try_` prefix instead.
-
 
 ## [0.5.4]
 
@@ -582,7 +583,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.4...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.5...develop>
+[0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
 [0.5.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.3>
 [0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>
