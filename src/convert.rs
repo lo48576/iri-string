@@ -106,10 +106,10 @@ macro_rules! impl_for_iri {
                     // Fail fast if the buffer is too short.
                     buf.try_reserve(additional)?;
                     write_percent_encoded(self.0.as_str(), |s| buf.push_str(s))?;
-                    // Convert the type.
-                    // This should never fail (unless the crate has bugs), but do the
-                    // validation here for extra safety.
                 }
+                // Convert the type.
+                // This should never fail (unless the crate has bugs), but do the
+                // validation here for extra safety.
                 let s = <&Self::OutputBorrowed>::try_from(buf.into_bytes())
                     .expect("[consistency] an IRI must be convertible into a valid URI");
                 Ok(s)
