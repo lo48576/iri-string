@@ -5,6 +5,7 @@
 * Add `RiQueryStr` and `RiQueryString` types for query.
 * Add functions with `try_` prefix are introduced for normalization and
   IRI resolution, and deprecate non-`try` versions.
+* Add encoder types for percent-encoding in `percent_encoding` module.
 
 ### Added
 * Add `RiQueryStr` and `RiQueryString` types for query.
@@ -26,6 +27,11 @@
         - `types::RiRelativeStr::try_resolve_normalize_against()`
         - `types::RiRelativeStr::try_resolve_whatwg_against()`
         - `types::RiRelativeStr::try_resolve_normalize_whatwg_against()`
+* Add encoder types for percent-encoding in `percent_encoding` module.
+    + List of added types:
+        - `percent_encoding::PercentEncoded`
+        - `percent_encoding::PercentEncodedForIri` (type alias)
+        - `percent_encoding::PercentEncodedForUri` (type alias)
 
 ### Changed (non-breaking)
 * Deprecate non-`try` function names for normalization and resolution.
