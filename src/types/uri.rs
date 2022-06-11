@@ -2,54 +2,63 @@
 
 use crate::spec::UriSpec;
 use crate::types::{
-    IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr, RiAbsoluteStr,
-    RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr,
+    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
+    RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString,
-    RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString, RiString,
+    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
+    IriString, RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString,
+    RiRelativeString, RiString,
 };
 
-/// A borrowed string type for an absolute URI.
+/// A type alias for [`RiAbsoluteStr`]`<`[`UriSpec`]`>`.
 pub type UriAbsoluteStr = RiAbsoluteStr<UriSpec>;
 
-/// An owned string type for an absolute URI.
+/// A type alias for [`RiAbsoluteString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriAbsoluteString = RiAbsoluteString<UriSpec>;
 
-/// A borrowed string type for a fragment part of an URI.
+/// A type alias for [`RiFragmentStr`]`<`[`UriSpec`]`>`.
 pub type UriFragmentStr = RiFragmentStr<UriSpec>;
 
-/// An owned string type for a fragment part of an URI.
+/// A type alias for [`RiFragmentString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriFragmentString = RiFragmentString<UriSpec>;
 
-/// A borrowed string type for an URI.
+/// A type alias for [`RiStr`]`<`[`UriSpec`]`>`.
 pub type UriStr = RiStr<UriSpec>;
 
-/// An owned string type for an URI.
+/// A type alias for [`RiString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriString = RiString<UriSpec>;
 
-/// A borrowed string type for an URI reference.
+/// A type alias for [`RiReferenceStr`]`<`[`UriSpec`]`>`.
 pub type UriReferenceStr = RiReferenceStr<UriSpec>;
 
-/// An owned string type for an URI reference.
+/// A type alias for [`RiReferenceString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriReferenceString = RiReferenceString<UriSpec>;
 
-/// A borrowed string type for a relative URI reference.
+/// A type alias for [`RiRelativeStr`]`<`[`UriSpec`]`>`.
 pub type UriRelativeStr = RiRelativeStr<UriSpec>;
 
-/// An owned string type for a relative URI reference.
+/// A type alias for [`RiRelativeString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriRelativeString = RiRelativeString<UriSpec>;
+
+/// A type alias for [`RiQueryStr`]`<`[`UriSpec`]`>`.
+pub type UriQueryStr = RiQueryStr<UriSpec>;
+
+/// A type alias for [`RiQueryString`]`<`[`UriSpec`]`>`.
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub type UriQueryString = RiQueryString<UriSpec>;
 
 /// Implements the trivial conversions between a URI and an IRI.
 macro_rules! impl_conversions_between_iri {
@@ -107,6 +116,7 @@ impl_conversions_between_iri!(
     IriRelativeString,
 );
 impl_conversions_between_iri!(UriStr, UriString, IriStr, IriString,);
+impl_conversions_between_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString,);
 impl_conversions_between_iri!(
     UriFragmentStr,
     UriFragmentString,

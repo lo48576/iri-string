@@ -7,15 +7,21 @@ use alloc::string::String;
 
 use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
 use crate::task::{Error, ProcessAndWrite};
-use crate::types::{IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr};
-#[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString,
+    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
 };
-use crate::types::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr};
 #[cfg(feature = "alloc")]
 use crate::types::{
-    UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString,
+    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
+    IriString,
+};
+use crate::types::{
+    UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr,
+};
+#[cfg(feature = "alloc")]
+use crate::types::{
+    UriAbsoluteString, UriFragmentString, UriQueryString, UriReferenceString, UriRelativeString,
+    UriString,
 };
 
 /// Hexadecimal digits for a nibble.
@@ -96,14 +102,14 @@ macro_rules! impl_for_iri {
                     // No need to escape.
                     buf.push_str(self.0.as_str())?;
                 } else {
-                    let additional = num_nonascii * 2;
+                    let additional = num_nonascii * 3;
                     // Fail fast if the buffer is too short.
                     buf.try_reserve(additional)?;
                     write_percent_encoded(self.0.as_str(), |s| buf.push_str(s))?;
-                    // Convert the type.
-                    // This should never fail (unless the crate has bugs), but do the
-                    // validation here for extra safety.
                 }
+                // Convert the type.
+                // This should never fail (unless the crate has bugs), but do the
+                // validation here for extra safety.
                 let s = <&Self::OutputBorrowed>::try_from(buf.into_bytes())
                     .expect("[consistency] an IRI must be convertible into a valid URI");
                 Ok(s)
@@ -275,6 +281,7 @@ impl_for_iri!(
     IriRelativeString
 );
 impl_for_iri!(UriStr, UriString, IriStr, IriString);
+impl_for_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString);
 impl_for_iri!(
     UriFragmentStr,
     UriFragmentString,

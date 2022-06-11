@@ -131,6 +131,7 @@ pub mod components;
 pub mod convert;
 pub mod normalize;
 pub(crate) mod parser;
+pub mod percent_encoding;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;

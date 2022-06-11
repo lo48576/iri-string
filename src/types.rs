@@ -201,16 +201,22 @@
 #[cfg(feature = "alloc")]
 pub use self::{
     generic::{
-        CreationError, RiAbsoluteString, RiFragmentString, RiReferenceString, RiRelativeString,
-        RiString,
+        CreationError, RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString,
+        RiRelativeString, RiString,
     },
-    iri::{IriAbsoluteString, IriFragmentString, IriReferenceString, IriRelativeString, IriString},
-    uri::{UriAbsoluteString, UriFragmentString, UriReferenceString, UriRelativeString, UriString},
+    iri::{
+        IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString,
+        IriRelativeString, IriString,
+    },
+    uri::{
+        UriAbsoluteString, UriFragmentString, UriQueryString, UriReferenceString,
+        UriRelativeString, UriString,
+    },
 };
 pub use self::{
-    generic::{RiAbsoluteStr, RiFragmentStr, RiReferenceStr, RiRelativeStr, RiStr},
-    iri::{IriAbsoluteStr, IriFragmentStr, IriReferenceStr, IriRelativeStr, IriStr},
-    uri::{UriAbsoluteStr, UriFragmentStr, UriReferenceStr, UriRelativeStr, UriStr},
+    generic::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr},
+    iri::{IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr},
+    uri::{UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr},
 };
 
 pub(crate) mod generic;

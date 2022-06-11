@@ -211,7 +211,7 @@ fn test_resolve_standalone() {
         let base = abs_iri(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let got = resolve(input, base).expect("Invalid testcase: result should be valid");
+            let got = try_resolve(input, base).expect("Invalid testcase: result should be valid");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -230,7 +230,7 @@ fn test_resolve_standalone_same_result_as_reference_impl() {
         let base = abs_iri(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let got = resolve(input, base).expect("Invalid testcase: result should be valid");
+            let got = try_resolve(input, base).expect("Invalid testcase: result should be valid");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -279,7 +279,7 @@ fn test_resolve_percent_encoded_dots() {
     for (base, reference, expected) in TEST_CASES {
         let base = abs_iri(base);
         let reference = iri_ref(reference);
-        let got = resolve(reference, base).expect("resolution should success in this test");
+        let got = try_resolve(reference, base).expect("resolution should success in this test");
         assert_eq!(got, *expected);
     }
 }
@@ -293,7 +293,7 @@ fn test_fixed_base_resolver() {
         for (input, expected) in *pairs {
             let input = iri_ref(input);
             let got = resolver
-                .resolve(input)
+                .try_resolve(input)
                 .expect("Invalid testcase: result should be valid");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),

@@ -151,7 +151,7 @@ fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
 
 pub fn print_normalized(iri: &IriStr) {
     println!("is_normalized: {}", iri.is_normalized());
-    match iri.normalize() {
+    match iri.try_normalize() {
         Ok(normalized) => println!("normalized: {:?}", normalized),
         Err(_) => println!("The IRI is not normalizable."),
     }
