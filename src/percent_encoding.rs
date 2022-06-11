@@ -4,7 +4,13 @@ use core::fmt::{self, Write as _};
 use core::marker::PhantomData;
 
 use crate::parser::char;
-use crate::spec::Spec;
+use crate::spec::{IriSpec, Spec, UriSpec};
+
+/// A proxy to percent-encode a string as a part of URI.
+pub type PercentEncodedForUri<T> = PercentEncoded<T, UriSpec>;
+
+/// A proxy to percent-encode a string as a part of IRI.
+pub type PercentEncodedForIri<T> = PercentEncoded<T, IriSpec>;
 
 /// Context for percent encoding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,6 +33,11 @@ enum Context {
 }
 
 /// A proxy to percent-encode a string.
+///
+/// Type aliases [`PercentEncodedForUri`] and [`PercentEncodedForUri`] are provided.
+/// You can use them to make the expression simpler, for example write
+/// `PercentEncodedForUri::from_path(foo)` instead of
+/// `PercentEncoded::<_, UriSpec>::from_path(foo)`.
 #[derive(Debug, Clone, Copy)]
 pub struct PercentEncoded<T, S> {
     /// Source string context.
@@ -224,8 +235,6 @@ mod tests {
     use super::*;
 
     use alloc::string::ToString;
-
-    use crate::spec::{IriSpec, UriSpec};
 
     #[test]
     fn regname() {
