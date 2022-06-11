@@ -18,9 +18,9 @@ const MASK_UNRESERVED: u8 = 1 << 1;
 // `sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="`
 const MASK_SUB_DELIMS: u8 = 1 << 3;
 
-///// A mask to test whether the character matches `pchar` (modulo percent-encoded bytes).
-//// `pchar = unreserved / pct-encoded / sub-delims / ":" / "@"`
-//const MASK_PCHAR: u8 = 1 << 4;
+/// A mask to test whether the character matches `pchar` (modulo percent-encoded bytes).
+// `pchar = unreserved / pct-encoded / sub-delims / ":" / "@"`
+const MASK_PCHAR: u8 = 1 << 4;
 
 /// A mask to test whether the character can appear in `query` and `fragment`.
 // `query = *( pchar / "/" / "?" )`
@@ -212,12 +212,12 @@ pub(crate) fn is_unreserved<S: Spec>(c: char) -> bool {
 //    (TABLE[c as usize] & (MASK_GEN_DELIMS | MASK_SUB_DELIMS)) != 0
 //}
 
-///// Returns `true` if the given ASCII character matches `pchar` modulo `pct-encoded`.
-//#[inline]
-//#[must_use]
-//pub(crate) const fn is_ascii_pchar(c: u8) -> bool {
-//    (TABLE[c as usize] & MASK_PCHAR) != 0
-//}
+/// Returns `true` if the given ASCII character matches `pchar` modulo `pct-encoded`.
+#[inline]
+#[must_use]
+pub(crate) const fn is_ascii_pchar(c: u8) -> bool {
+    (TABLE[c as usize] & MASK_PCHAR) != 0
+}
 
 /// Returns `true` if the given ASCII character is allowed to appear in `query` and `fragment`.
 #[inline]
