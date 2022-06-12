@@ -813,7 +813,7 @@ mod tests {
     use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
 
     #[cfg(feature = "alloc")]
-    // `&[(expected, &[source_for_expected], &[different_iri])]`
+    // `&[(expected, &[source_for_expected], &[iri_with_different_normalization_result])]`
     const CASES: &[(&str, &[&str], &[&str])] = &[
         (
             "https://example.com/pa/th?query#frag",
