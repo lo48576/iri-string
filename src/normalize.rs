@@ -713,6 +713,18 @@ impl<'a> NormalizationTaskCommon<'a> {
                     }
                     None => authority,
                 };
+
+                // If the suffix is a colon, it is a delimiter between the host
+                // and empty port. An empty port should be removed during
+                // normalization (see RFC 3986 section 3.2.3), so strip it.
+                //
+                // > URI producers and normalizers should omit the port
+                // > component and its ":" delimiter if port is empty or if its
+                // > value would be the same as that of the scheme's default.
+                // >
+                // > --- [RFC 3986 section 3.2.3. Port](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3)
+                let host_port = host_port.strip_suffix(':').unwrap_or(host_port);
+
                 // Apply case normalization and percent-encoding normalization to `host`.
                 // Optional `":" port` part only consists of an ASCII colon
                 // and ASCII digit, so this won't affect to the test result.
@@ -813,7 +825,7 @@ mod tests {
     use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
 
     #[cfg(feature = "alloc")]
-    // `&[(expected, &[source_for_expected], &[different_iri])]`
+    // `&[(expected, &[source_for_expected], &[iri_with_different_normalization_result])]`
     const CASES: &[(&str, &[&str], &[&str])] = &[
         (
             "https://example.com/pa/th?query#frag",
@@ -855,6 +867,16 @@ mod tests {
         (
             "http://example.com/~Ascii%21",
             &["http://example.com/%7E%41%73%63%69%69%21"],
+            &[],
+        ),
+        (
+            // See <https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3>:
+            //
+            // > URI producers and normalizers should omit the port component
+            // > and its ":" delimiter if port is empty or if its value would
+            // > be the same as that of the scheme's default.
+            "https://example.com/",
+            &["https://example.com:/"],
             &[],
         ),
     ];
