@@ -857,6 +857,16 @@ mod tests {
             &["http://example.com/%7E%41%73%63%69%69%21"],
             &[],
         ),
+        (
+            // See <https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3>:
+            //
+            // > URI producers and normalizers should omit the port component
+            // > and its ":" delimiter if port is empty or if its value would
+            // > be the same as that of the scheme's default.
+            "https://example.com/",
+            &["https://example.com:/"],
+            &[],
+        ),
     ];
 
     #[test]
