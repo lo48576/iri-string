@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Fix normalization bug.
+    + Previously, trailing colon of an authority (with empty port) was not
+      stripped. Now this is fixed.
+
+### Fixed
+* Fix normalization bug.
+    + Previously, trailing colon of an authority (with empty port) was not
+      stripped. Now this is fixed.
+
 ## [0.5.5]
 
 * Add `RiQueryStr` and `RiQueryString` types for query.
