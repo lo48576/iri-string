@@ -80,9 +80,7 @@ use core::convert::Infallible;
 use crate::components::RiReferenceComponents;
 #[cfg(feature = "alloc")]
 use crate::normalize::Error;
-use crate::normalize::{
-    NormalizationOp, NormalizationTask, NormalizationTaskCommon, Path, PathToNormalize,
-};
+use crate::normalize::{NormalizationOp, NormalizationTask, Path, PathToNormalize};
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::task::{Error as TaskError, ProcessAndWrite};
@@ -1052,18 +1050,17 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             RefToplevel::Query | RefToplevel::None => Path::Done(b_path),
         };
 
-        NormalizationTaskCommon {
-            scheme: r_scheme.unwrap_or(b_scheme),
-            authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
+        NormalizationTask::new(
+            r_scheme.unwrap_or(b_scheme),
+            ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
             path,
-            query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
-            fragment: r_fragment,
-            op: NormalizationOp {
+            ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
+            r_fragment,
+            NormalizationOp {
                 case_pct_normalization: false,
                 whatwg_serialization: false,
             },
-        }
-        .into()
+        )
     }
 
     /// Creates a resolution task.

@@ -129,6 +129,7 @@ extern crate alloc;
 pub(crate) mod buffer;
 pub mod components;
 pub mod convert;
+pub mod formatting;
 pub mod normalize;
 pub(crate) mod parser;
 pub mod percent_encoding;

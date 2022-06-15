@@ -9,7 +9,8 @@ use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
-use crate::normalize::normalize_case_and_pct_encodings;
+use crate::formatting::eq_str_display;
+use crate::normalize::{is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
@@ -358,28 +359,10 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
         // Check `host`.
         let host = authority_components.host();
         let host_is_normalized = if is_ascii_only_host(host) {
-            // Note that percent-encoding triplets in US-ASCII only
-            // host should be uppercase. For example, `plus%2bplus`
-            // is wrong and `plus%2Bplus` is correct.
-            let normalized_host_chars =
-                normalize_case_and_pct_encodings::<S>(host).scan(3, |after_percent, c| {
-                    // after_percent: 0 is `%`, 1 is upper hexdigit, 2 is lower
-                    // hexdigit, and 3 is plain character.
-                    Some(if c == '%' {
-                        *after_percent = 0;
-                        c
-                    } else if *after_percent < 2 {
-                        *after_percent += 1;
-                        c
-                    } else {
-                        *after_percent = 3;
-                        c.to_ascii_lowercase()
-                    })
-                });
-            normalized_host_chars.eq(host.chars())
+            eq_str_display(host, &DisplayNormalizedAsciiOnlyHost::new(host))
         } else {
             // If the host is not ASCII-only, conversion to lowercase is not performed.
-            normalize_case_and_pct_encodings::<S>(host).eq(host.chars())
+            is_pct_case_normalized::<S>(host)
         };
         if !host_is_normalized {
             return false;
@@ -387,10 +370,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
 
         // Check pencent encodings in `userinfo`.
         if let Some(userinfo) = authority_components.userinfo() {
-            if !userinfo
-                .chars()
-                .eq(normalize_case_and_pct_encodings::<S>(userinfo))
-            {
+            if !is_pct_case_normalized::<S>(userinfo) {
                 return false;
             }
         }
@@ -414,7 +394,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
     {
         return false;
     }
-    normalize_case_and_pct_encodings::<S>(after_authority).eq(after_authority.chars())
+    is_pct_case_normalized::<S>(after_authority)
 }
 
 /// Decodes two hexdigits into a byte.

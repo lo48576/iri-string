@@ -242,6 +242,7 @@ pub(crate) struct FmtWritableBuffer<'a, 'b, T: ?Sized + Buffer<'b>> {
 }
 
 impl<'a, 'b, T: ?Sized + Buffer<'b>> FmtWritableBuffer<'a, 'b, T> {
+    /// Creates a new wrapper object.
     #[inline]
     #[must_use]
     pub(crate) fn new(buffer: &'a mut T) -> Self {
@@ -262,13 +263,6 @@ impl<'a, 'b, T: ?Sized + Buffer<'b>> FmtWritableBuffer<'a, 'b, T> {
         self.error
             .take()
             .expect("[precondition] buffer error should be set")
-    }
-
-    /// Returns the inner buffer.
-    #[inline]
-    #[must_use]
-    pub(crate) fn into_buffer(self) -> &'a mut T {
-        self.buffer
     }
 }
 
