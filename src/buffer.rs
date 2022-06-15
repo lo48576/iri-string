@@ -3,6 +3,7 @@
 mod error;
 
 use core::cmp::Ordering;
+use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::string::String;
@@ -16,6 +17,17 @@ pub use self::error::Error;
 pub(crate) trait Buffer<'a> {
     /// Error on extending buffer.
     type ExtendError;
+
+    /// Writes the formatted input to the buffer.
+    ///
+    /// Intended to be used with `std::write!`.
+    fn write_fmt(&mut self, args: fmt::Arguments<'_>) -> Result<(), Self::ExtendError> {
+        let mut buf = FmtWritableBuffer::new(self);
+        match fmt::write(&mut buf, args) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(buf.take_error_unwrap()),
+        }
+    }
 
     /// Returns the content in a byte slice.
     #[must_use]
@@ -218,5 +230,48 @@ impl<'a> Buffer<'a> for ByteSliceBuf<'a> {
         } else {
             Ok(())
         }
+    }
+}
+
+/// A wrapper type to make the buffer type writable by `core::fmt::Write`.
+pub(crate) struct FmtWritableBuffer<'a, 'b, T: ?Sized + Buffer<'b>> {
+    /// Buffer.
+    buffer: &'a mut T,
+    /// Error.
+    error: Option<T::ExtendError>,
+}
+
+impl<'a, 'b, T: ?Sized + Buffer<'b>> FmtWritableBuffer<'a, 'b, T> {
+    /// Creates a new wrapper object.
+    #[inline]
+    #[must_use]
+    pub(crate) fn new(buffer: &'a mut T) -> Self {
+        Self {
+            buffer,
+            error: None,
+        }
+    }
+
+    /// Takes the error object out of `self` and returns it.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the error is not set or already cleared.
+    #[inline]
+    #[must_use]
+    pub(crate) fn take_error_unwrap(&mut self) -> T::ExtendError {
+        self.error
+            .take()
+            .expect("[precondition] buffer error should be set")
+    }
+}
+
+impl<'a, 'b, T: ?Sized + Buffer<'b>> fmt::Write for FmtWritableBuffer<'a, 'b, T> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if let Err(e) = self.buffer.push_str(s) {
+            self.error = Some(e);
+            return Err(fmt::Error);
+        }
+        Ok(())
     }
 }
