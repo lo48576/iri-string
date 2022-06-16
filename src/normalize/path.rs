@@ -99,17 +99,17 @@ impl<'a> PathToNormalize<'a> {
         }
     }
 
-    /// Returns the copy of `self` with the starting bytes of the given length trimmed.
-    #[must_use]
-    fn trim_start(&self, len: usize) -> Self {
+    /// Removes the `len` characters from the beginning of `self`.
+    fn remove_start(&mut self, len: usize) {
         if let Some(prefix) = self.0 {
             if let Some(suffix_trim_len) = len.checked_sub(prefix.len()) {
-                Self(None, &self.1[suffix_trim_len..])
+                self.0 = None;
+                self.1 = &self.1[suffix_trim_len..];
             } else {
-                Self(Some(&prefix[len..]), self.1)
+                self.0 = Some(&prefix[len..]);
             }
         } else {
-            Self(None, &self.1[len..])
+            self.1 = &self.1[len..];
         }
     }
 }
@@ -142,7 +142,7 @@ impl PathToNormalize<'_> {
                     let segname = seg.segment(&rest);
                     // Attempt to skip the following slash by `+ 1`.
                     let skip = rest.len().min(segname.len() + 1);
-                    rest = rest.trim_start(skip);
+                    rest.remove_start(skip);
                 }
                 SegmentKind::Normal => break,
             }
@@ -183,7 +183,7 @@ impl PathToNormalize<'_> {
                         _ => break,
                     }
                 }
-                rest = rest.trim_start(skipped_len);
+                rest.remove_start(skipped_len);
                 if rest.is_empty() {
                     // Finished with a dot segment.
                     // The last `/.` or `/..` should be replaced to `/`.
@@ -261,7 +261,7 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            rest = rest.trim_start(end);
+            rest.remove_start(end);
         }
 
         Ok(())
