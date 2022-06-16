@@ -274,6 +274,18 @@ mod tests {
     }
 
     #[test]
+    fn iri_middle_decode() {
+        assert_eq!(
+            DisplayPctCaseNormalize::<UriSpec>::new("%ce%ce%b1%b1").to_string(),
+            "%CE%CE%B1%B1"
+        );
+        assert_eq!(
+            DisplayPctCaseNormalize::<IriSpec>::new("%ce%ce%b1%b1").to_string(),
+            "%CE\u{03B1}%B1"
+        );
+    }
+
+    #[test]
     fn ascii_reserved() {
         assert_eq!(
             DisplayPctCaseNormalize::<UriSpec>::new("%3f").to_string(),
