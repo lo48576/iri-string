@@ -200,6 +200,7 @@ impl<'a, S: Spec> DisplayNormalize<'a, S> {
 }
 
 impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.fmt_write(f).map_err(|_| fmt::Error)
     }
