@@ -112,6 +112,28 @@ impl<'a> PathToNormalize<'a> {
             self.1 = &self.1[len..];
         }
     }
+
+    /// Removes the prefix that are ignorable on normalization.
+    // Skips the prefix dot segments without leading slashes (such as `./`,
+    // `../`, and `../.././`).
+    // This is necessary because such segments should be removed with the
+    // FOLLOWING slashes, not leading slashes.
+    fn remove_ignorable_prefix(&mut self) {
+        while let Some(seg) = PathSegmentsIter::new(self).next() {
+            if seg.has_leading_slash {
+                // The first segment starting with a slash is not target.
+                break;
+            }
+            match seg.kind(self) {
+                SegmentKind::Dot | SegmentKind::DotDot => {
+                    // Attempt to skip the following slash by `+ 1`.
+                    let skip = self.len().min(seg.range.end + 1);
+                    self.remove_start(skip);
+                }
+                SegmentKind::Normal => break,
+            }
+        }
+    }
 }
 
 impl PathToNormalize<'_> {
@@ -136,20 +158,7 @@ impl PathToNormalize<'_> {
         // `../`, and `../.././`).
         // This is necessary because such segments should be removed with the
         // FOLLOWING slashes, not leading slashes.
-        while let Some(seg) = PathSegmentsIter::new(&rest).next() {
-            if seg.has_leading_slash {
-                // The first segment starting with a slash is not target.
-                break;
-            }
-            match seg.kind(&rest) {
-                SegmentKind::Dot | SegmentKind::DotDot => {
-                    // Attempt to skip the following slash by `+ 1`.
-                    let skip = rest.len().min(seg.range.end + 1);
-                    rest.remove_start(skip);
-                }
-                SegmentKind::Normal => break,
-            }
-        }
+        rest.remove_ignorable_prefix();
         if rest.is_empty() {
             // Path consists of only `/.`s and `/..`s.
             // In this case, if the authority component is present, the result
