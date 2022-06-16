@@ -197,18 +197,6 @@ impl<'a, S: Spec> DisplayNormalize<'a, S> {
             _spec: PhantomData,
         }
     }
-
-    /// Enables normalization for the task.
-    #[inline]
-    pub fn enable_normalization(&mut self) {
-        self.input.op.case_pct_normalization = true;
-    }
-
-    /// Enables WHATWG URL Standard serialization for the task.
-    #[inline]
-    pub fn enable_whatwg_serialization(&mut self) {
-        self.input.op.whatwg_serialization = true;
-    }
 }
 
 impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
