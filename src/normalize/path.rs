@@ -137,11 +137,14 @@ impl PathToNormalize<'_> {
         // This is necessary because such segments should be removed with the
         // FOLLOWING slashes, not leading slashes.
         while let Some(seg) = PathSegmentsIter::new(&rest).next() {
+            if seg.has_leading_slash {
+                // The first segment starting with a slash is not target.
+                break;
+            }
             match seg.kind(&rest) {
                 SegmentKind::Dot | SegmentKind::DotDot => {
-                    let segname = seg.segment(&rest);
                     // Attempt to skip the following slash by `+ 1`.
-                    let skip = rest.len().min(segname.len() + 1);
+                    let skip = rest.len().min(seg.range.end + 1);
                     rest.remove_start(skip);
                 }
                 SegmentKind::Normal => break,
