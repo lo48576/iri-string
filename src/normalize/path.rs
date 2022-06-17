@@ -99,17 +99,39 @@ impl<'a> PathToNormalize<'a> {
         }
     }
 
-    /// Returns the copy of `self` with the starting bytes of the given length trimmed.
-    #[must_use]
-    fn trim_start(&self, len: usize) -> Self {
+    /// Removes the `len` characters from the beginning of `self`.
+    fn remove_start(&mut self, len: usize) {
         if let Some(prefix) = self.0 {
             if let Some(suffix_trim_len) = len.checked_sub(prefix.len()) {
-                Self(None, &self.1[suffix_trim_len..])
+                self.0 = None;
+                self.1 = &self.1[suffix_trim_len..];
             } else {
-                Self(Some(&prefix[len..]), self.1)
+                self.0 = Some(&prefix[len..]);
             }
         } else {
-            Self(None, &self.1[len..])
+            self.1 = &self.1[len..];
+        }
+    }
+
+    /// Removes the prefix that are ignorable on normalization.
+    // Skips the prefix dot segments without leading slashes (such as `./`,
+    // `../`, and `../.././`).
+    // This is necessary because such segments should be removed with the
+    // FOLLOWING slashes, not leading slashes.
+    fn remove_ignorable_prefix(&mut self) {
+        while let Some(seg) = PathSegmentsIter::new(self).next() {
+            if seg.has_leading_slash {
+                // The first segment starting with a slash is not target.
+                break;
+            }
+            match seg.kind(self) {
+                SegmentKind::Dot | SegmentKind::DotDot => {
+                    // Attempt to skip the following slash by `+ 1`.
+                    let skip = self.len().min(seg.range.end + 1);
+                    self.remove_start(skip);
+                }
+                SegmentKind::Normal => break,
+            }
         }
     }
 }
@@ -136,17 +158,7 @@ impl PathToNormalize<'_> {
         // `../`, and `../.././`).
         // This is necessary because such segments should be removed with the
         // FOLLOWING slashes, not leading slashes.
-        while let Some(seg) = PathSegmentsIter::new(&rest).next() {
-            match seg.kind(&rest) {
-                SegmentKind::Dot | SegmentKind::DotDot => {
-                    let segname = seg.segment(&rest);
-                    // Attempt to skip the following slash by `+ 1`.
-                    let skip = rest.len().min(segname.len() + 1);
-                    rest = rest.trim_start(skip);
-                }
-                SegmentKind::Normal => break,
-            }
-        }
+        rest.remove_ignorable_prefix();
         if rest.is_empty() {
             // Path consists of only `/.`s and `/..`s.
             // In this case, if the authority component is present, the result
@@ -183,7 +195,7 @@ impl PathToNormalize<'_> {
                         _ => break,
                     }
                 }
-                rest = rest.trim_start(skipped_len);
+                rest.remove_start(skipped_len);
                 if rest.is_empty() {
                     // Finished with a dot segment.
                     // The last `/.` or `/..` should be replaced to `/`.
@@ -261,7 +273,7 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            rest = rest.trim_start(end);
+            rest.remove_start(end);
         }
 
         Ok(())

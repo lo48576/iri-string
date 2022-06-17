@@ -21,9 +21,6 @@ impl Sealed for UriSpec {}
 
 /// Internal implementations for spec types.
 pub trait SpecInternal: Sized {
-    /// Returns true if the spec is ASCII only.
-    #[must_use]
-    fn is_ascii_only() -> bool;
     /// Checks if the given non-ASCII character matches `unreserved` or `iunreserved` rule.
     #[must_use]
     fn is_nonascii_char_unreserved(c: char) -> bool;
@@ -33,11 +30,6 @@ pub trait SpecInternal: Sized {
 }
 
 impl SpecInternal for IriSpec {
-    #[inline]
-    fn is_ascii_only() -> bool {
-        false
-    }
-
     #[inline]
     fn is_nonascii_char_unreserved(c: char) -> bool {
         is_ucschar(c)
@@ -54,11 +46,6 @@ impl SpecInternal for IriSpec {
 }
 
 impl SpecInternal for UriSpec {
-    #[inline]
-    fn is_ascii_only() -> bool {
-        true
-    }
-
     #[inline]
     fn is_nonascii_char_unreserved(_: char) -> bool {
         false
