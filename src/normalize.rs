@@ -74,7 +74,7 @@ mod error;
 mod path;
 mod pct_case;
 
-use core::fmt::{self, Write};
+use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
 use crate::buffer::{Buffer, ByteSliceBuf, FmtWritableBuffer};
@@ -255,7 +255,7 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
         if let Some(authority) = self.input.authority {
             f.write_str("//")?;
             if self.input.op.case_pct_normalization {
-                normalize_authority::<S, _>(f, authority)?;
+                normalize_authority::<S>(f, authority)?;
             } else {
                 // No case/pct normalization.
                 f.write_str(authority)?;
@@ -297,22 +297,22 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
 }
 
 /// Writes the normalized authority.
-fn normalize_authority<S: Spec, W: fmt::Write>(f: &mut W, authority: &str) -> fmt::Result {
+fn normalize_authority<S: Spec>(f: &mut fmt::Formatter<'_>, authority: &str) -> fmt::Result {
     let host_port = match rfind_split_hole(authority, b'@') {
         Some((userinfo, host_port)) => {
             // Don't lowercase `userinfo` even if it is ASCII only. `userinfo`
             // is not a part of `host`.
-            write!(f, "{}", DisplayPctCaseNormalize::<S>::new(userinfo))?;
+            DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
             f.write_char('@')?;
             host_port
         }
         None => authority,
     };
-    normalize_host_port::<S, _>(f, host_port)
+    normalize_host_port::<S>(f, host_port)
 }
 
 /// Writes the normalized host and port.
-fn normalize_host_port<S: Spec, W: fmt::Write>(f: &mut W, host_port: &str) -> fmt::Result {
+fn normalize_host_port<S: Spec>(f: &mut fmt::Formatter<'_>, host_port: &str) -> fmt::Result {
     // If the suffix is a colon, it is a delimiter between the host and empty
     // port. An empty port should be removed during normalization (see RFC 3986
     // section 3.2.3), so strip it.
@@ -329,9 +329,9 @@ fn normalize_host_port<S: Spec, W: fmt::Write>(f: &mut W, host_port: &str) -> fm
     // digits, so this won't affect to the test result.
     if is_ascii_only_host(host_port) {
         // If the host is ASCII characters only, make plain alphabets lower case.
-        write!(f, "{}", DisplayNormalizedAsciiOnlyHost::new(host_port))
+        DisplayNormalizedAsciiOnlyHost::new(host_port).fmt(f)
     } else {
-        write!(f, "{}", DisplayPctCaseNormalize::<S>::new(host_port))
+        DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
     }
 }
 
