@@ -5,6 +5,13 @@
 * Fix normalization bug.
     + Previously, trailing colon of an authority (with empty port) was not
       stripped. Now this is fixed.
+* Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
+
+### Added
+* Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
+    + List of added functions:
+        - `types::RiStr::ensure_rfc3986_normalizable()`
+        - `types::RiAbsoluteStr::ensure_rfc3986_normalizable()`
 
 ### Fixed
 * Fix normalization bug.
