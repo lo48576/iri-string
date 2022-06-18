@@ -74,7 +74,7 @@ mod error;
 mod path;
 mod pct_case;
 
-use core::fmt;
+use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
 use crate::buffer::{Buffer, ByteSliceBuf, FmtWritableBuffer};
@@ -93,29 +93,6 @@ pub(crate) use self::pct_case::{
     is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost, DisplayPctCaseNormalize,
 };
 
-/// Error on normalization by `core::fmt::Display`.
-#[derive(Debug, Clone)]
-enum DisplayNormalizeError {
-    /// Formatting error.
-    Format(fmt::Error),
-    /// Normalization error.
-    Normalization(Error),
-}
-
-impl From<fmt::Error> for DisplayNormalizeError {
-    #[inline]
-    fn from(e: fmt::Error) -> Self {
-        Self::Format(e)
-    }
-}
-
-impl From<Error> for DisplayNormalizeError {
-    #[inline]
-    fn from(e: Error) -> Self {
-        Self::Normalization(e)
-    }
-}
-
 /// Normalization operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NormalizationOp {
@@ -125,31 +102,11 @@ pub(crate) struct NormalizationOp {
     /// won't be automatically lowered. Users should apply case normalization
     /// for US-ASCII only `host` component by themselves.
     pub(crate) case_pct_normalization: bool,
-    /// Whether to apply serialization described in WHATWG URL Standard when necessary.
-    ///
-    /// If this option is enabled, serialization of WHATWG URL Standard will be
-    /// used instead of pure RFC 3986 algorithm in some situation.
-    ///
-    /// Consider an IRI that would have `foo` as a scheme, no authority, and
-    /// `//bar` as a path, after normalization. According to RFC 3986 algorithm,
-    /// the resulting string would be `foo://bar`, but this is obviously invalid
-    /// since `bar` here would be interpreted as an authority, rather than the
-    /// part of the path.
-    ///
-    /// To prevent such erroneous / fallible normalization and resolution,
-    /// WHATWG URL Standard have an additional rule to modify the path.
-    /// That rule is, prepending `/.` to the path to prevent starting from `//`
-    /// when no authority is present.
-    /// By this rule, the result of the example case above will be
-    /// `foo:/.//bar`. This can be unambiguously interpreted as the combination
-    /// of the scheme `foo`, no authority, and the path `/.//bar`, which is
-    /// semantically equal to the path `//bar`.
-    pub(crate) whatwg_serialization: bool,
 }
 
 /// Spec-agnostic IRI normalization/resolution input.
 #[derive(Debug, Clone, Copy)]
-struct NormalizationInput<'a> {
+pub(crate) struct NormalizationInput<'a> {
     /// Target scheme.
     scheme: &'a str,
     /// Target authority.
@@ -162,6 +119,77 @@ struct NormalizationInput<'a> {
     fragment: Option<&'a str>,
     /// Normalization type.
     op: NormalizationOp,
+}
+
+impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiAbsoluteString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl NormalizationInput<'_> {
+    /// Checks if the path is normalizable by RFC 3986 algorithm.
+    ///
+    /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
+    pub(crate) fn ensure_rfc3986_normalizable(&self) -> Result<(), Error> {
+        if self.authority.is_some() {
+            return Ok(());
+        }
+        match self.path {
+            Path::Done(_) => Ok(()),
+            Path::NeedsProcessing(path) => path.ensure_rfc3986_normalizable_with_authority_absent(),
+        }
+    }
 }
 
 /// Writable as a normalized IRI.
@@ -202,13 +230,6 @@ impl<'a, S: Spec> DisplayNormalize<'a, S> {
 impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_write(f).map_err(|_| fmt::Error)
-    }
-}
-
-impl<S: Spec> DisplayNormalize<'_, S> {
-    /// Writes the normalized IRI string.
-    fn fmt_write<W: fmt::Write>(&self, f: &mut W) -> Result<(), DisplayNormalizeError> {
         // Write the scheme.
         if self.input.op.case_pct_normalization {
             // Apply case normalization.
@@ -234,7 +255,7 @@ impl<S: Spec> DisplayNormalize<'_, S> {
         if let Some(authority) = self.input.authority {
             f.write_str("//")?;
             if self.input.op.case_pct_normalization {
-                normalize_authority::<S, _>(f, authority)?;
+                normalize_authority::<S>(f, authority)?;
             } else {
                 // No case/pct normalization.
                 f.write_str(authority)?;
@@ -254,7 +275,7 @@ impl<S: Spec> DisplayNormalize<'_, S> {
             f.write_char('?')?;
             if self.input.op.case_pct_normalization {
                 // Apply percent-encoding normalization.
-                write!(f, "{}", DisplayPctCaseNormalize::<S>::new(query))?;
+                DisplayPctCaseNormalize::<S>::new(query).fmt(f)?;
             } else {
                 f.write_str(query)?;
             }
@@ -265,7 +286,7 @@ impl<S: Spec> DisplayNormalize<'_, S> {
             f.write_char('#')?;
             if self.input.op.case_pct_normalization {
                 // Apply percent-encoding normalization.
-                write!(f, "{}", DisplayPctCaseNormalize::<S>::new(fragment))?;
+                DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)?;
             } else {
                 f.write_str(fragment)?;
             }
@@ -276,22 +297,22 @@ impl<S: Spec> DisplayNormalize<'_, S> {
 }
 
 /// Writes the normalized authority.
-fn normalize_authority<S: Spec, W: fmt::Write>(f: &mut W, authority: &str) -> fmt::Result {
+fn normalize_authority<S: Spec>(f: &mut fmt::Formatter<'_>, authority: &str) -> fmt::Result {
     let host_port = match rfind_split_hole(authority, b'@') {
         Some((userinfo, host_port)) => {
             // Don't lowercase `userinfo` even if it is ASCII only. `userinfo`
             // is not a part of `host`.
-            write!(f, "{}", DisplayPctCaseNormalize::<S>::new(userinfo))?;
+            DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
             f.write_char('@')?;
             host_port
         }
         None => authority,
     };
-    normalize_host_port::<S, _>(f, host_port)
+    normalize_host_port::<S>(f, host_port)
 }
 
 /// Writes the normalized host and port.
-fn normalize_host_port<S: Spec, W: fmt::Write>(f: &mut W, host_port: &str) -> fmt::Result {
+fn normalize_host_port<S: Spec>(f: &mut fmt::Formatter<'_>, host_port: &str) -> fmt::Result {
     // If the suffix is a colon, it is a delimiter between the host and empty
     // port. An empty port should be removed during normalization (see RFC 3986
     // section 3.2.3), so strip it.
@@ -308,9 +329,9 @@ fn normalize_host_port<S: Spec, W: fmt::Write>(f: &mut W, host_port: &str) -> fm
     // digits, so this won't affect to the test result.
     if is_ascii_only_host(host_port) {
         // If the host is ASCII characters only, make plain alphabets lower case.
-        write!(f, "{}", DisplayNormalizedAsciiOnlyHost::new(host_port))
+        DisplayNormalizedAsciiOnlyHost::new(host_port).fmt(f)
     } else {
-        write!(f, "{}", DisplayPctCaseNormalize::<S>::new(host_port))
+        DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
     }
 }
 
@@ -323,6 +344,26 @@ fn normalize_host_port<S: Spec, W: fmt::Write>(f: &mut W, host_port: &str) -> fm
 pub struct NormalizationTask<'a, T: ?Sized> {
     /// Normalization input.
     input: NormalizationInput<'a>,
+    /// Whether to apply serialization described in WHATWG URL Standard when necessary.
+    ///
+    /// If this option is enabled, serialization of WHATWG URL Standard will be
+    /// used instead of pure RFC 3986 algorithm in some situation.
+    ///
+    /// Consider an IRI that would have `foo` as a scheme, no authority, and
+    /// `//bar` as a path, after normalization. According to RFC 3986 algorithm,
+    /// the resulting string would be `foo://bar`, but this is obviously invalid
+    /// since `bar` here would be interpreted as an authority, rather than the
+    /// part of the path.
+    ///
+    /// To prevent such erroneous / fallible normalization and resolution,
+    /// WHATWG URL Standard have an additional rule to modify the path.
+    /// That rule is, prepending `/.` to the path to prevent starting from `//`
+    /// when no authority is present.
+    /// By this rule, the result of the example case above will be
+    /// `foo:/.//bar`. This can be unambiguously interpreted as the combination
+    /// of the scheme `foo`, no authority, and the path `/.//bar`, which is
+    /// semantically equal to the path `//bar`.
+    whatwg_serialization: bool,
     /// Spec-aware IRI string type.
     _ty_str: PhantomData<fn() -> T>,
 }
@@ -338,6 +379,7 @@ impl<'a, T: ?Sized> NormalizationTask<'a, T> {
         query: Option<&'a str>,
         fragment: Option<&'a str>,
         op: NormalizationOp,
+        whatwg_serialization: bool,
     ) -> Self {
         Self {
             input: NormalizationInput {
@@ -348,6 +390,7 @@ impl<'a, T: ?Sized> NormalizationTask<'a, T> {
                 fragment,
                 op,
             },
+            whatwg_serialization,
             _ty_str: PhantomData,
         }
     }
@@ -369,9 +412,9 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
                 fragment,
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: false,
                 },
             },
+            whatwg_serialization: false,
             _ty_str: PhantomData,
         }
     }
@@ -401,9 +444,9 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationTask<'a, RiAbsolut
                 fragment,
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: false,
                 },
             },
+            whatwg_serialization: false,
             _ty_str: PhantomData,
         }
     }
@@ -427,7 +470,7 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// Enables WHATWG URL Standard serialization for the task.
     #[inline]
     pub fn enable_whatwg_serialization(&mut self) {
-        self.input.op.whatwg_serialization = true;
+        self.whatwg_serialization = true;
     }
 
     /// Resolves the IRI, and writes it to the buffer.
@@ -438,12 +481,17 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     where
         TaskError<Error>: From<B::ExtendError>,
     {
+        if !self.whatwg_serialization {
+            self.input
+                .ensure_rfc3986_normalizable()
+                .map_err(TaskError::Process)?;
+        }
+
         let buf_offset = buf.as_bytes().len();
         let mut writer = FmtWritableBuffer::new(&mut buf);
-        match DisplayNormalize::<S>::from_input(self.input).fmt_write(&mut writer) {
+        match write!(writer, "{}", DisplayNormalize::<S>::from_input(self.input)) {
             Ok(_) => Ok(&buf.into_bytes()[buf_offset..]),
-            Err(DisplayNormalizeError::Format(_)) => Err(writer.take_error_unwrap().into()),
-            Err(DisplayNormalizeError::Normalization(e)) => Err(TaskError::Process(e)),
+            Err(_) => Err(writer.take_error_unwrap().into()),
         }
     }
 
@@ -855,7 +903,6 @@ mod tests_display {
                 fragment: Some("fragment"),
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: true,
                 },
             },
             _spec: PhantomData,
@@ -880,7 +927,6 @@ mod tests_display {
                 fragment: Some("fragment"),
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: true,
                 },
             },
             _spec: PhantomData,
@@ -905,7 +951,6 @@ mod tests_display {
                 fragment: Some("fragment"),
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: true,
                 },
             },
             _spec: PhantomData,
@@ -927,7 +972,6 @@ mod tests_display {
                 fragment: None,
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: true,
                 },
             },
             _spec: PhantomData,
@@ -948,39 +992,11 @@ mod tests_display {
                 fragment: None,
                 op: NormalizationOp {
                     case_pct_normalization: true,
-                    whatwg_serialization: true,
                 },
             },
             _spec: PhantomData,
         };
         assert_eq!(disp.to_string(), "scheme:/.//c");
-    }
-
-    #[test]
-    fn leading_double_slash_without_authority_non_whatwg() {
-        let disp = DisplayNormalize::<UriSpec> {
-            input: NormalizationInput {
-                scheme: "scheme",
-                authority: None,
-                path: Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
-                    "/a/b/", "../..//c",
-                )),
-                query: None,
-                fragment: None,
-                op: NormalizationOp {
-                    case_pct_normalization: true,
-                    whatwg_serialization: false,
-                },
-            },
-            _spec: PhantomData,
-        };
-        struct DummyWriter;
-        impl fmt::Write for DummyWriter {
-            fn write_str(&mut self, _: &str) -> fmt::Result {
-                Ok(())
-            }
-        }
-        assert!(disp.fmt_write(&mut DummyWriter).is_err());
     }
 }
 
