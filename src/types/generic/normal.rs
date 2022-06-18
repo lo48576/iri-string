@@ -8,7 +8,7 @@ use alloc::string::String;
 
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::{Error, NormalizationTask};
+use crate::normalize::{Error, NormalizationInput, NormalizationTask};
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
@@ -194,6 +194,29 @@ impl<S: Spec> RiStr<S> {
             // is also an absolute IRI.
             RiAbsoluteStr::new_maybe_unchecked(&self.as_str()[..prefix_len])
         }
+    }
+
+    /// Returns Ok`(())` if the IRI is normalizable by the RFC 3986 algorithm.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://example.COM/foo/%2e/bar/..")?;
+    /// assert!(iri.ensure_rfc3986_normalizable().is_ok());
+    ///
+    /// let iri2 = IriStr::new("scheme:/..//bar")?;
+    /// // The normalization result would be `scheme://bar` according to RFC
+    /// // 3986, but it is unintended and should be treated as a failure.
+    /// // WHATWG URL Stardard handles this case.
+    /// assert!(!iri.ensure_rfc3986_normalizable().is_err());
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    pub fn ensure_rfc3986_normalizable(&self) -> Result<(), Error> {
+        NormalizationInput::from(self).ensure_rfc3986_normalizable()
     }
 
     /// Returns `true` if the IRI is already normalized.

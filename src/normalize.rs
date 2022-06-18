@@ -149,7 +149,7 @@ pub(crate) struct NormalizationOp {
 
 /// Spec-agnostic IRI normalization/resolution input.
 #[derive(Debug, Clone, Copy)]
-struct NormalizationInput<'a> {
+pub(crate) struct NormalizationInput<'a> {
     /// Target scheme.
     scheme: &'a str,
     /// Target authority.
@@ -162,6 +162,79 @@ struct NormalizationInput<'a> {
     fragment: Option<&'a str>,
     /// Normalization type.
     op: NormalizationOp,
+}
+
+impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+                whatwg_serialization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+                whatwg_serialization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiAbsoluteString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl NormalizationInput<'_> {
+    /// Checks if the path is normalizable by RFC 3986 algorithm.
+    ///
+    /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
+    pub(crate) fn ensure_rfc3986_normalizable(&self) -> Result<(), Error> {
+        if self.authority.is_some() {
+            return Ok(());
+        }
+        match self.path {
+            Path::Done(_) => Ok(()),
+            Path::NeedsProcessing(path) => path.ensure_rfc3986_normalizable_with_authority_absent(),
+        }
+    }
 }
 
 /// Writable as a normalized IRI.

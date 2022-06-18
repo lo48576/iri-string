@@ -4,7 +4,7 @@ use core::fmt;
 use core::ops::Range;
 
 use crate::parser::str::rfind;
-use crate::spec::Spec;
+use crate::spec::{Spec, UriSpec};
 
 use super::pct_case::DisplayPctCaseNormalize;
 use super::{DisplayNormalizeError, Error, NormalizationOp};
@@ -277,6 +277,60 @@ impl PathToNormalize<'_> {
         }
 
         Ok(())
+    }
+
+    /// Checks if the path is normalizable by RFC 3986 algorithm when the authority is absent.
+    ///
+    /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
+    pub(super) fn ensure_rfc3986_normalizable_with_authority_absent(&self) -> Result<(), Error> {
+        /// A sink to get the prefix of the input.
+        #[derive(Default)]
+        struct PrefixRetriever {
+            /// The buffer to remember the prefix of the input.
+            buf: [u8; 3],
+            /// The next write position in the buffer.
+            cursor: usize,
+        }
+        impl PrefixRetriever {
+            /// Returns the read prefix data.
+            #[inline]
+            #[must_use]
+            fn as_bytes(&self) -> &[u8] {
+                &self.buf[..self.cursor]
+            }
+        }
+        impl fmt::Write for PrefixRetriever {
+            fn write_str(&mut self, s: &str) -> fmt::Result {
+                if !s.is_empty() && (self.cursor >= self.buf.len()) {
+                    // Enough bytes are read.
+                    return Err(fmt::Error);
+                }
+                self.buf[self.cursor..]
+                    .iter_mut()
+                    .zip(s.bytes())
+                    .for_each(|(dest, src)| *dest = src);
+                self.cursor = self.cursor.saturating_add(s.len()).min(self.buf.len());
+                Ok(())
+            }
+        }
+
+        let mut prefix = PrefixRetriever::default();
+        // The failure of this write indicates more than 3 characters are read.
+        // This is safe to ignore since the check needs only 3 characters.
+        let _ = self.fmt_write_normalize::<UriSpec, _>(
+            &mut prefix,
+            NormalizationOp {
+                case_pct_normalization: false,
+            },
+            // Assume the authority is absent.
+            false,
+        );
+
+        if prefix.as_bytes() == b"/./" {
+            Err(Error::new())
+        } else {
+            Ok(())
+        }
     }
 }
 
