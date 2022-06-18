@@ -1058,8 +1058,8 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
             r_fragment,
             NormalizationOp {
                 case_pct_normalization: false,
-                whatwg_serialization: false,
             },
+            false,
         )
     }
 

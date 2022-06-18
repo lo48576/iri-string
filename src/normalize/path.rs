@@ -7,7 +7,7 @@ use crate::parser::str::rfind;
 use crate::spec::{Spec, UriSpec};
 
 use super::pct_case::DisplayPctCaseNormalize;
-use super::{DisplayNormalizeError, Error, NormalizationOp};
+use super::{Error, NormalizationOp};
 
 /// Path that is (possibly) not yet processed or being processed.
 #[derive(Debug, Clone, Copy)]
@@ -143,7 +143,7 @@ impl PathToNormalize<'_> {
         f: &mut W,
         op: NormalizationOp,
         authority_is_present: bool,
-    ) -> Result<(), DisplayNormalizeError> {
+    ) -> fmt::Result {
         debug_assert!(
             self.0.map_or(true, |s| s.ends_with('/')),
             "[validity] the prefix field of `PathToNormalize` should end with a slash"
@@ -248,10 +248,6 @@ impl PathToNormalize<'_> {
                     }
                     Some(only_a_slash) => {
                         if only_a_slash && !authority_is_present {
-                            if !op.whatwg_serialization {
-                                // Serialization of WHATWG URL Standard is disabled.
-                                return Err(Error::new().into());
-                            }
                             // Apply serialization of WHATWG URL Standard.
                             // This prevents `<scheme=foo>:<path=//bar>` from
                             // written as // `foo://bar`, which is interpreted
