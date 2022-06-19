@@ -4,7 +4,7 @@ use core::cmp::Ordering;
 use core::fmt::{self, Write as _};
 use core::marker::PhantomData;
 
-use crate::formatting::eq_str_display;
+use crate::format::eq_str_display;
 use crate::parser::char::{is_ascii_unreserved, is_unreserved, is_utf8_byte_continue};
 use crate::parser::str::find_split_hole;
 use crate::parser::trusted::take_xdigits2;

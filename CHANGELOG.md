@@ -7,6 +7,7 @@
       stripped. Now this is fixed.
 * Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
 * Add IRI builder in `build` module.
+* Deprecate `percent_encoding` module in favor of the new name `percent_encode`.
 
 ### Added
 * Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
@@ -26,6 +27,11 @@
 * Fix normalization bug.
     + Previously, trailing colon of an authority (with empty port) was not
       stripped. Now this is fixed.
+
+### Changed (non-breaking)
+* Deprecate `percent_encoding` module in favor of the new name `percent_encode`.
+    + Previously exported items are still provided from `percent_encoding`
+      module to keep backward compatibility.
 
 ## [0.5.5]
 

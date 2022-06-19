@@ -9,7 +9,7 @@ use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
-use crate::formatting::eq_str_display;
+use crate::format::eq_str_display;
 use crate::normalize::{is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
