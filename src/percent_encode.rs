@@ -63,7 +63,7 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::percent_encoding::PercentEncoded;
+    /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
     /// let raw = "alpha.\u{03B1}.example.com";
@@ -88,7 +88,7 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::percent_encoding::PercentEncoded;
+    /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
     /// let raw = "alpha/\u{03B1}?#";
@@ -114,7 +114,7 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::percent_encoding::PercentEncoded;
+    /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
     /// let raw = "alpha/\u{03B1}?#";
@@ -140,7 +140,7 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::percent_encoding::PercentEncoded;
+    /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
     /// let raw = "alpha/\u{03B1}?#";
@@ -165,7 +165,7 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::percent_encoding::PercentEncoded;
+    /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
     /// let raw = "alpha/\u{03B1}?#";
