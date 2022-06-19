@@ -2,7 +2,8 @@
 
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::{Error, NormalizationInput, NormalizationTask};
+use crate::normalize::NormalizationTask;
+use crate::normalize::{Error, NormalizationInput};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
