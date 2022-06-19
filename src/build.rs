@@ -1317,6 +1317,9 @@ mod private {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "alloc")]
+    use alloc::string::ToString;
+
     use crate::types::{IriReferenceStr, IriStr};
 
     #[test]
@@ -1356,8 +1359,11 @@ mod tests {
         builder.path("/path/to/somewhere");
         builder.query("query");
         builder.fragment("fragment");
+        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
+        let built = builder.build::<IriStr>().expect("valid");
+        #[cfg(feature = "alloc")]
         assert_eq!(
-            builder.build::<IriStr>().expect("valid").to_string(),
+            built.to_string(),
             "http://user:password@example.com:80/path/to/somewhere?query#fragment"
         );
     }
@@ -1367,13 +1373,10 @@ mod tests {
         let mut builder = Builder::new();
         builder.port("99999999999999999999999999999999");
         builder.port("99999999999999999999999999999999");
-        assert_eq!(
-            builder
-                .build::<IriReferenceStr>()
-                .expect("valid")
-                .to_string(),
-            "//:99999999999999999999999999999999"
-        );
+        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
+        let built = builder.build::<IriReferenceStr>().expect("valid");
+        #[cfg(feature = "alloc")]
+        assert_eq!(built.to_string(), "//:99999999999999999999999999999999");
     }
 
     #[test]
@@ -1411,7 +1414,6 @@ mod tests {
         // results in `scheme://bar`, but this is unintentional. `bar` should be
         // the second path segment, not a host. So this should be rejected.
         builder.normalize_rfc3986();
-        #[cfg(feature = "alloc")]
         assert!(builder.build::<IriStr>().is_err());
     }
 
@@ -1426,10 +1428,9 @@ mod tests {
         // the RFC 3986 point of view, but more normalization would be
         // impossible and this would practically work in most situations.
         builder.normalize_whatwg();
+        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
+        let built = builder.build::<IriStr>().expect("normalizable");
         #[cfg(feature = "alloc")]
-        assert_eq!(
-            builder.build::<IriStr>().expect("normalizable").to_string(),
-            "scheme:/.//bar"
-        );
+        assert_eq!(built.to_string(), "scheme:/.//bar");
     }
 }
