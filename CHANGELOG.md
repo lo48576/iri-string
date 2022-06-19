@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+* Support escaping username and password by `percent_encode::PercentEncode`.
+
+### Added
+* Support escaping username and password by `percent_encode::PercentEncode`.
+    + List of added functions:
+        `percen_encode::PercentEncode::from_user()`
+        `percen_encode::PercentEncode::from_password()`
+
 ## [0.5.6]
 
 * Fix normalization bug.
