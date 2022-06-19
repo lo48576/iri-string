@@ -29,6 +29,16 @@ where
     succeeded && writer.0.is_empty()
 }
 
+/// A debug-printable type to hide the sensitive information.
+#[derive(Clone, Copy)]
+pub(crate) struct Censored;
+
+impl core::fmt::Debug for Censored {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("{censored}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

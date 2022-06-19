@@ -138,7 +138,7 @@ impl<'a> PathToNormalize<'a> {
 
 impl PathToNormalize<'_> {
     /// Writes the normalized path.
-    pub(super) fn fmt_write_normalize<S: Spec, W: fmt::Write>(
+    pub(crate) fn fmt_write_normalize<S: Spec, W: fmt::Write>(
         &self,
         f: &mut W,
         op: NormalizationOp,
@@ -278,7 +278,7 @@ impl PathToNormalize<'_> {
     /// Checks if the path is normalizable by RFC 3986 algorithm when the authority is absent.
     ///
     /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
-    pub(super) fn ensure_rfc3986_normalizable_with_authority_absent(&self) -> Result<(), Error> {
+    pub(crate) fn ensure_rfc3986_normalizable_with_authority_absent(&self) -> Result<(), Error> {
         /// A sink to get the prefix of the input.
         #[derive(Default)]
         struct PrefixRetriever {

@@ -11,6 +11,7 @@ use crate::spec::Spec;
 use crate::validate::Error;
 
 use self::authority::validate_authority;
+pub(crate) use self::authority::{validate_host, validate_userinfo};
 pub(crate) use self::path::validate_path;
 use self::path::{
     validate_path_abempty, validate_path_absolute_authority_absent,
@@ -18,7 +19,7 @@ use self::path::{
 };
 
 /// Returns `Ok(_)` if the string matches `scheme`.
-fn validate_scheme(i: &str) -> Result<(), Error> {
+pub(crate) fn validate_scheme(i: &str) -> Result<(), Error> {
     debug_assert!(!i.is_empty());
     let bytes = i.as_bytes();
     if bytes[0].is_ascii_alphabetic()

@@ -232,20 +232,7 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Write the scheme.
         if self.input.op.case_pct_normalization {
-            // Apply case normalization.
-            //
-            // > namely, that the scheme and US-ASCII only host are case
-            // > insensitive and therefore should be normalized to lowercase.
-            // >
-            // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
-            //
-            // Note that `scheme` consists of only ASCII characters and contains
-            // no percent-encoded characters.
-            self.input
-                .scheme
-                .chars()
-                .map(|c| c.to_ascii_lowercase())
-                .try_for_each(|c| f.write_char(c))?;
+            normalize_scheme(f, self.input.scheme)?;
         } else {
             f.write_str(self.input.scheme)?;
         }
@@ -274,8 +261,7 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
         if let Some(query) = self.input.query {
             f.write_char('?')?;
             if self.input.op.case_pct_normalization {
-                // Apply percent-encoding normalization.
-                DisplayPctCaseNormalize::<S>::new(query).fmt(f)?;
+                normalize_query::<S>(f, query)?;
             } else {
                 f.write_str(query)?;
             }
@@ -285,8 +271,7 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
         if let Some(fragment) = self.input.fragment {
             f.write_char('#')?;
             if self.input.op.case_pct_normalization {
-                // Apply percent-encoding normalization.
-                DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)?;
+                normalize_fragment::<S>(f, fragment)?;
             } else {
                 f.write_str(fragment)?;
             }
@@ -294,6 +279,23 @@ impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
 
         Ok(())
     }
+}
+
+/// Writes the normalized scheme.
+pub(crate) fn normalize_scheme(f: &mut fmt::Formatter<'_>, scheme: &str) -> fmt::Result {
+    // Apply case normalization.
+    //
+    // > namely, that the scheme and US-ASCII only host are case
+    // > insensitive and therefore should be normalized to lowercase.
+    // >
+    // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
+    //
+    // Note that `scheme` consists of only ASCII characters and contains
+    // no percent-encoded characters.
+    scheme
+        .chars()
+        .map(|c| c.to_ascii_lowercase())
+        .try_for_each(|c| f.write_char(c))
 }
 
 /// Writes the normalized authority.
@@ -312,7 +314,10 @@ fn normalize_authority<S: Spec>(f: &mut fmt::Formatter<'_>, authority: &str) -> 
 }
 
 /// Writes the normalized host and port.
-fn normalize_host_port<S: Spec>(f: &mut fmt::Formatter<'_>, host_port: &str) -> fmt::Result {
+pub(crate) fn normalize_host_port<S: Spec>(
+    f: &mut fmt::Formatter<'_>,
+    host_port: &str,
+) -> fmt::Result {
     // If the suffix is a colon, it is a delimiter between the host and empty
     // port. An empty port should be removed during normalization (see RFC 3986
     // section 3.2.3), so strip it.
@@ -333,6 +338,21 @@ fn normalize_host_port<S: Spec>(f: &mut fmt::Formatter<'_>, host_port: &str) -> 
     } else {
         DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
     }
+}
+
+/// Writes the normalized query without the '?' prefix.
+pub(crate) fn normalize_query<S: Spec>(f: &mut fmt::Formatter<'_>, query: &str) -> fmt::Result {
+    // Apply percent-encoding normalization.
+    DisplayPctCaseNormalize::<S>::new(query).fmt(f)
+}
+
+/// Writes the normalized query without the '#' prefix.
+pub(crate) fn normalize_fragment<S: Spec>(
+    f: &mut fmt::Formatter<'_>,
+    fragment: &str,
+) -> fmt::Result {
+    // Apply percent-encoding normalization.
+    DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)
 }
 
 /// IRI normalization/resolution task.
