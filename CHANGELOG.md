@@ -615,7 +615,7 @@ Beleive rustdoc rather than this CHANGELOG.**
 Totally rewritten.
 
 [Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.5...develop>
-[0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
+[0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
 [0.5.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.3>
 [0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>
