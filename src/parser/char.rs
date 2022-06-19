@@ -240,7 +240,7 @@ pub(crate) fn is_nonascii_fragment<S: Spec>(c: char) -> bool {
     S::is_nonascii_char_unreserved(c)
 }
 
-/// Returns `true` if the given ASCII character is allowed to appear in `userinfo`
+/// Returns `true` if the given ASCII character is allowed to appear in `userinfo` and `IPvFuture`.
 #[inline]
 #[must_use]
 pub(crate) const fn is_ascii_userinfo_ipvfutureaddr(c: u8) -> bool {

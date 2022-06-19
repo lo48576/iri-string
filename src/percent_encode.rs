@@ -26,6 +26,8 @@ pub type PercentEncodedForIri<T> = PercentEncoded<T, IriSpec>;
 enum Context {
     /// Encode the string as a reg-name (usually called as "hostname").
     RegName,
+    /// Encode the string as a user name or a password (inside the `userinfo` component).
+    UserOrPassword,
     /// Encode the string as a path segment.
     ///
     /// A slash (`/`) will be encoded to `%2F`.
@@ -77,6 +79,60 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     pub fn from_reg_name(raw: T) -> Self {
         Self {
             context: Context::RegName,
+            raw,
+            _spec: PhantomData,
+        }
+    }
+
+    /// Creates an encoded string from a raw user name (inside `userinfo` component).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::percent_encode::PercentEncoded;
+    /// use iri_string::spec::UriSpec;
+    ///
+    /// let raw = "user:\u{03B1}";
+    /// // The first `:` will be interpreted as a delimiter, so colons will be escaped.
+    /// let encoded = "user%3A%CE%B1";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::from_user(raw).to_string(),
+    ///     encoded
+    /// );
+    /// # }
+    /// ```
+    pub fn from_user(raw: T) -> Self {
+        Self {
+            context: Context::UserOrPassword,
+            raw,
+            _spec: PhantomData,
+        }
+    }
+
+    /// Creates an encoded string from a raw user name (inside `userinfo` component).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::percent_encode::PercentEncoded;
+    /// use iri_string::spec::UriSpec;
+    ///
+    /// let raw = "password:\u{03B1}";
+    /// // The first `:` will be interpreted as a delimiter, and the colon
+    /// // inside the password will be the first one if the user name is empty,
+    /// // so colons will be escaped.
+    /// let encoded = "password%3A%CE%B1";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::from_password(raw).to_string(),
+    ///     encoded
+    /// );
+    /// # }
+    /// ```
+    pub fn from_password(raw: T) -> Self {
+        Self {
+            context: Context::UserOrPassword,
             raw,
             _spec: PhantomData,
         }
@@ -204,6 +260,10 @@ impl<T: fmt::Display, S: Spec> fmt::Display for PercentEncoded<T, S> {
                 let is_valid_char = match (self.context, c.is_ascii()) {
                     (Context::RegName, true) => char::is_ascii_regname(c as u8),
                     (Context::RegName, false) => char::is_nonascii_regname::<S>(c),
+                    (Context::UserOrPassword, true) => {
+                        c != ':' && char::is_ascii_userinfo_ipvfutureaddr(c as u8)
+                    }
+                    (Context::UserOrPassword, false) => char::is_nonascii_userinfo::<S>(c),
                     (Context::PathSegment, true) => char::is_ascii_pchar(c as u8),
                     (Context::PathSegment, false) => S::is_nonascii_char_unreserved(c),
                     (Context::Path, true) => c == '/' || char::is_ascii_pchar(c as u8),
