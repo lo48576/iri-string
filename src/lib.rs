@@ -127,6 +127,7 @@
 extern crate alloc;
 
 pub(crate) mod buffer;
+pub mod build;
 pub mod components;
 pub mod convert;
 pub mod formatting;

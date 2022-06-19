@@ -11,7 +11,7 @@ use crate::spec::Spec;
 use crate::validate::Error;
 
 /// Returns `Ok(_)` if the string matches `userinfo` or `iuserinfo`.
-fn validate_userinfo<S: Spec>(i: &str) -> Result<(), Error> {
+pub(crate) fn validate_userinfo<S: Spec>(i: &str) -> Result<(), Error> {
     let is_valid = satisfy_chars_with_pct_encoded(
         i,
         char::is_ascii_userinfo_ipvfutureaddr,
@@ -190,7 +190,12 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
         None => (i, None),
     };
     // Validate `host`.
-    match get_wrapped_inner(maybe_host, b'[', b']') {
+    validate_host::<S>(maybe_host)
+}
+
+/// Validates `host`.
+pub(crate) fn validate_host<S: Spec>(i: &str) -> Result<(), Error> {
+    match get_wrapped_inner(i, b'[', b']') {
         Some(maybe_addr) => {
             // `IP-literal`.
             // Note that `v` here is case insensitive. See RFC 3987 section 3.2.2.
@@ -223,7 +228,7 @@ pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
         None => {
             // `IPv4address` or `reg-name`. No need to distinguish them here.
             let is_valid = satisfy_chars_with_pct_encoded(
-                maybe_host,
+                i,
                 char::is_ascii_regname,
                 char::is_nonascii_regname::<S>,
             );

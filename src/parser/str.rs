@@ -14,6 +14,25 @@ pub(crate) fn get_wrapped_inner(s: &str, open: u8, close: u8) -> Option<&str> {
     }
 }
 
+/// Returns the byte that appears first.
+#[cfg(not(feature = "memchr"))]
+#[inline]
+#[must_use]
+pub(crate) fn prior_byte2(haystack: &[u8], needle1: u8, needle2: u8) -> Option<u8> {
+    haystack
+        .iter()
+        .copied()
+        .find(|&b| b == needle1 || b == needle2)
+}
+
+/// Returns the byte that appears first.
+#[cfg(feature = "memchr")]
+#[inline]
+#[must_use]
+pub(crate) fn prior_byte2(haystack: &[u8], needle1: u8, needle2: u8) -> Option<u8> {
+    memchr::memchr2(needle1, needle2, haystack).map(|pos| haystack[pos])
+}
+
 /// (Possibly) faster version of `haystack.rfind(needle)` when `needle` is an ASCII character.
 #[cfg(not(feature = "memchr"))]
 #[inline]
