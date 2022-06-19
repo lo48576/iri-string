@@ -130,7 +130,7 @@ pub(crate) mod buffer;
 pub mod build;
 pub mod components;
 pub mod convert;
-pub mod formatting;
+pub mod format;
 pub mod normalize;
 pub(crate) mod parser;
 pub mod percent_encoding;

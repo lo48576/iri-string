@@ -5,7 +5,7 @@
 use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
-use crate::formatting::Censored;
+use crate::format::Censored;
 use crate::normalize::{self, DisplayPctCaseNormalize};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
