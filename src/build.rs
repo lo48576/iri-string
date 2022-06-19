@@ -1312,3 +1312,124 @@ mod private {
         fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error>;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::types::{IriReferenceStr, IriStr};
+
+    #[test]
+    fn set_port() {
+        let mut builder = Builder::new();
+        builder.port(80_u8);
+        builder.port(80_u16);
+        builder.port("80");
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn set_ipaddr() {
+        let mut builder = Builder::new();
+        builder.ip_address(std::net::Ipv4Addr::new(192, 0, 2, 0));
+        builder.ip_address(std::net::Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0));
+    }
+
+    #[test]
+    fn set_userinfo() {
+        let mut builder = Builder::new();
+        builder.userinfo("arbitrary-valid-string");
+        builder.userinfo("user:password");
+        builder.userinfo((None, None));
+        builder.userinfo(("user", None));
+        builder.userinfo((None, "password"));
+        builder.userinfo(("user", "password"));
+    }
+
+    #[test]
+    fn all() {
+        let mut builder = Builder::new();
+        builder.scheme("http");
+        builder.userinfo(("user", "password"));
+        builder.host("example.com");
+        builder.port(80_u16);
+        builder.path("/path/to/somewhere");
+        builder.query("query");
+        builder.fragment("fragment");
+        assert_eq!(
+            builder.build::<IriStr>().expect("valid").to_string(),
+            "http://user:password@example.com:80/path/to/somewhere?query#fragment"
+        );
+    }
+
+    #[test]
+    fn large_port() {
+        let mut builder = Builder::new();
+        builder.port("99999999999999999999999999999999");
+        builder.port("99999999999999999999999999999999");
+        assert_eq!(
+            builder
+                .build::<IriReferenceStr>()
+                .expect("valid")
+                .to_string(),
+            "//:99999999999999999999999999999999"
+        );
+    }
+
+    #[test]
+    fn authority_and_relative_path() {
+        let mut builder = Builder::new();
+        builder.host("example.com");
+        builder.path("relative/path");
+        assert!(builder.build::<IriReferenceStr>().is_err());
+    }
+
+    #[test]
+    fn no_authority_and_double_slash_prefix() {
+        let mut builder = Builder::new();
+        // This would be interpreted as "network-path reference" (see RFC 3986
+        // section 4.2), so this should be rejected.
+        builder.path("//double-slash");
+        assert!(builder.build::<IriReferenceStr>().is_err());
+    }
+
+    #[test]
+    fn no_authority_and_relative_first_segment_colon() {
+        let mut builder = Builder::new();
+        // This would be interpreted as scheme `foo` and host `bar`,
+        // so this should be rejected.
+        builder.path("foo:bar");
+        assert!(builder.build::<IriReferenceStr>().is_err());
+    }
+
+    #[test]
+    fn normalize_rfc3986_double_slash_prefix() {
+        let mut builder = Builder::new();
+        builder.scheme("scheme");
+        builder.path("/..//bar");
+        // Naive application of RFC 3986 normalization/resolution algorithm
+        // results in `scheme://bar`, but this is unintentional. `bar` should be
+        // the second path segment, not a host. So this should be rejected.
+        builder.normalize_rfc3986();
+        #[cfg(feature = "alloc")]
+        assert!(builder.build::<IriStr>().is_err());
+    }
+
+    #[test]
+    fn normalize_whawtg_double_slash_prefix() {
+        let mut builder = Builder::new();
+        builder.scheme("scheme");
+        builder.path("/..//bar");
+        // In contrast to RFC 3986, WHATWG URL Standard defines serialization
+        // algorithm and handles this case specially. In this case, the result
+        // is `scheme:/.//bar`, this won't be considered fully normalized from
+        // the RFC 3986 point of view, but more normalization would be
+        // impossible and this would practically work in most situations.
+        builder.normalize_whatwg();
+        #[cfg(feature = "alloc")]
+        assert_eq!(
+            builder.build::<IriStr>().expect("normalizable").to_string(),
+            "scheme:/.//bar"
+        );
+    }
+}
