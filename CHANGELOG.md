@@ -6,12 +6,21 @@
     + Previously, trailing colon of an authority (with empty port) was not
       stripped. Now this is fixed.
 * Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
+* Add IRI builder in `build` module.
 
 ### Added
 * Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
     + List of added functions:
         - `types::RiStr::ensure_rfc3986_normalizable()`
         - `types::RiAbsoluteStr::ensure_rfc3986_normalizable()`
+* Add IRI builder in `build` module.
+    + `Builder` type is a builder.
+    + `DisplayBulid` type is a validated build result (but not yet heap-allocates).
+    + `PortBuilder` and `UserinfoBuilder` types are intermediate types to
+      provide convenient generics to component setters.
+    + `Error` type is a builder error.
+    + `Buildable` trait indicates the syntax corresponding to the string types
+      (such as `IriStr` or `UriReferenceStr`) can be constructed by the builder.
 
 ### Fixed
 * Fix normalization bug.
