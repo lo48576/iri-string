@@ -2,6 +2,39 @@
 
 ## [Unreleased]
 
+## [0.5.6]
+
+* Fix normalization bug.
+    + Previously, trailing colon of an authority (with empty port) was not
+      stripped. Now this is fixed.
+* Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
+* Add IRI builder in `build` module.
+* Deprecate `percent_encoding` module in favor of the new name `percent_encode`.
+
+### Added
+* Add `ensure_rfc3986_normalizable()` methods to absolute IRI string types.
+    + List of added functions:
+        - `types::RiStr::ensure_rfc3986_normalizable()`
+        - `types::RiAbsoluteStr::ensure_rfc3986_normalizable()`
+* Add IRI builder in `build` module.
+    + `Builder` type is a builder.
+    + `DisplayBulid` type is a validated build result (but not yet heap-allocates).
+    + `PortBuilder` and `UserinfoBuilder` types are intermediate types to
+      provide convenient generics to component setters.
+    + `Error` type is a builder error.
+    + `Buildable` trait indicates the syntax corresponding to the string types
+      (such as `IriStr` or `UriReferenceStr`) can be constructed by the builder.
+
+### Fixed
+* Fix normalization bug.
+    + Previously, trailing colon of an authority (with empty port) was not
+      stripped. Now this is fixed.
+
+### Changed (non-breaking)
+* Deprecate `percent_encoding` module in favor of the new name `percent_encode`.
+    + Previously exported items are still provided from `percent_encoding`
+      module to keep backward compatibility.
+
 ## [0.5.5]
 
 * Add `RiQueryStr` and `RiQueryString` types for query.
@@ -583,8 +616,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.5...develop>
-[0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.6...develop>
+[0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
+[0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
 [0.5.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.3>
 [0.5.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.2>

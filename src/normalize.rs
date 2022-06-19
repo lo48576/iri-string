@@ -72,14 +72,12 @@
 
 mod error;
 mod path;
-mod percent_encoding;
+mod pct_case;
 
+use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
-#[cfg(feature = "alloc")]
-use alloc::string::String;
-
-use crate::buffer::{Buffer, ByteSliceBuf};
+use crate::buffer::{Buffer, ByteSliceBuf, FmtWritableBuffer};
 use crate::components::RiReferenceComponents;
 use crate::parser::str::rfind_split_hole;
 use crate::parser::trusted::is_ascii_only_host;
@@ -91,6 +89,9 @@ use crate::types::{RiAbsoluteString, RiString};
 
 pub use self::error::Error;
 pub(crate) use self::path::{Path, PathToNormalize};
+pub(crate) use self::pct_case::{
+    is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost, DisplayPctCaseNormalize,
+};
 
 /// Normalization operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -101,8 +102,257 @@ pub(crate) struct NormalizationOp {
     /// won't be automatically lowered. Users should apply case normalization
     /// for US-ASCII only `host` component by themselves.
     pub(crate) case_pct_normalization: bool,
-    /// Whether to apply serialization described in WHATWG URL Standard.
-    pub(crate) whatwg_serialization: bool,
+}
+
+/// Spec-agnostic IRI normalization/resolution input.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct NormalizationInput<'a> {
+    /// Target scheme.
+    scheme: &'a str,
+    /// Target authority.
+    authority: Option<&'a str>,
+    /// Target path without dot-removal.
+    path: Path<'a>,
+    /// Target query.
+    query: Option<&'a str>,
+    /// Target fragment.
+    fragment: Option<&'a str>,
+    /// Normalization type.
+    op: NormalizationOp,
+}
+
+impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
+    fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
+        let components = RiReferenceComponents::<S>::from(iri.as_ref());
+        let (scheme, authority, path, query, fragment) = components.to_major();
+        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
+
+        NormalizationInput {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+            },
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationInput<'a> {
+    #[inline]
+    fn from(iri: &'a RiAbsoluteString<S>) -> Self {
+        Self::from(iri.as_slice())
+    }
+}
+
+impl NormalizationInput<'_> {
+    /// Checks if the path is normalizable by RFC 3986 algorithm.
+    ///
+    /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
+    pub(crate) fn ensure_rfc3986_normalizable(&self) -> Result<(), Error> {
+        if self.authority.is_some() {
+            return Ok(());
+        }
+        match self.path {
+            Path::Done(_) => Ok(()),
+            Path::NeedsProcessing(path) => path.ensure_rfc3986_normalizable_with_authority_absent(),
+        }
+    }
+}
+
+/// Writable as a normalized IRI.
+///
+/// Note that this implicitly apply serialization rule defined by WHATWG URL
+/// Standard (to handle normalization impossible by RFC 3986) because `Display`
+/// should not fail by reasons other than backend I/O failure. If you make the
+/// normalization fail in such cases, check if the path starts with `/./`.
+/// When the normalization succeeds by RFC 3986 algorithm, the path never starts
+/// with `/./`.
+struct DisplayNormalize<'a, S> {
+    /// Spec-agnostic normalization input.
+    input: NormalizationInput<'a>,
+    /// Spec.
+    _spec: PhantomData<fn() -> S>,
+}
+
+impl<S: Spec> fmt::Debug for DisplayNormalize<'_, S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DisplayNormalize")
+            .field("input", &self.input)
+            .finish()
+    }
+}
+
+impl<'a, S: Spec> DisplayNormalize<'a, S> {
+    /// Creates a new `DisplayNormalize` object from the given input.
+    #[inline]
+    #[must_use]
+    fn from_input(input: NormalizationInput<'a>) -> Self {
+        Self {
+            input,
+            _spec: PhantomData,
+        }
+    }
+}
+
+impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Write the scheme.
+        if self.input.op.case_pct_normalization {
+            normalize_scheme(f, self.input.scheme)?;
+        } else {
+            f.write_str(self.input.scheme)?;
+        }
+        f.write_str(":")?;
+
+        // Write the authority if available.
+        if let Some(authority) = self.input.authority {
+            f.write_str("//")?;
+            if self.input.op.case_pct_normalization {
+                normalize_authority::<S>(f, authority)?;
+            } else {
+                // No case/pct normalization.
+                f.write_str(authority)?;
+            }
+        }
+
+        // Process and write the path.
+        match self.input.path {
+            Path::Done(s) => f.write_str(s)?,
+            Path::NeedsProcessing(path) => {
+                path.fmt_write_normalize::<S, _>(f, self.input.op, self.input.authority.is_some())?
+            }
+        }
+
+        // Write the query if available.
+        if let Some(query) = self.input.query {
+            f.write_char('?')?;
+            if self.input.op.case_pct_normalization {
+                normalize_query::<S>(f, query)?;
+            } else {
+                f.write_str(query)?;
+            }
+        }
+
+        // Write the fragment if available.
+        if let Some(fragment) = self.input.fragment {
+            f.write_char('#')?;
+            if self.input.op.case_pct_normalization {
+                normalize_fragment::<S>(f, fragment)?;
+            } else {
+                f.write_str(fragment)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Writes the normalized scheme.
+pub(crate) fn normalize_scheme(f: &mut fmt::Formatter<'_>, scheme: &str) -> fmt::Result {
+    // Apply case normalization.
+    //
+    // > namely, that the scheme and US-ASCII only host are case
+    // > insensitive and therefore should be normalized to lowercase.
+    // >
+    // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
+    //
+    // Note that `scheme` consists of only ASCII characters and contains
+    // no percent-encoded characters.
+    scheme
+        .chars()
+        .map(|c| c.to_ascii_lowercase())
+        .try_for_each(|c| f.write_char(c))
+}
+
+/// Writes the normalized authority.
+fn normalize_authority<S: Spec>(f: &mut fmt::Formatter<'_>, authority: &str) -> fmt::Result {
+    let host_port = match rfind_split_hole(authority, b'@') {
+        Some((userinfo, host_port)) => {
+            // Don't lowercase `userinfo` even if it is ASCII only. `userinfo`
+            // is not a part of `host`.
+            DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
+            f.write_char('@')?;
+            host_port
+        }
+        None => authority,
+    };
+    normalize_host_port::<S>(f, host_port)
+}
+
+/// Writes the normalized host and port.
+pub(crate) fn normalize_host_port<S: Spec>(
+    f: &mut fmt::Formatter<'_>,
+    host_port: &str,
+) -> fmt::Result {
+    // If the suffix is a colon, it is a delimiter between the host and empty
+    // port. An empty port should be removed during normalization (see RFC 3986
+    // section 3.2.3), so strip it.
+    //
+    // > URI producers and normalizers should omit the port component and its
+    // > ":" delimiter if port is empty or if its value would be the same as
+    // > that of the scheme's default.
+    // >
+    // > --- [RFC 3986 section 3.2.3. Port](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3)
+    let host_port = host_port.strip_suffix(':').unwrap_or(host_port);
+
+    // Apply case normalization and percent-encoding normalization to `host`.
+    // Optional `":" port` part only consists of an ASCII colon and ASCII
+    // digits, so this won't affect to the test result.
+    if is_ascii_only_host(host_port) {
+        // If the host is ASCII characters only, make plain alphabets lower case.
+        DisplayNormalizedAsciiOnlyHost::new(host_port).fmt(f)
+    } else {
+        DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
+    }
+}
+
+/// Writes the normalized query without the '?' prefix.
+pub(crate) fn normalize_query<S: Spec>(f: &mut fmt::Formatter<'_>, query: &str) -> fmt::Result {
+    // Apply percent-encoding normalization.
+    DisplayPctCaseNormalize::<S>::new(query).fmt(f)
+}
+
+/// Writes the normalized query without the '#' prefix.
+pub(crate) fn normalize_fragment<S: Spec>(
+    f: &mut fmt::Formatter<'_>,
+    fragment: &str,
+) -> fmt::Result {
+    // Apply percent-encoding normalization.
+    DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)
 }
 
 /// IRI normalization/resolution task.
@@ -112,10 +362,58 @@ pub(crate) struct NormalizationOp {
 /// use this task type.
 #[derive(Debug, Clone, Copy)]
 pub struct NormalizationTask<'a, T: ?Sized> {
-    /// Common data.
-    common: NormalizationTaskCommon<'a>,
-    /// Spec.
-    _spec: PhantomData<fn() -> T>,
+    /// Normalization input.
+    input: NormalizationInput<'a>,
+    /// Whether to apply serialization described in WHATWG URL Standard when necessary.
+    ///
+    /// If this option is enabled, serialization of WHATWG URL Standard will be
+    /// used instead of pure RFC 3986 algorithm in some situation.
+    ///
+    /// Consider an IRI that would have `foo` as a scheme, no authority, and
+    /// `//bar` as a path, after normalization. According to RFC 3986 algorithm,
+    /// the resulting string would be `foo://bar`, but this is obviously invalid
+    /// since `bar` here would be interpreted as an authority, rather than the
+    /// part of the path.
+    ///
+    /// To prevent such erroneous / fallible normalization and resolution,
+    /// WHATWG URL Standard have an additional rule to modify the path.
+    /// That rule is, prepending `/.` to the path to prevent starting from `//`
+    /// when no authority is present.
+    /// By this rule, the result of the example case above will be
+    /// `foo:/.//bar`. This can be unambiguously interpreted as the combination
+    /// of the scheme `foo`, no authority, and the path `/.//bar`, which is
+    /// semantically equal to the path `//bar`.
+    whatwg_serialization: bool,
+    /// Spec-aware IRI string type.
+    _ty_str: PhantomData<fn() -> T>,
+}
+
+impl<'a, T: ?Sized> NormalizationTask<'a, T> {
+    /// Creates a new normalization task.
+    #[inline]
+    #[must_use]
+    pub(crate) fn new(
+        scheme: &'a str,
+        authority: Option<&'a str>,
+        path: Path<'a>,
+        query: Option<&'a str>,
+        fragment: Option<&'a str>,
+        op: NormalizationOp,
+        whatwg_serialization: bool,
+    ) -> Self {
+        Self {
+            input: NormalizationInput {
+                scheme,
+                authority,
+                path,
+                query,
+                fragment,
+                op,
+            },
+            whatwg_serialization,
+            _ty_str: PhantomData,
+        }
+    }
 }
 
 impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
@@ -125,18 +423,20 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
         let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
-        let common = NormalizationTaskCommon {
-            scheme,
-            authority,
-            path,
-            query,
-            fragment,
-            op: NormalizationOp {
-                case_pct_normalization: true,
-                whatwg_serialization: false,
+        Self {
+            input: NormalizationInput {
+                scheme,
+                authority,
+                path,
+                query,
+                fragment,
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
             },
-        };
-        common.into()
+            whatwg_serialization: false,
+            _ty_str: PhantomData,
+        }
     }
 }
 
@@ -144,7 +444,7 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
 impl<'a, S: Spec> From<&'a RiString<S>> for NormalizationTask<'a, RiStr<S>> {
     #[inline]
     fn from(iri: &'a RiString<S>) -> Self {
-        NormalizationTask::from(iri.as_slice())
+        Self::from(iri.as_slice())
     }
 }
 
@@ -155,18 +455,20 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationTask<'a, RiAbsolut
         let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
-        let common = NormalizationTaskCommon {
-            scheme,
-            authority,
-            path,
-            query,
-            fragment,
-            op: NormalizationOp {
-                case_pct_normalization: true,
-                whatwg_serialization: false,
+        Self {
+            input: NormalizationInput {
+                scheme,
+                authority,
+                path,
+                query,
+                fragment,
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
             },
-        };
-        common.into()
+            whatwg_serialization: false,
+            _ty_str: PhantomData,
+        }
     }
 }
 
@@ -174,7 +476,7 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationTask<'a, RiAbsolut
 impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationTask<'a, RiAbsoluteStr<S>> {
     #[inline]
     fn from(iri: &'a RiAbsoluteString<S>) -> Self {
-        NormalizationTask::from(iri.as_slice())
+        Self::from(iri.as_slice())
     }
 }
 
@@ -182,21 +484,35 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// Enables normalization for the task.
     #[inline]
     pub fn enable_normalization(&mut self) {
-        self.common.op.case_pct_normalization = true;
+        self.input.op.case_pct_normalization = true;
     }
 
     /// Enables WHATWG URL Standard serialization for the task.
     #[inline]
     pub fn enable_whatwg_serialization(&mut self) {
-        self.common.op.whatwg_serialization = true;
+        self.whatwg_serialization = true;
     }
 
     /// Resolves the IRI, and writes it to the buffer.
-    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(&self, buf: B) -> Result<&'b [u8], TaskError<Error>>
+    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(
+        &self,
+        mut buf: B,
+    ) -> Result<&'b [u8], TaskError<Error>>
     where
         TaskError<Error>: From<B::ExtendError>,
     {
-        self.common.write_to_buf::<B, S>(buf).map_err(Into::into)
+        if !self.whatwg_serialization {
+            self.input
+                .ensure_rfc3986_normalizable()
+                .map_err(TaskError::Process)?;
+        }
+
+        let buf_offset = buf.as_bytes().len();
+        let mut writer = FmtWritableBuffer::new(&mut buf);
+        match write!(writer, "{}", DisplayNormalize::<S>::from_input(self.input)) {
+            Ok(_) => Ok(&buf.into_bytes()[buf_offset..]),
+            Err(_) => Err(writer.take_error_unwrap().into()),
+        }
     }
 
     /// Returns the estimated maximum size required for IRI normalization/resolution.
@@ -231,23 +547,16 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
     /// ```
     #[must_use]
     pub fn estimate_max_buf_size_for_resolution(&self) -> usize {
-        let known_exact = self.common.scheme.len()
-            + self.common.authority.map_or(0, |s| s.len() + 2)
-            + self.common.query.map_or(0, |s| s.len() + 1)
-            + self.common.fragment.map_or(0, |s| s.len() + 1);
-        let path_max = self.common.path.estimate_max_buf_size_for_resolution();
+        let known_exact = self.input.scheme.len()
+            + self.input.authority.map_or(0, |s| s.len() + 2)
+            + self.input.query.map_or(0, |s| s.len() + 1)
+            + self.input.fragment.map_or(0, |s| s.len() + 1);
+        let path_max = match &self.input.path {
+            Path::Done(s) => s.len(),
+            Path::NeedsProcessing(path) => path.len(),
+        };
 
         known_exact + path_max
-    }
-}
-
-impl<'a, T: ?Sized> From<NormalizationTaskCommon<'a>> for NormalizationTask<'a, T> {
-    #[inline]
-    fn from(common: NormalizationTaskCommon<'a>) -> Self {
-        Self {
-            common,
-            _spec: PhantomData,
-        }
     }
 }
 
@@ -333,38 +642,8 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
     /// ```
     ///
     /// This returns error when the buffer is not long enough for processing.
-    ///
-    /// Note that it would be still not enough even if the buffer is long enough
-    /// to store the result. During processing, the resolver might use more
-    /// memory than the result. You can get maximum required buffer size by
+    /// You can get maximum required buffer size by
     /// [`estimate_max_buf_size_for_resolution`] method.
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::{Error as TaskError, ProcessAndWrite};
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
-    /// const EXPECTED: &str = "http://example.com/f";
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// // Buffer is too short for processing, even though it is long enough
-    /// // to store the result.
-    /// let mut buf = [0_u8; EXPECTED.len()];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..]);
-    /// assert!(
-    ///     matches!(resolved, Err(TaskError::Buffer(_))),
-    ///     "failed due to not enough buffer size"
-    /// );
-    /// // You can retry writing if you have larger buffer,
-    /// // since `task` was not consumed.
-    /// # Ok::<_, Error>(())
-    /// ```
     ///
     /// [`estimate_max_buf_size_for_resolution`]: `NormalizationTask::estimate_max_buf_size_for_resolution`
     fn write_to_byte_slice(
@@ -533,38 +812,8 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     /// ```
     ///
     /// This returns error when the buffer is not long enough for processing.
-    ///
-    /// Note that it would be still not enough even if the buffer is long enough
-    /// to store the result. During processing, the resolver might use more
-    /// memory than the result. You can get maximum required buffer size by
+    /// You can get maximum required buffer size by
     /// [`estimate_max_buf_size_for_resolution`] method.
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl From<iri_string::normalize::Error> for Error {
-    /// #     fn from(e: iri_string::normalize::Error) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::{Error as TaskError, ProcessAndWrite};
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("http://example.com/a/b/c/d/e/../../../../../f")?;
-    /// const EXPECTED: &str = "http://example.com/f";
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// // Buffer is too short for processing, even though it is long enough
-    /// // to store the result.
-    /// let mut buf = [0_u8; EXPECTED.len()];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..]);
-    /// assert!(
-    ///     matches!(resolved, Err(TaskError::Buffer(_))),
-    ///     "failed due to not enough buffer size"
-    /// );
-    /// // You can retry writing if you have larger buffer,
-    /// // since `task` was not consumed.
-    /// # Ok::<_, Error>(())
-    /// ```
     ///
     /// [`estimate_max_buf_size_for_resolution`]: `NormalizationTask::estimate_max_buf_size_for_resolution`
     fn write_to_byte_slice(
@@ -653,167 +902,130 @@ impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
     }
 }
 
-/// Spec-agnostic IRI normalization/resolution task.
-#[derive(Debug, Clone, Copy)]
-pub(crate) struct NormalizationTaskCommon<'a> {
-    /// Target scheme.
-    pub(crate) scheme: &'a str,
-    /// Target authority.
-    pub(crate) authority: Option<&'a str>,
-    /// Target path without dot-removal.
-    pub(crate) path: Path<'a>,
-    /// Target query.
-    pub(crate) query: Option<&'a str>,
-    /// Target fragment.
-    pub(crate) fragment: Option<&'a str>,
-    /// Normalization type.
-    pub(crate) op: NormalizationOp,
-}
+#[cfg(test)]
+#[cfg(feature = "alloc")]
+mod tests_display {
+    use super::*;
 
-impl<'a> NormalizationTaskCommon<'a> {
-    /// Runs the resolution task and write the result to the buffer.
-    // For the internal algorithm, see [RFC 3986 section 5.3],
-    // [RFC 3986 section 6.2.2], and [RFC 3987 section 5.3.2].
-    //
-    // [RFC 3986 section 5.3]: https://datatracker.ietf.org/doc/html/rfc3986#section-5.3
-    // [RFC 3986 section 6.2]: https://datatracker.ietf.org/doc/html/rfc3986#section-6.2.2
-    // [RFC 3987 section 5.3.2]: https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2
-    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(
-        &self,
-        mut buf: B,
-    ) -> Result<&'b [u8], TaskError<Error>>
-    where
-        TaskError<Error>: From<B::ExtendError>,
-    {
-        let buf_offset = buf.as_bytes().len();
-        // Write the scheme.
-        if self.op.case_pct_normalization {
-            // Apply case normalization.
-            //
-            // > namely, that the scheme and US-ASCII only host are case
-            // > insensitive and therefore should be normalized to lowercase.
-            // >
-            // > --- <https://datatracker.ietf.org/doc/html/rfc3987#section-5.3.2.1>.
-            buf.extend_chars(self.scheme.chars().map(|c| c.to_ascii_lowercase()))?;
-        } else {
-            buf.push_str(self.scheme)?;
-        }
-        buf.push_str(":")?;
+    use crate::spec::{IriSpec, UriSpec};
 
-        // Write the authority if available.
-        if let Some(authority) = self.authority {
-            buf.push_str("//")?;
-            if self.op.case_pct_normalization {
-                let host_port = match rfind_split_hole(authority, b'@') {
-                    Some((userinfo, host_port)) => {
-                        // Don't lowercase `userinfo` even if it is ASCII only.
-                        buf.extend_chars(normalize_case_and_pct_encodings::<S>(userinfo))?;
-                        buf.push_str("@")?;
-                        host_port
-                    }
-                    None => authority,
-                };
-                // Apply case normalization and percent-encoding normalization to `host`.
-                // Optional `":" port` part only consists of an ASCII colon
-                // and ASCII digit, so this won't affect to the test result.
-                if is_ascii_only_host(host_port) {
-                    let mut chars = normalize_case_and_pct_encodings::<S>(host_port);
-                    loop {
-                        buf.extend_chars(
-                            chars
-                                .by_ref()
-                                .take_while(|c| *c != '%')
-                                .map(|c| c.to_ascii_lowercase()),
-                        )?;
-                        let pct_upper = match chars.next() {
-                            Some(v) => v,
-                            None => break,
-                        };
-                        let pct_lower = chars.next().expect(
-                            "[validity] valid IRI must have following two hexxdigits after `%`",
-                        );
-                        debug_assert!(
-                            !pct_upper.is_ascii_lowercase() && !pct_lower.is_ascii_lowercase(),
-                            "[consistency] percent-encoded triplets should not be \
-                                 normalized to uppercase"
-                        );
-                        // Note that percent-encoding triplets in US-ASCII only
-                        // host should be uppercase. For example, `plus%2bplus`
-                        // is wrong and `plus%2Bplus` is correct.
-                        buf.extend_chars(['%', pct_upper, pct_lower])?;
-                    }
-                } else {
-                    buf.extend_chars(normalize_case_and_pct_encodings::<S>(host_port))?;
-                }
-            } else {
-                buf.push_str(authority)?;
-            }
-        }
+    #[test]
+    fn normalize_iri_1() {
+        let disp = DisplayNormalize::<IriSpec> {
+            input: NormalizationInput {
+                scheme: "http",
+                authority: Some("user:pass@example.com:80"),
+                path: Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
+                    "/1/2/3/4/.././5/../6/",
+                    "a/b/c/d/e/f/g/h/i/../../../j/k/l/../../../../m/n/./o",
+                )),
+                query: Some("query"),
+                fragment: Some("fragment"),
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
+            },
+            _spec: PhantomData,
+        };
+        assert_eq!(
+            disp.to_string(),
+            "http://user:pass@example.com:80/1/2/3/6/a/b/c/d/e/m/n/o?query#fragment"
+        );
+    }
 
-        // Process and write the path.
-        let path_start_pos = buf.as_bytes().len();
-        match self.path {
-            Path::Done(s) => {
-                // Not applying `remove_dot_segments`.
-                buf.push_str(s)?;
-            }
-            Path::NeedsProcessing(path) => {
-                path.normalize::<_, S>(&mut buf, self.op)?;
-            }
-        }
+    #[test]
+    fn normalize_iri_2() {
+        let disp = DisplayNormalize::<IriSpec> {
+            input: NormalizationInput {
+                scheme: "http",
+                authority: Some("user:pass@example.com:80"),
+                path: Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
+                    "/%7e/2/beta=%CE%B2/4/.././5/../6/",
+                    "a/b/alpha=%CE%B1/d/e/f/g/h/i/../../../j/k/l/../../../../%3c/%7e/./%3e",
+                )),
+                query: Some("query"),
+                fragment: Some("fragment"),
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
+            },
+            _spec: PhantomData,
+        };
+        assert_eq!(
+            disp.to_string(),
+            "http://user:pass@example.com:80/~/2/beta=\u{03B2}/6/a/b/alpha=\u{03B1}/d/e/%3C/~/%3E?query#fragment"
+        );
+    }
 
-        // If authority is absent, the path should never start with `//`.
-        if self.authority.is_none()
-            && buf.as_bytes()[path_start_pos..].starts_with(b"//")
-            && !self.op.whatwg_serialization
-        {
-            return Err(TaskError::Process(Error::new()));
-        }
+    #[test]
+    fn normalize_uri_1() {
+        let disp = DisplayNormalize::<UriSpec> {
+            input: NormalizationInput {
+                scheme: "http",
+                authority: Some("user:pass@example.com:80"),
+                path: Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
+                    "/%7e/2/beta=%ce%b2/4/.././5/../6/",
+                    "a/b/alpha=%CE%B1/d/e/f/g/h/i/../../../j/k/l/../../../../%3c/%7e/./%3e",
+                )),
+                query: Some("query"),
+                fragment: Some("fragment"),
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
+            },
+            _spec: PhantomData,
+        };
+        assert_eq!(
+            disp.to_string(),
+            "http://user:pass@example.com:80/~/2/beta=%CE%B2/6/a/b/alpha=%CE%B1/d/e/%3C/~/%3E?query#fragment"
+        );
+    }
 
-        // Write the query if available.
-        if let Some(query) = self.query {
-            buf.push_str("?")?;
-            if self.op.case_pct_normalization {
-                // Apply percent-encoding normalization.
-                buf.extend_chars(normalize_case_and_pct_encodings::<S>(query))?;
-            } else {
-                buf.push_str(query)?;
-            }
-        }
+    #[test]
+    fn trailing_slash_should_remain() {
+        let disp = DisplayNormalize::<UriSpec> {
+            input: NormalizationInput {
+                scheme: "http",
+                authority: Some("example.com"),
+                path: Path::NeedsProcessing(PathToNormalize::from_single_path("/../../")),
+                query: None,
+                fragment: None,
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
+            },
+            _spec: PhantomData,
+        };
+        assert_eq!(disp.to_string(), "http://example.com/");
+    }
 
-        // Write the fragment if available.
-        if let Some(fragment) = self.fragment {
-            buf.push_str("#")?;
-            if self.op.case_pct_normalization {
-                // Apply percent-encoding normalization.
-                buf.extend_chars(normalize_case_and_pct_encodings::<S>(fragment))?;
-            } else {
-                buf.push_str(fragment)?;
-            }
-        }
-
-        Ok(&buf.into_bytes()[buf_offset..])
+    #[test]
+    fn leading_double_slash_without_authority_whatwg() {
+        let disp = DisplayNormalize::<UriSpec> {
+            input: NormalizationInput {
+                scheme: "scheme",
+                authority: None,
+                path: Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
+                    "/a/b/", "../..//c",
+                )),
+                query: None,
+                fragment: None,
+                op: NormalizationOp {
+                    case_pct_normalization: true,
+                },
+            },
+            _spec: PhantomData,
+        };
+        assert_eq!(disp.to_string(), "scheme:/.//c");
     }
 }
 
-/// Returns an iterator to apply percent encodings normalization and case normalization.
-///
-/// # Precondition
-///
-/// The given string should be a valid IRI reference with the spec `S`.
-pub(crate) fn normalize_case_and_pct_encodings<S: Spec>(
-    i: &str,
-) -> core::iter::Flatten<percent_encoding::PctNormalizedFragments<'_, S>> {
-    percent_encoding::PctNormalizedFragments::new(i).flatten()
-}
-
 #[cfg(test)]
+#[cfg(feature = "alloc")]
 mod tests {
-    #[cfg(feature = "alloc")]
     use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
 
-    #[cfg(feature = "alloc")]
-    // `&[(expected, &[source_for_expected], &[different_iri])]`
+    // `&[(expected, &[source_for_expected], &[iri_with_different_normalization_result])]`
     const CASES: &[(&str, &[&str], &[&str])] = &[
         (
             "https://example.com/pa/th?query#frag",
@@ -857,10 +1069,19 @@ mod tests {
             &["http://example.com/%7E%41%73%63%69%69%21"],
             &[],
         ),
+        (
+            // See <https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3>:
+            //
+            // > URI producers and normalizers should omit the port component
+            // > and its ":" delimiter if port is empty or if its value would
+            // > be the same as that of the scheme's default.
+            "https://example.com/",
+            &["https://example.com:/"],
+            &[],
+        ),
     ];
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn normalize() {
         for (expected, sources, different_iris) in CASES {
             let expected = IriStr::new(*expected).expect("must be a valid IRI");
@@ -892,7 +1113,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn normalize_percent_encoded_non_ascii_in_uri() {
         let uri = UriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid URI");
@@ -901,7 +1121,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn normalize_percent_encoded_non_ascii_in_iri() {
         let iri = IriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid IRI");
@@ -913,7 +1132,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn resolution_without_normalization() {
         let iri_base =
             IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
@@ -929,7 +1147,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn resolution_with_normalization() {
         let iri_base =
             IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
@@ -945,7 +1162,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn normalize_non_ascii_only_host() {
         let uri = UriStr::new("SCHEME://Alpha%ce%b1/").expect("must be a valid URI");
         let normalized = uri.try_normalize().expect("should be normalizable");
@@ -953,7 +1169,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn normalize_host_with_sub_delims() {
         let uri = UriStr::new("SCHEME://PLUS%2bPLUS/").expect("must be a valid URI");
         let normalized = uri.try_normalize().expect("should be normalizable");
@@ -964,7 +1179,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "alloc")]
     fn whatwg_normalization() {
         let uri = UriStr::new("scheme:..///not-a-host").expect("must be a valid URI");
         assert!(!uri.is_normalized_whatwg());

@@ -10,7 +10,7 @@ pub struct Error(());
 
 impl Error {
     /// Creates a new error.
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(())
     }
 }
