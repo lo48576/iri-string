@@ -200,23 +200,23 @@ impl NormalizationInput<'_> {
 /// normalization fail in such cases, check if the path starts with `/./`.
 /// When the normalization succeeds by RFC 3986 algorithm, the path never starts
 /// with `/./`.
-struct DisplayNormalize<'a, S> {
+struct NormalizedInner<'a, S> {
     /// Spec-agnostic normalization input.
     input: NormalizationInput<'a>,
     /// Spec.
     _spec: PhantomData<fn() -> S>,
 }
 
-impl<S: Spec> fmt::Debug for DisplayNormalize<'_, S> {
+impl<S: Spec> fmt::Debug for NormalizedInner<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DisplayNormalize")
+        f.debug_struct("Normalized")
             .field("input", &self.input)
             .finish()
     }
 }
 
-impl<'a, S: Spec> DisplayNormalize<'a, S> {
-    /// Creates a new `DisplayNormalize` object from the given input.
+impl<'a, S: Spec> NormalizedInner<'a, S> {
+    /// Creates a new `Normalized` object from the given input.
     #[inline]
     #[must_use]
     fn from_input(input: NormalizationInput<'a>) -> Self {
@@ -227,7 +227,7 @@ impl<'a, S: Spec> DisplayNormalize<'a, S> {
     }
 }
 
-impl<S: Spec> fmt::Display for DisplayNormalize<'_, S> {
+impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Write the scheme.
@@ -509,7 +509,7 @@ impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
 
         let buf_offset = buf.as_bytes().len();
         let mut writer = FmtWritableBuffer::new(&mut buf);
-        match write!(writer, "{}", DisplayNormalize::<S>::from_input(self.input)) {
+        match write!(writer, "{}", NormalizedInner::<S>::from_input(self.input)) {
             Ok(_) => Ok(&buf.into_bytes()[buf_offset..]),
             Err(_) => Err(writer.take_error_unwrap().into()),
         }
@@ -911,7 +911,7 @@ mod tests_display {
 
     #[test]
     fn normalize_iri_1() {
-        let disp = DisplayNormalize::<IriSpec> {
+        let disp = NormalizedInner::<IriSpec> {
             input: NormalizationInput {
                 scheme: "http",
                 authority: Some("user:pass@example.com:80"),
@@ -935,7 +935,7 @@ mod tests_display {
 
     #[test]
     fn normalize_iri_2() {
-        let disp = DisplayNormalize::<IriSpec> {
+        let disp = NormalizedInner::<IriSpec> {
             input: NormalizationInput {
                 scheme: "http",
                 authority: Some("user:pass@example.com:80"),
@@ -959,7 +959,7 @@ mod tests_display {
 
     #[test]
     fn normalize_uri_1() {
-        let disp = DisplayNormalize::<UriSpec> {
+        let disp = NormalizedInner::<UriSpec> {
             input: NormalizationInput {
                 scheme: "http",
                 authority: Some("user:pass@example.com:80"),
@@ -983,7 +983,7 @@ mod tests_display {
 
     #[test]
     fn trailing_slash_should_remain() {
-        let disp = DisplayNormalize::<UriSpec> {
+        let disp = NormalizedInner::<UriSpec> {
             input: NormalizationInput {
                 scheme: "http",
                 authority: Some("example.com"),
@@ -1001,7 +1001,7 @@ mod tests_display {
 
     #[test]
     fn leading_double_slash_without_authority_whatwg() {
-        let disp = DisplayNormalize::<UriSpec> {
+        let disp = NormalizedInner::<UriSpec> {
             input: NormalizationInput {
                 scheme: "scheme",
                 authority: None,
