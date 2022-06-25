@@ -10,6 +10,58 @@ use alloc::string::String;
 #[cfg(feature = "alloc")]
 use crate::buffer::FmtWritableBuffer;
 
+/// Output buffer capacity overflow error.
+#[derive(Debug, Clone, Copy)]
+pub struct CapacityOverflowError;
+
+impl fmt::Display for CapacityOverflowError {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("buffer capacity overflow")
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for CapacityOverflowError {}
+
+/// Writer to the bytes buffer.
+struct ByteBufWriter<'b> {
+    /// Destination buffer.
+    buffer: &'b mut [u8],
+    /// Position to write the next string fragment.
+    cursor: usize,
+}
+
+impl fmt::Write for ByteBufWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let dest = &mut self.buffer[self.cursor..];
+        if dest.len() < s.len() {
+            return Err(fmt::Error);
+        }
+        dest[..s.len()].copy_from_slice(s.as_bytes());
+        self.cursor += s.len();
+        Ok(())
+    }
+}
+
+/// Writes to the bytes buffer.
+pub fn write_to_slice<T: fmt::Display>(
+    buf: &mut [u8],
+    value: T,
+) -> Result<&str, CapacityOverflowError> {
+    let mut writer = ByteBufWriter {
+        buffer: buf,
+        cursor: 0,
+    };
+    if write!(writer, "{}", value).is_err() {
+        return Err(CapacityOverflowError);
+    }
+    let len = writer.cursor;
+    let result = core::str::from_utf8(&buf[..len])
+        .expect("[validity] fmt::Display writes valid UTF-8 byte sequence");
+    Ok(result)
+}
+
 /// Returns true if the two equals after they are converted to strings.
 pub(crate) fn eq_str_display<T>(s: &str, d: &T) -> bool
 where
