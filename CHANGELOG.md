@@ -3,12 +3,34 @@
 ## [Unreleased]
 
 * Support escaping username and password by `percent_encode::PercentEncode`.
+* Add `format::ToStringFallible` trait.
+* Add `format::ToDedicatedString` trait.
+* Add `format::write_to_slice` function and `format::CapacityOverflow` type.
+* Add `format::try_append_to_string` function.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
     + List of added functions:
         `percen_encode::PercentEncode::from_user()`
         `percen_encode::PercentEncode::from_password()`
+* Add `format::ToStringFallible` trait.
+    + This trait allows users to convert `Display`-able values into `String`,
+      but without panicking on OOM.
+    + List of types that implements this trait:
+        - `build::DisplayBuild<'_, RiReferenceStr<S>>`
+        - `build::DisplayBuild<'_, RiStr<S>>`
+        - `build::DisplayBuild<'_, RiAbsoluteStr<S>>`
+        - `build::DisplayBuild<'_, RiRelativeStr<S>>`
+* Add `format::ToDedicatedString` trait.
+    + This trait allows users to convert `Display`-able values into owned
+      dedicated IRI string types, with or without panicking on OOM.
+    + List of added implementations:
+        - `build::DisplayBuild<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
+        - `build::DisplayBuild<'_, RiStr<S>>` (Target = `RiString<S>`)
+        - `build::DisplayBuild<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
+        - `build::DisplayBuild<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+* Add `format::write_to_slice` function and `format::CapacityOverflow` type.
+* Add `format::try_append_to_string` function.
 
 ## [0.5.6]
 

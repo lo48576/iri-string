@@ -5,7 +5,12 @@
 use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+
 use crate::format::Censored;
+#[cfg(feature = "alloc")]
+use crate::format::{ToDedicatedString, ToStringFallible};
 use crate::normalize::{self, DisplayPctCaseNormalize};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
@@ -1030,101 +1035,51 @@ impl<T: ?Sized> Clone for DisplayBuild<'_, T> {
     }
 }
 
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiReferenceStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
+/// Implements conversions to a string.
+macro_rules! impl_stringifiers {
+    ($borrowed:ident, $owned:ident) => {
+        impl<S: Spec> fmt::Display for DisplayBuild<'_, $borrowed<S>> {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.builder.fmt_write_to::<S>(f)
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> ToDedicatedString for DisplayBuild<'_, $borrowed<S>> {
+            type Target = $owned<S>;
+
+            #[inline]
+            fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
+                let s = self.try_to_string()?;
+                Ok(TryFrom::try_from(s)
+                    .expect("[validity] the IRI to be built is already validated"))
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> From<DisplayBuild<'_, $borrowed<S>>> for $owned<S> {
+            #[inline]
+            fn from(builder: DisplayBuild<'_, $borrowed<S>>) -> Self {
+                (&builder).into()
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> From<&DisplayBuild<'_, $borrowed<S>>> for $owned<S> {
+            #[inline]
+            fn from(builder: &DisplayBuild<'_, $borrowed<S>>) -> Self {
+                let s = builder.to_string();
+                Self::try_from(s).expect("[validity] the IRI to be built is already validated")
+            }
+        }
+    };
 }
 
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiAbsoluteStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiRelativeStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiReferenceStr<S>>> for RiReferenceString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiReferenceStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiReferenceStr<S>>> for RiReferenceString<S> {
-    fn from(builder: &DisplayBuild<'_, RiReferenceStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiStr<S>>> for RiString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiStr<S>>> for RiString<S> {
-    fn from(builder: &DisplayBuild<'_, RiStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiAbsoluteStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
-    fn from(builder: &DisplayBuild<'_, RiAbsoluteStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiRelativeStr<S>>> for RiRelativeString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiRelativeStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiRelativeStr<S>>> for RiRelativeString<S> {
-    fn from(builder: &DisplayBuild<'_, RiRelativeStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
+impl_stringifiers!(RiReferenceStr, RiReferenceString);
+impl_stringifiers!(RiStr, RiString);
+impl_stringifiers!(RiAbsoluteStr, RiAbsoluteString);
+impl_stringifiers!(RiRelativeStr, RiRelativeString);
 
 /// IRI build error.
 #[derive(Debug, Clone)]
