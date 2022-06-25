@@ -10,9 +10,6 @@ use alloc::collections::TryReserveError;
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
-#[cfg(feature = "alloc")]
-use crate::buffer::FmtWritableBuffer;
-
 /// Output buffer capacity overflow error.
 #[derive(Debug, Clone, Copy)]
 pub struct CapacityOverflowError;
@@ -161,14 +158,11 @@ pub trait ToStringFallible: alloc::string::ToString {
 #[cfg(feature = "alloc")]
 impl<T: fmt::Display> ToStringFallible for T {
     /// [`ToString::to_string`][`alloc::string::ToString::to_string`], but without panic on OOM.
+    #[inline]
     fn try_to_string(&self) -> Result<String, TryReserveError> {
         let mut buf = String::new();
-        let mut buf_ref = &mut buf;
-        let mut writer = FmtWritableBuffer::new(&mut buf_ref);
-        match write!(writer, "{}", self) {
-            Ok(_) => Ok(buf),
-            Err(_) => Err(writer.take_error_unwrap()),
-        }
+        try_append_to_string(&mut buf, self)?;
+        Ok(buf)
     }
 }
 
