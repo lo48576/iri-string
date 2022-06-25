@@ -119,7 +119,7 @@ fn main() {
 fn process_iri(opt: &CliOpt) {
     let mut normalized = normalize::<iri_string::spec::IriSpec>(opt);
     if opt.output_ascii {
-        normalized.encode_to_uri();
+        normalized.encode_to_uri_inline();
     }
     println!("{normalized}");
 }
