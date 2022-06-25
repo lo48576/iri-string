@@ -7,6 +7,7 @@
 * Add `format::ToDedicatedString` trait.
 * Add `format::write_to_slice` function and `format::CapacityOverflow` type.
 * Add `format::try_append_to_string` function.
+* Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -31,6 +32,9 @@
         - `build::DisplayBuild<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
 * Add `format::write_to_slice` function and `format::CapacityOverflow` type.
 * Add `format::try_append_to_string` function.
+
+### Changed (breaking)
+* Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
 
 ## [0.5.6]
 

@@ -3,16 +3,8 @@
 use core::fmt::{self, Write as _};
 use core::marker::PhantomData;
 
-#[cfg(feature = "alloc")]
-use alloc::collections::TryReserveError;
-#[cfg(feature = "alloc")]
-use alloc::string::String;
-
-use crate::buffer::Buffer as _;
-use crate::buffer::ByteSliceBuf;
 use crate::parser::char;
 use crate::spec::{IriSpec, Spec, UriSpec};
-use crate::task::{Error as TaskError, ProcessAndWrite};
 
 /// A proxy to percent-encode a string as a part of URI.
 pub type PercentEncodedForUri<T> = PercentEncoded<T, UriSpec>;
@@ -295,80 +287,6 @@ fn write_pct_encoded_char<W: fmt::Write>(writer: &mut W, c: char) -> fmt::Result
     let mut buf = [0_u8; 4];
     let buf = c.encode_utf8(&mut buf);
     buf.bytes().try_for_each(|b| write!(writer, "%{:02X}", b))
-}
-
-impl<T: fmt::Display, S: Spec> ProcessAndWrite for &'_ PercentEncoded<T, S> {
-    type OutputBorrowed = str;
-    #[cfg(feature = "alloc")]
-    type OutputOwned = String;
-    type ProcessError = core::convert::Infallible;
-
-    #[cfg(feature = "alloc")]
-    #[inline]
-    fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
-        let mut s = String::new();
-        self.try_append_to_std_string(&mut s)?;
-        Ok(s)
-    }
-
-    fn write_to_byte_slice(
-        self,
-        buf: &mut [u8],
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        /// A wrapper to implement `fmt::Write` for `ByteSliceBuf`.
-        struct FmtWritableByteSlice<'a> {
-            /// Backend buffer.
-            buf: ByteSliceBuf<'a>,
-        }
-        impl fmt::Write for FmtWritableByteSlice<'_> {
-            fn write_str(&mut self, s: &str) -> fmt::Result {
-                self.buf.push_str(s).map_err(|_| fmt::Error)
-            }
-        }
-
-        let mut writer = FmtWritableByteSlice {
-            buf: ByteSliceBuf::new(buf),
-        };
-        write!(writer, "{}", self).expect("[validity] percent encoding should never fail");
-        let s = core::str::from_utf8(writer.buf.into_bytes())
-            .expect("[validity] percent-encoded characters must always be valid Ascii string.");
-        Ok(s)
-    }
-
-    #[cfg(feature = "alloc")]
-    fn try_append_to_std_string(
-        self,
-        buf: &mut String,
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        /// `fmt::Write for String` panics on allocation falilure, so use custom wrapper.
-        struct FmtWritableString<'a> {
-            /// Backend buffer.
-            buf: &'a mut String,
-            /// Memory allocation error.
-            error: Option<TryReserveError>,
-        }
-        impl fmt::Write for FmtWritableString<'_> {
-            fn write_str(&mut self, s: &str) -> fmt::Result {
-                if let Err(e) = self.buf.try_reserve(s.len()) {
-                    self.error = Some(e);
-                    return Err(fmt::Error);
-                }
-                self.buf.push_str(s);
-                Ok(())
-            }
-        }
-
-        let mut writer = FmtWritableString { buf, error: None };
-        let _result = write!(writer, "{}", self);
-        if let Some(e) = writer.error {
-            assert!(
-                _result.is_err(),
-                "[consistency] error should be set iff the memory allocation failed"
-            );
-            return Err(TaskError::Buffer(e.into()));
-        }
-        Ok(buf.as_str())
-    }
 }
 
 #[cfg(feature = "alloc")]
