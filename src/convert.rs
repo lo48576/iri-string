@@ -9,16 +9,14 @@ use alloc::string::String;
 
 #[cfg(feature = "alloc")]
 use crate::format::{ToDedicatedString, ToStringFallible};
+use crate::spec::Spec;
 use crate::types::{
-    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
+    RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
-    IriString,
-};
-use crate::types::{
-    UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr,
+    RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString, RiRelativeString,
+    RiString,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
@@ -72,17 +70,15 @@ pub struct MappedToUri<'a, Src: ?Sized>(&'a Src);
 
 /// Implement conversions for an IRI string type.
 macro_rules! impl_for_iri {
-    ($borrowed_uri:ident, $owned_uri:ident, $borrowed_iri:ident, $owned_iri:ident) => {
-        // For IRIs.
-
-        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_iri> {
+    ($borrowed:ident, $owned:ident, $owned_uri:ident) => {
+        impl<S: Spec> fmt::Display for MappedToUri<'_, $borrowed<S>> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
+                write_percent_encoded(f, self.0.as_str())
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl ToDedicatedString for MappedToUri<'_, $borrowed_iri> {
+        impl<S: Spec> ToDedicatedString for MappedToUri<'_, $borrowed<S>> {
             type Target = $owned_uri;
 
             fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
@@ -92,89 +88,32 @@ macro_rules! impl_for_iri {
             }
         }
 
-        impl<'a> From<&'a $borrowed_iri> for MappedToUri<'a, $borrowed_iri> {
+        impl<'a, S: Spec> From<&'a $borrowed<S>> for MappedToUri<'a, $borrowed<S>> {
             #[inline]
-            fn from(iri: &'a $borrowed_iri) -> Self {
+            fn from(iri: &'a $borrowed<S>) -> Self {
                 Self(iri)
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $owned_iri> for MappedToUri<'a, $borrowed_iri> {
+        impl<'a, S: Spec> From<&'a $owned<S>> for MappedToUri<'a, $borrowed<S>> {
             #[inline]
-            fn from(iri: &'a $owned_iri) -> Self {
-                Self(iri.as_slice())
-            }
-        }
-
-        // For URIs.
-
-        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_uri> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
-            }
-        }
-
-        #[cfg(feature = "alloc")]
-        impl ToDedicatedString for MappedToUri<'_, $borrowed_uri> {
-            type Target = $owned_uri;
-
-            fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
-                let s = self.try_to_string()?;
-                Ok(TryFrom::try_from(s)
-                    .expect("[validity] the URI must be encoded into a valid URI"))
-            }
-        }
-
-        impl<'a> From<&'a $borrowed_uri> for MappedToUri<'a, $borrowed_uri> {
-            #[inline]
-            fn from(iri: &'a $borrowed_uri) -> Self {
-                Self(iri)
-            }
-        }
-
-        #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $owned_uri> for MappedToUri<'a, $borrowed_uri> {
-            #[inline]
-            fn from(iri: &'a $owned_uri) -> Self {
+            fn from(iri: &'a $owned<S>) -> Self {
                 Self(iri.as_slice())
             }
         }
     };
 }
 
-impl_for_iri!(
-    UriAbsoluteStr,
-    UriAbsoluteString,
-    IriAbsoluteStr,
-    IriAbsoluteString
-);
-impl_for_iri!(
-    UriReferenceStr,
-    UriReferenceString,
-    IriReferenceStr,
-    IriReferenceString
-);
-impl_for_iri!(
-    UriRelativeStr,
-    UriRelativeString,
-    IriRelativeStr,
-    IriRelativeString
-);
-impl_for_iri!(UriStr, UriString, IriStr, IriString);
-impl_for_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString);
-impl_for_iri!(
-    UriFragmentStr,
-    UriFragmentString,
-    IriFragmentStr,
-    IriFragmentString
-);
+impl_for_iri!(RiReferenceStr, RiReferenceString, UriReferenceString);
+impl_for_iri!(RiStr, RiString, UriString);
+impl_for_iri!(RiAbsoluteStr, RiAbsoluteString, UriAbsoluteString);
+impl_for_iri!(RiRelativeStr, RiRelativeString, UriRelativeString);
+impl_for_iri!(RiQueryStr, RiQueryString, UriQueryString);
+impl_for_iri!(RiFragmentStr, RiFragmentString, UriFragmentString);
 
 /// Percent-encodes and writes the IRI string using the given buffer.
-fn write_percent_encoded<F, E>(mut s: &str, mut f: F) -> Result<(), E>
-where
-    F: FnMut(&str) -> Result<(), E>,
-{
+fn write_percent_encoded(f: &mut fmt::Formatter<'_>, mut s: &str) -> fmt::Result {
     while !s.is_empty() {
         // Skip ASCII characters.
         let non_ascii_pos = s
@@ -183,7 +122,7 @@ where
             .unwrap_or_else(|| s.len());
         let (ascii, rest) = s.split_at(non_ascii_pos);
         if !ascii.is_empty() {
-            f(ascii)?;
+            f.write_str(ascii)?;
             s = rest;
         }
 
@@ -211,7 +150,7 @@ where
         // appear in an IRI match `ucschar` or `iprivate`.
         /// Number of source bytes to encode at once.
         const NUM_BYTES_AT_ONCE: usize = 21;
-        percent_encode_bytes(nonasciis, &mut [0_u8; NUM_BYTES_AT_ONCE * 3], &mut f)?;
+        percent_encode_bytes(f, nonasciis, &mut [0_u8; NUM_BYTES_AT_ONCE * 3])?;
     }
 
     Ok(())
@@ -225,10 +164,7 @@ where
 /// # Precondition
 ///
 /// The length of `buf` must be 3 bytes or more.
-fn percent_encode_bytes<F, E>(s: &str, buf: &mut [u8], mut f: F) -> Result<(), E>
-where
-    for<'a> F: FnMut(&'a str) -> Result<(), E>,
-{
+fn percent_encode_bytes(f: &mut fmt::Formatter<'_>, s: &str, buf: &mut [u8]) -> fmt::Result {
     /// Fill the buffer by percent-encoded bytes.
     ///
     /// Note that this function applies percent-encoding to every characters,
@@ -288,7 +224,7 @@ where
     // `<core::str::Bytes as ExactSizeIterator>::is_empty` is unstable as of Rust 1.58.1.
     while bytes.len() != 0 {
         let encoded = fill_by_percent_encoded(buf, &mut bytes);
-        f(encoded)?;
+        f.write_str(encoded)?;
     }
 
     Ok(())

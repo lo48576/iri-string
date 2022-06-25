@@ -14,6 +14,7 @@
 * Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
 * Add `{OwnedIri}::try_encode_to_uri_inline` method.
 * Add `{OwnedIri}::try_encode_into_uri` method.
+* Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -55,6 +56,11 @@
     + The code `borrowed.encode_to_uri()` in older versions should be rewritten
       to `borrowed.encode_to_uri().to_dedicated_string()`.
 * Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+
+### Changed (non-breaking)
+* Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
+    + Now methods of `convert::MappedToUri<'_, T>` can be called for
+      `{BorrowedIri}<S> where S: Spec`.
 
 ## [0.5.6]
 
