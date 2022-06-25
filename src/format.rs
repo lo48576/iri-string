@@ -62,6 +62,54 @@ pub fn write_to_slice<T: fmt::Display>(
     Ok(result)
 }
 
+/// Writer that fails (not panics) on OOM.
+#[cfg(feature = "alloc")]
+struct StringWriter<'a> {
+    /// Destination buffer.
+    buffer: &'a mut String,
+    /// Memory allocation error.
+    error: Option<TryReserveError>,
+}
+
+#[cfg(feature = "alloc")]
+impl fmt::Write for StringWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if self.error.is_some() {
+            return Err(fmt::Error);
+        }
+        if let Err(e) = self.buffer.try_reserve(s.len()) {
+            self.error = Some(e);
+            return Err(fmt::Error);
+        }
+        // This should never fail since `.try_reserve(s.len())` succeeded.
+        self.buffer.push_str(s);
+        Ok(())
+    }
+}
+
+/// Appends the data to the string.
+///
+/// When allocation failure happens, incompletely appended strings won't be
+/// stripped. Callers are responsible to clean up the destination if necessary.
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub fn try_append_to_string<T: fmt::Display>(
+    dest: &mut String,
+    value: T,
+) -> Result<(), TryReserveError> {
+    let mut writer = StringWriter {
+        buffer: dest,
+        error: None,
+    };
+    if write!(writer, "{}", value).is_err() {
+        let e = writer
+            .error
+            .expect("[consistency] allocation error should be set on formatting failure");
+        return Err(e);
+    }
+    Ok(())
+}
+
 /// Returns true if the two equals after they are converted to strings.
 pub(crate) fn eq_str_display<T>(s: &str, d: &T) -> bool
 where
