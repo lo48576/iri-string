@@ -2,6 +2,14 @@
 
 use core::fmt::{self, Write as _};
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+#[cfg(feature = "alloc")]
+use alloc::string::String;
+
+#[cfg(feature = "alloc")]
+use crate::buffer::FmtWritableBuffer;
+
 /// Returns true if the two equals after they are converted to strings.
 pub(crate) fn eq_str_display<T>(s: &str, d: &T) -> bool
 where
@@ -36,6 +44,28 @@ pub(crate) struct Censored;
 impl core::fmt::Debug for Censored {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("{censored}")
+    }
+}
+
+/// [`ToString`][`alloc::string::ToString`], but without panic.
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub trait ToStringFallible: alloc::string::ToString {
+    /// [`ToString::to_string`][`alloc::string::ToString::to_string`], but without panic on OOM.
+    fn try_to_string(&self) -> Result<String, TryReserveError>;
+}
+
+#[cfg(feature = "alloc")]
+impl<T: fmt::Display> ToStringFallible for T {
+    /// [`ToString::to_string`][`alloc::string::ToString::to_string`], but without panic on OOM.
+    fn try_to_string(&self) -> Result<String, TryReserveError> {
+        let mut buf = String::new();
+        let mut buf_ref = &mut buf;
+        let mut writer = FmtWritableBuffer::new(&mut buf_ref);
+        match write!(writer, "{}", self) {
+            Ok(_) => Ok(buf),
+            Err(_) => Err(writer.take_error_unwrap()),
+        }
     }
 }
 
