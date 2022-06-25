@@ -1,4 +1,7 @@
-//! Utilities for formatting.
+//! Utilities for formatting (especially `Display` trait).
+//!
+//! This module contains utilities for [`Display`][`core::fmt::Display`]-able
+//! types.
 
 use core::fmt::{self, Write as _};
 
