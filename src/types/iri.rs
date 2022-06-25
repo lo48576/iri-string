@@ -163,7 +163,8 @@ macro_rules! impl_conversion_between_uri {
             /// If you want a new URI string rather than modifying the IRI
             /// string, or if you need more precise control over memory
             /// allocation and buffer handling, use
-            /// [`encode_to_uri`][`Self::encode_to_uri`] method.
+            #[doc = concat!("[`encode_to_uri`][`", stringify!($ty_borrowed_iri), "::encode_to_uri`]")]
+            /// method.
             ///
             /// # Panics
             ///
@@ -195,7 +196,8 @@ macro_rules! impl_conversion_between_uri {
             /// If you want a new URI string rather than modifying the IRI
             /// string, or if you need more precise control over memory
             /// allocation and buffer handling, use
-            /// [`encode_to_uri`][`Self::encode_to_uri`] method.
+            #[doc = concat!("[`encode_to_uri`][`", stringify!($ty_borrowed_iri), "::encode_to_uri`]")]
+            /// method.
             ///
             // TODO: This seems true as of this writing, but is this guaranteed? See
             // <https://users.rust-lang.org/t/does-try-reserve-guarantees-that-the-content-is-preserved-on-allocation-failure/77446>.
@@ -230,7 +232,8 @@ macro_rules! impl_conversion_between_uri {
             /// If you want a new URI string rather than modifying the IRI
             /// string, or if you need more precise control over memory
             /// allocation and buffer handling, use
-            /// [`encode_to_uri`][`Self::encode_to_uri`] method.
+            #[doc = concat!("[`encode_to_uri`][`", stringify!($ty_borrowed_iri), "::encode_to_uri`]")]
+            /// method.
             ///
             /// # Examples
             ///
@@ -258,7 +261,8 @@ macro_rules! impl_conversion_between_uri {
             /// If you want a new URI string rather than modifying the IRI
             /// string, or if you need more precise control over memory
             /// allocation and buffer handling, use
-            /// [`encode_to_uri`][`Self::encode_to_uri`] method.
+            #[doc = concat!("[`encode_to_uri`][`", stringify!($ty_borrowed_iri), "::encode_to_uri`]")]
+            /// method.
             ///
             // TODO: This seems true as of this writing, but is this guaranteed? See
             // <https://users.rust-lang.org/t/does-try-reserve-guarantees-that-the-content-is-preserved-on-allocation-failure/77446>.
