@@ -8,6 +8,12 @@
 * Add `format::write_to_slice` function and `format::CapacityOverflow` type.
 * Add `format::try_append_to_string` function.
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
+* Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
+* Change return types of `{BorrowedIri}::encode_to_uri` to
+  `convert::MappedToUri<'_, Self>`.
+* Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+* Add `{OwnedIri}::try_encode_to_uri_inline` method.
+* Add `{OwnedIri}::try_encode_into_uri` method.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -30,11 +36,25 @@
         - `build::DisplayBuild<'_, RiStr<S>>` (Target = `RiString<S>`)
         - `build::DisplayBuild<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
         - `build::DisplayBuild<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+        - `convert::MappedToUri<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
+        - `convert::MappedToUri<'_, RiStr<S>>` (Target = `RiString<S>`)
+        - `convert::MappedToUri<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
+        - `convert::MappedToUri<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+        - `convert::MappedToUri<'_, RiQueryStr<S>>` (Target = `RiQueryString<S>`)
+        - `convert::MappedToUri<'_, RiFragmentStr<S>>` (Target = `RiFragmentString<S>`)
 * Add `format::write_to_slice` function and `format::CapacityOverflow` type.
 * Add `format::try_append_to_string` function.
+* Add `{OwnedIri}::try_encode_to_uri_inline` method.
+* Add `{OwnedIri}::try_encode_into_uri` method.
 
 ### Changed (breaking)
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
+* Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
+* Change return types of `{BorrowedIri}::encode_to_uri` to
+  `convert::MappedToUri<'_, Self>`.
+    + The code `borrowed.encode_to_uri()` in older versions should be rewritten
+      to `borrowed.encode_to_uri().to_dedicated_string()`.
+* Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
 
 ## [0.5.6]
 
