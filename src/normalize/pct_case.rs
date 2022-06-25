@@ -169,12 +169,12 @@ impl<S: Spec> fmt::Display for DisplayPctCaseNormalize<'_, S> {
 
 /// Writable as a normalized ASCII-only `host` (and optionally `port` followed).
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct DisplayNormalizedAsciiOnlyHost<'a> {
+pub(crate) struct NormalizedAsciiOnlyHost<'a> {
     /// Valid host (and additionaly port) to normalize.
     host_port: &'a str,
 }
 
-impl<'a> DisplayNormalizedAsciiOnlyHost<'a> {
+impl<'a> NormalizedAsciiOnlyHost<'a> {
     /// Creates a new `DisplayNormalizedAsciiOnlyHost` value.
     ///
     /// # Preconditions
@@ -192,7 +192,7 @@ impl<'a> DisplayNormalizedAsciiOnlyHost<'a> {
     }
 }
 
-impl fmt::Display for DisplayNormalizedAsciiOnlyHost<'_> {
+impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut rest = self.host_port;
 

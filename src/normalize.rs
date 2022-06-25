@@ -90,7 +90,7 @@ use crate::types::{RiAbsoluteString, RiString};
 pub use self::error::Error;
 pub(crate) use self::path::{Path, PathToNormalize};
 pub(crate) use self::pct_case::{
-    is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost, DisplayPctCaseNormalize,
+    is_pct_case_normalized, DisplayPctCaseNormalize, NormalizedAsciiOnlyHost,
 };
 
 /// Normalization operation.
@@ -334,7 +334,7 @@ pub(crate) fn normalize_host_port<S: Spec>(
     // digits, so this won't affect to the test result.
     if is_ascii_only_host(host_port) {
         // If the host is ASCII characters only, make plain alphabets lower case.
-        DisplayNormalizedAsciiOnlyHost::new(host_port).fmt(f)
+        NormalizedAsciiOnlyHost::new(host_port).fmt(f)
     } else {
         DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
     }
