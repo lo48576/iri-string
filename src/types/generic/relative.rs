@@ -1,6 +1,7 @@
 //! Relative IRI reference.
 
 use crate::components::AuthorityComponents;
+use crate::mask_password::{password_range_to_hide, PasswordMasked};
 use crate::normalize::Normalized;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
@@ -136,6 +137,33 @@ impl<S: Spec> RiRelativeStr<S> {
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
     pub fn resolve_against<'a>(&'a self, base: &'a RiAbsoluteStr<S>) -> Normalized<'a, RiStr<S>> {
         FixedBaseResolver::new(base).resolve(self.as_ref())
+    }
+
+    /// Returns the proxy to the IRI with password masking feature.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriRelativeStr;
+    ///
+    /// let iri = IriRelativeStr::new("//user:password@example.com/path?query")?;
+    /// let masked = iri.mask_password();
+    /// assert_eq!(masked.to_dedicated_string(), "//user:@example.com/path?query");
+    ///
+    /// assert_eq!(
+    ///     masked.replace_password("${password}").to_string(),
+    ///     "//user:${password}@example.com/path?query"
+    /// );
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn mask_password(&self) -> PasswordMasked<'_, Self> {
+        PasswordMasked::new(self)
     }
 }
 
@@ -348,6 +376,105 @@ impl<S: Spec> RiRelativeString<S> {
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
         debug_assert!(iri::<S>(&self.inner).is_ok());
+    }
+
+    /// Removes the password completely (including separator colon) from `self` even if it is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:password@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "//user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Even if the password is empty, the password and separator will be removed.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "//user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) => v,
+            None => return,
+        };
+        let separator_colon = pw_range.start - 1;
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component and
+            // the leading separator colon is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(separator_colon..pw_range.end);
+            debug_assert!(
+                RiRelativeStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
+    }
+
+    /// Replaces the non-empty password in `self` to the empty password.
+    ///
+    /// This leaves the separator colon if the password part was available.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:password@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "//user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the password is empty, it is left as is.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "//user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_nonempty_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) if !v.is_empty() => v,
+            _ => return,
+        };
+        debug_assert_eq!(
+            self.as_str().as_bytes().get(pw_range.start - 1).copied(),
+            Some(b':'),
+            "[validity] the password component must be prefixed with a separator colon"
+        );
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(pw_range);
+            debug_assert!(
+                RiRelativeStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
     }
 }
 

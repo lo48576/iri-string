@@ -129,6 +129,7 @@ pub mod build;
 pub mod components;
 pub mod convert;
 pub mod format;
+pub mod mask_password;
 pub mod normalize;
 pub(crate) mod parser;
 pub mod percent_encode;

@@ -30,6 +30,10 @@
 * Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
 * Remove `BufferError` type.
 * Remove `task` module.
+* Add `mask_password` module.
+* Add `{BorrowedIri}::mask_password` method.
+* Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
+  methods.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -64,6 +68,29 @@
 * Add `{OwnedIri}::try_encode_into_uri` method.
 * Add `normalize::Normalized` type.
     + This replaces `normalize::NormalizationTask` type in previous versions.
+* Add `mask_password` module.
+    + Items in this module let users hide or replace password to keep sensitive
+      information secret.
+    + List of added items:
+        - `mask_password::PasswordMasked` type
+        - `mask_password::PasswordReplaced` type
+* Add `{BorrowedIri}::mask_password` method.
+    + List of added methods:
+        - `types::RiReferenceStr::mask_password()`
+        - `types::RiStr::mask_password()`
+        - `types::RiAbsoluteStr::mask_password()`
+        - `types::RiRelativeStr::mask_password()`
+* Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
+  methods.
+    + List of added methods:
+        - `types::RiReferenceString::remove_password_inline()`
+        - `types::RiReferenceString::remove_nonempty_password_inline()`
+        - `types::RiString::remove_password_inline()`
+        - `types::RiString::remove_nonempty_password_inline()`
+        - `types::RiAbsoluteString::remove_password_inline()`
+        - `types::RiAbsoluteString::remove_nonempty_password_inline()`
+        - `types::RiRelativeString::remove_password_inline()`
+        - `types::RiRelativeString::remove_nonempty_password_inline()`
 
 ### Changed (breaking)
 * Bump MSRV to 1.60.0.
