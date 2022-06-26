@@ -116,10 +116,7 @@ impl_for_iri!(RiFragmentStr, RiFragmentString, UriFragmentString);
 fn write_percent_encoded(f: &mut fmt::Formatter<'_>, mut s: &str) -> fmt::Result {
     while !s.is_empty() {
         // Skip ASCII characters.
-        let non_ascii_pos = s
-            .bytes()
-            .position(|b| !b.is_ascii())
-            .unwrap_or_else(|| s.len());
+        let non_ascii_pos = s.bytes().position(|b| !b.is_ascii()).unwrap_or(s.len());
         let (ascii, rest) = s.split_at(non_ascii_pos);
         if !ascii.is_empty() {
             f.write_str(ascii)?;
@@ -131,10 +128,7 @@ fn write_percent_encoded(f: &mut fmt::Formatter<'_>, mut s: &str) -> fmt::Result
         }
 
         // Search for the next ASCII character.
-        let nonascii_end = s
-            .bytes()
-            .position(|b| b.is_ascii())
-            .unwrap_or_else(|| s.len());
+        let nonascii_end = s.bytes().position(|b| b.is_ascii()).unwrap_or(s.len());
         let (nonasciis, rest) = s.split_at(nonascii_end);
         debug_assert!(
             !nonasciis.is_empty(),
