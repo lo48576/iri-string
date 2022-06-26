@@ -1,28 +1,20 @@
 //! IRI reference.
 
-#[cfg(feature = "alloc")]
-use core::convert::Infallible;
 use core::convert::TryFrom;
 
 #[cfg(feature = "alloc")]
-use alloc::{borrow::Cow, string::String};
+use alloc::string::String;
 
 use crate::components::AuthorityComponents;
-#[cfg(feature = "alloc")]
-use crate::normalize::Error;
+use crate::normalize::Normalized;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
-#[cfg(feature = "alloc")]
-use crate::resolve::{
-    try_resolve, try_resolve_normalize, try_resolve_normalize_whatwg, try_resolve_whatwg,
-};
+use crate::resolve::FixedBaseResolver;
 use crate::spec::Spec;
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
-use crate::task::Error as TaskError;
-#[cfg(feature = "alloc")]
-use crate::types::{RiAbsoluteStr, RiRelativeString, RiString};
-use crate::types::{RiFragmentStr, RiQueryStr, RiRelativeStr, RiStr};
+use crate::types::{RiRelativeString, RiString};
 #[cfg(feature = "alloc")]
 use crate::validate::iri;
 use crate::validate::iri_reference;
@@ -146,54 +138,10 @@ impl<S: Spec> RiReferenceStr<S> {
 
     /// Returns resolved IRI against the given base IRI.
     ///
-    /// For reference resolution output examples, see [RFC 3986 section 5.4].
+    /// For IRI reference resolution output examples, see [RFC 3986 section 5.4].
     ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Strictness
-    ///
-    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
-    /// always interpreted as a composition of the scheme `http` and the path
-    /// `g`), so backward compatible parsing and resolution are not provided.
-    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
-    ///
-    /// > Some parsers allow the scheme name to be present in a relative
-    /// > reference if it is the same as the base URI scheme. This is considered
-    /// > to be a loophole in prior specifications of partial URI
-    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
-    /// > avoided but is allowed for backward compatibility.
-    /// >
-    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`normalize`][`crate::normalize`] module.
-    ///
-    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
-    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn try_resolve_against<'a>(
-        &'a self,
-        base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<Cow<'a, RiStr<S>>, TaskError<Error>> {
-        match self.to_iri() {
-            Ok(iri) => Ok(Cow::Borrowed(iri)),
-            Err(relative) => try_resolve(relative, base).map(Cow::Owned),
-        }
-    }
-
-    /// Returns resolved IRI against the given base IRI.
-    ///
-    /// For reference resolution output examples, see [RFC 3986 section 5.4].
-    ///
-    /// Enabled by `alloc` or `std` feature.
+    /// If you are going to resolve multiple references against the common base,
+    /// consider using [`FixedBaseResolver`].
     ///
     /// # Strictness
     ///
@@ -212,171 +160,16 @@ impl<S: Spec> RiReferenceStr<S> {
     ///
     /// # Failures
     ///
-    /// This fails if
+    /// This method itself does not fail, but IRI resolution without WHATWG URL
+    /// Standard serialization can fail in some minor cases.
     ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
+    /// To see examples of such unresolvable IRIs, visit the documentation
     /// for [`normalize`][`crate::normalize`] module.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_resolve_against()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn resolve_against<'a>(
-        &'a self,
-        base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<Cow<'a, RiStr<S>>, TaskError<Error>> {
-        self.try_resolve_against(base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_resolve_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<Cow<'_, RiStr<S>>, TaskError<Infallible>> {
-        match self.to_iri() {
-            Ok(iri) => Ok(Cow::Borrowed(iri)),
-            Err(relative) => try_resolve_whatwg(relative, base).map(Cow::Owned),
-        }
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_resolve_whatwg_against()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn resolve_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<Cow<'_, RiStr<S>>, TaskError<Infallible>> {
-        self.try_resolve_whatwg_against(base)
-    }
-
-    /// Returns normalized and try_resolved IRI against the given base IRI.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_against`][`Self::try_resolve_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`normalize`][`crate::normalize`] module.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_resolve_normalize_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Error>> {
-        try_resolve_normalize(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the given base IRI.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_against`][`Self::try_resolve_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`normalize`][`crate::normalize`] module.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn resolve_normalize_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Error>> {
-        try_resolve_normalize(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_resolve_normalize_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_normalize_whatwg(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn resolve_normalize_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_normalize_whatwg(self, base)
+    pub fn resolve_against<'a>(&'a self, base: &'a RiAbsoluteStr<S>) -> Normalized<'a, RiStr<S>> {
+        FixedBaseResolver::new(base).resolve(self.as_ref())
     }
 }
 

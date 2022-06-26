@@ -1,7 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
+use core::fmt::Write;
+
+use iri_string::format::{write_to_slice, ToDedicatedString};
 use iri_string::resolve::FixedBaseResolver;
-use iri_string::task::ProcessAndWrite;
 use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 
 pub fn criterion_benchmark(c: &mut Criterion) {
@@ -14,36 +16,28 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     .expect("should be valid IRI");
 
     c.bench_function("resolve (new task, new buf)", |b| {
-        b.iter(|| {
-            rel.try_resolve_against(base)
-                .expect("resolvable inputs should be passed")
-        })
+        b.iter(|| rel.resolve_against(base).to_dedicated_string())
     });
 
     c.bench_function("resolve (task reuse, new buf)", |b| {
-        let task = FixedBaseResolver::new(base).create_task(rel);
-        b.iter(|| {
-            task.allocate_and_write()
-                .expect("resolvable inputs should be passed")
-        });
+        let task = FixedBaseResolver::new(base).resolve(rel);
+        b.iter(|| task.to_dedicated_string());
     });
 
     c.bench_function("resolve (task reuse, buf reuse)", |b| {
         let mut buf = String::new();
-        let task = FixedBaseResolver::new(base).create_task(rel);
+        let task = FixedBaseResolver::new(base).resolve(rel);
         b.iter(|| {
             buf.clear();
-            task.append_to_std_string(&mut buf)
-                .expect("resolvable inputs should be passed");
+            write!(&mut buf, "{}", task).expect("write to `String` should never fail");
         });
     });
 
     c.bench_function("resolve (task reuse, fixed buf reuse)", |b| {
         let mut buf = [0_u8; 512];
-        let task = FixedBaseResolver::new(base).create_task(rel);
-        b.iter(|| {
-            task.write_to_byte_slice(&mut buf)
-                .expect("resolvable inputs and long buffer should be passed");
+        let task = FixedBaseResolver::new(base).resolve(rel);
+        b.iter(move || {
+            write_to_slice(&mut buf, &task).expect("`buf` should have enough capacity");
         });
     });
 }

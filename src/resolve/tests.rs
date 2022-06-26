@@ -8,7 +8,9 @@ mod refimpl;
 
 use super::*;
 
-use crate::task::ProcessAndWrite;
+use crate::format::write_to_slice;
+#[cfg(feature = "alloc")]
+use crate::format::ToDedicatedString;
 use crate::types::{IriAbsoluteStr, IriReferenceStr};
 
 #[cfg(feature = "alloc")]
@@ -211,7 +213,7 @@ fn test_resolve_standalone() {
         let base = abs_iri(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let got = try_resolve(input, base).expect("Invalid testcase: result should be valid");
+            let got = input.resolve_against(base).to_dedicated_string();
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -230,7 +232,7 @@ fn test_resolve_standalone_same_result_as_reference_impl() {
         let base = abs_iri(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let got = try_resolve(input, base).expect("Invalid testcase: result should be valid");
+            let got = input.resolve_against(base).to_dedicated_string();
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -279,7 +281,7 @@ fn test_resolve_percent_encoded_dots() {
     for (base, reference, expected) in TEST_CASES {
         let base = abs_iri(base);
         let reference = iri_ref(reference);
-        let got = try_resolve(reference, base).expect("resolution should success in this test");
+        let got = reference.resolve_against(base).to_dedicated_string();
         assert_eq!(got, *expected);
     }
 }
@@ -292,9 +294,7 @@ fn test_fixed_base_resolver() {
         let resolver = FixedBaseResolver::new(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let got = resolver
-                .try_resolve(input)
-                .expect("Invalid testcase: result should be valid");
+            let got = resolver.resolve(input).to_dedicated_string();
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -307,17 +307,16 @@ fn test_fixed_base_resolver() {
 }
 
 #[test]
-fn test_fixed_base_resolver_to_byte_slice() {
+fn test_fixed_base_resolver_write_to_slice() {
     let mut buf = [0_u8; 128];
     for (base, pairs) in TEST_CASES {
         let base = abs_iri(base);
         let resolver = FixedBaseResolver::new(base);
         for (input, expected) in *pairs {
             let input = iri_ref(input);
-            let task = resolver.create_task(input);
-            let got = task
-                .write_to_byte_slice(&mut buf)
-                .expect("should not fail by OOM");
+            let resolved = resolver.resolve(input);
+            let got =
+                write_to_slice(&mut buf, &resolved).expect("`buf` should have enough capacity");
             assert_eq!(
                 AsRef::<str>::as_ref(&got),
                 *expected,
@@ -330,7 +329,7 @@ fn test_fixed_base_resolver_to_byte_slice() {
 }
 
 #[test]
-fn test_fixed_base_resolver_to_byte_slice_should_never_panic() {
+fn test_fixed_base_resolver_write_to_slice_should_never_panic() {
     let mut buf_small = [0_u8; 2];
     let mut buf_empty = [];
 
@@ -339,13 +338,13 @@ fn test_fixed_base_resolver_to_byte_slice_should_never_panic() {
         let resolver = FixedBaseResolver::new(base);
         for (input, _) in *pairs {
             let input = iri_ref(input);
-            let task = resolver.create_task(input);
-            let result_small = task.write_to_byte_slice(&mut buf_small);
+            let resolved = resolver.resolve(input);
+            let result_small = write_to_slice(&mut buf_small, &resolved);
             assert!(
                 result_small.is_err(),
                 "expected to fail due to too small destination buffer"
             );
-            let result_empty = task.write_to_byte_slice(&mut buf_empty);
+            let result_empty = write_to_slice(&mut buf_empty, &resolved);
             assert!(
                 result_empty.is_err(),
                 "expected to fail due to too small destination buffer"
@@ -361,12 +360,10 @@ fn test_task_live_longer_than_fixed_base_resolver() {
     let base = abs_iri("http://example.com/");
     let reference = iri_ref("foo/bar");
 
-    let task = {
+    let resolved = {
         let resolver = FixedBaseResolver::new(base);
-        resolver.create_task(reference)
+        resolver.resolve(reference)
     };
-    let result = task
-        .write_to_byte_slice(&mut buf)
-        .expect("`buf` should be long enough");
+    let result = write_to_slice(&mut buf, &resolved).expect("`buf` should have enough capacity");
     assert_eq!(result, "http://example.com/foo/bar");
 }

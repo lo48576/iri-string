@@ -1,6 +1,6 @@
 //! An example to normalize an IRI from the CLI argument.
 
-use iri_string::task::Error as TaskError;
+use iri_string::format::ToDedicatedString;
 use iri_string::types::{RiStr, RiString};
 
 const USAGE: &str = "\
@@ -135,16 +135,11 @@ fn normalize<S: iri_string::spec::Spec>(opt: &CliOpt) -> RiString<S> {
         Ok(v) => v,
         Err(e) => die(format_args!("Failed to parse {raw:?}: {e:?}")),
     };
-    let normalized = if opt.whatwg_serialization {
-        iri.try_normalize_whatwg().map_err(|e| match e {
-            TaskError::Buffer(e) => TaskError::Buffer(e),
-            TaskError::Process(_) => unreachable!("WHATWG normaliation algorithm should not fail"),
-        })
-    } else {
-        iri.try_normalize()
-    };
-    match normalized {
-        Ok(v) => v,
-        Err(e) => die(format_args!("Failed to normalize: {e:?}")),
+    let normalized = iri.normalize();
+    if !opt.whatwg_serialization {
+        if let Err(e) = normalized.ensure_rfc3986_normalizable() {
+            die(format_args!("Failed to normalize: {e:?}"));
+        }
     }
+    normalized.to_dedicated_string()
 }

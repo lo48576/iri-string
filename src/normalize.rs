@@ -37,7 +37,10 @@
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
-//! assert!(base.try_normalize().is_err(), "this normalization should fail");
+//! assert!(
+//!     base.normalize().ensure_rfc3986_normalizable().is_err(),
+//!     "this normalization should fails without WAHTWG URL Standard serialization"
+//! );
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
@@ -52,9 +55,9 @@
 //! let base = IriAbsoluteStr::new("scheme:")?;
 //! {
 //!     let reference = IriReferenceStr::new(".///bar")?;
-//!     let err = reference.resolve_against(base)
-//!         .expect_err("this resolution should fail");
-//!     assert!(matches!(err, TaskError::Process(_)));
+//!     let result = reference.resolve_against(base)
+//!         .ensure_rfc3986_normalizable();
+//!     assert!(result.is_err());
 //! }
 //!
 //! {
@@ -62,9 +65,9 @@
 //!     // Resulting string will be `scheme://bar`, but `bar` should be a path
 //!     // segment, not a host. So, the semantically correct target IRI cannot
 //!     // be represented.
-//!     let err2 = reference2.resolve_against(base)
-//!         .expect_err("this resolution should fail");
-//!     assert!(matches!(err2, TaskError::Process(_)));
+//!     let result2 = reference2.resolve_against(base)
+//!         .ensure_rfc3986_normalizable();
+//!     assert!(result2.is_err());
 //! }
 //! # }
 //! # Ok::<_, iri_string::validate::Error>(())
@@ -77,13 +80,16 @@ mod pct_case;
 use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
-use crate::buffer::{Buffer, ByteSliceBuf, FmtWritableBuffer};
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+
 use crate::components::RiReferenceComponents;
+#[cfg(feature = "alloc")]
+use crate::format::{ToDedicatedString, ToStringFallible};
 use crate::parser::str::rfind_split_hole;
 use crate::parser::trusted::is_ascii_only_host;
 use crate::spec::Spec;
-use crate::task::{Error as TaskError, ProcessAndWrite};
-use crate::types::{RiAbsoluteStr, RiStr};
+use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiString};
 
@@ -119,6 +125,126 @@ pub(crate) struct NormalizationInput<'a> {
     fragment: Option<&'a str>,
     /// Normalization type.
     op: NormalizationOp,
+}
+
+impl<'a> NormalizationInput<'a> {
+    /// Creates a `NormalizedInput` from IRIs to resolve.
+    #[must_use]
+    pub(crate) fn with_resolution_params<S: Spec>(
+        base_components: &RiReferenceComponents<'a, S>,
+        reference: &'a RiReferenceStr<S>,
+    ) -> Self {
+        let b = base_components;
+        let r = RiReferenceComponents::from(reference);
+
+        let (r_scheme, r_authority, r_path, r_query, r_fragment) = r.to_major();
+        let (b_scheme, b_authority, b_path, b_query, _) = b.to_major();
+        let b_scheme = b_scheme.expect("[validity] non-relative IRI must have a scheme");
+
+        Self::create_normalization_input(
+            r_scheme,
+            r_authority,
+            r_path,
+            r_query,
+            r_fragment,
+            b_scheme,
+            b_authority,
+            b_path,
+            b_query,
+        )
+    }
+
+    /// Creates a `NormalizationInput` from components to resolve an IRI.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    fn create_normalization_input(
+        r_scheme: Option<&'a str>,
+        r_authority: Option<&'a str>,
+        r_path: &'a str,
+        r_query: Option<&'a str>,
+        r_fragment: Option<&'a str>,
+        b_scheme: &'a str,
+        b_authority: Option<&'a str>,
+        b_path: &'a str,
+        b_query: Option<&'a str>,
+    ) -> Self {
+        /// The toplevel component the reference has.
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+        enum RefToplevel {
+            /// Scheme.
+            Scheme,
+            /// Authority.
+            Authority,
+            /// Path.
+            Path,
+            /// Query.
+            Query,
+            /// Reference is empty or has only fragment.
+            None,
+        }
+
+        impl RefToplevel {
+            /// Choose a component from either of the reference or the base,
+            /// based on the toplevel component of the reference.
+            fn choose<T>(self, component: RefToplevel, reference: T, base: T) -> T {
+                if self <= component {
+                    reference
+                } else {
+                    base
+                }
+            }
+        }
+
+        let ref_toplevel = if r_scheme.is_some() {
+            RefToplevel::Scheme
+        } else if r_authority.is_some() {
+            RefToplevel::Authority
+        } else if !r_path.is_empty() {
+            RefToplevel::Path
+        } else if r_query.is_some() {
+            RefToplevel::Query
+        } else {
+            RefToplevel::None
+        };
+
+        let path = match ref_toplevel {
+            RefToplevel::Scheme | RefToplevel::Authority => {
+                Path::NeedsProcessing(PathToNormalize::from_single_path(r_path))
+            }
+            RefToplevel::Path => {
+                if r_path.starts_with('/') {
+                    Path::NeedsProcessing(PathToNormalize::from_single_path(r_path))
+                } else {
+                    // About this branch, see
+                    // <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3>.
+                    //
+                    // > o  If the base URI has a defined authority component and an empty
+                    // >    path, then return a string consisting of "/" concatenated with the
+                    // >    reference's path; otherwise,
+                    let b_path = if b_authority.is_some() && b_path.is_empty() {
+                        "/"
+                    } else {
+                        b_path
+                    };
+                    Path::NeedsProcessing(PathToNormalize::from_paths_to_be_resolved(
+                        b_path, r_path,
+                    ))
+                }
+            }
+            RefToplevel::Query | RefToplevel::None => Path::Done(b_path),
+        };
+
+        Self {
+            scheme: r_scheme.unwrap_or(b_scheme),
+            authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
+            path,
+            query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
+            fragment: r_fragment,
+            op: NormalizationOp {
+                case_pct_normalization: false,
+            },
+        }
+    }
 }
 
 impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
@@ -355,550 +481,125 @@ pub(crate) fn normalize_fragment<S: Spec>(
     DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)
 }
 
-/// IRI normalization/resolution task.
+/// Normalized OR resolved IRI.
 ///
-/// Most of the main functionalities are provided from [`ProcessAndWrite`] trait,
-/// so you may need to write `use iri_string::task::ProcessAndWrite` where you
-/// use this task type.
-#[derive(Debug, Clone, Copy)]
-pub struct NormalizationTask<'a, T: ?Sized> {
-    /// Normalization input.
+/// Resolved IRI can be represented by this type. In that case, the result might
+/// not be normalized. If you want the IRI resolution result to be normalized,
+/// use [`enable_normalization`][`Self::enable_normalization`] method.
+///
+/// [`Display`]: `core::fmt::Display`
+pub struct Normalized<'a, T: ?Sized> {
+    /// Spec-agnostic normalization input.
     input: NormalizationInput<'a>,
-    /// Whether to apply serialization described in WHATWG URL Standard when necessary.
-    ///
-    /// If this option is enabled, serialization of WHATWG URL Standard will be
-    /// used instead of pure RFC 3986 algorithm in some situation.
-    ///
-    /// Consider an IRI that would have `foo` as a scheme, no authority, and
-    /// `//bar` as a path, after normalization. According to RFC 3986 algorithm,
-    /// the resulting string would be `foo://bar`, but this is obviously invalid
-    /// since `bar` here would be interpreted as an authority, rather than the
-    /// part of the path.
-    ///
-    /// To prevent such erroneous / fallible normalization and resolution,
-    /// WHATWG URL Standard have an additional rule to modify the path.
-    /// That rule is, prepending `/.` to the path to prevent starting from `//`
-    /// when no authority is present.
-    /// By this rule, the result of the example case above will be
-    /// `foo:/.//bar`. This can be unambiguously interpreted as the combination
-    /// of the scheme `foo`, no authority, and the path `/.//bar`, which is
-    /// semantically equal to the path `//bar`.
-    whatwg_serialization: bool,
-    /// Spec-aware IRI string type.
+    /// Expected result type.
     _ty_str: PhantomData<fn() -> T>,
 }
 
-impl<'a, T: ?Sized> NormalizationTask<'a, T> {
-    /// Creates a new normalization task.
+impl<T: ?Sized> fmt::Debug for Normalized<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Normalized")
+            .field("input", &self.input)
+            .finish()
+    }
+}
+
+impl<'a, T: ?Sized> Normalized<'a, T> {
+    /// Creates a new `Normalized` object from the given input.
     #[inline]
     #[must_use]
-    pub(crate) fn new(
-        scheme: &'a str,
-        authority: Option<&'a str>,
-        path: Path<'a>,
-        query: Option<&'a str>,
-        fragment: Option<&'a str>,
-        op: NormalizationOp,
-        whatwg_serialization: bool,
-    ) -> Self {
+    pub(crate) fn from_input(input: NormalizationInput<'a>) -> Self {
         Self {
-            input: NormalizationInput {
-                scheme,
-                authority,
-                path,
-                query,
-                fragment,
-                op,
-            },
-            whatwg_serialization,
+            input,
             _ty_str: PhantomData,
         }
     }
-}
 
-impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationTask<'a, RiStr<S>> {
-    fn from(iri: &'a RiStr<S>) -> Self {
-        let components = RiReferenceComponents::<S>::from(iri.as_ref());
-        let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
-        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
-
-        Self {
-            input: NormalizationInput {
-                scheme,
-                authority,
-                path,
-                query,
-                fragment,
-                op: NormalizationOp {
-                    case_pct_normalization: true,
-                },
-            },
-            whatwg_serialization: false,
-            _ty_str: PhantomData,
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<'a, S: Spec> From<&'a RiString<S>> for NormalizationTask<'a, RiStr<S>> {
-    #[inline]
-    fn from(iri: &'a RiString<S>) -> Self {
-        Self::from(iri.as_slice())
-    }
-}
-
-impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationTask<'a, RiAbsoluteStr<S>> {
-    fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
-        let components = RiReferenceComponents::<S>::from(iri.as_ref());
-        let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
-        let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
-
-        Self {
-            input: NormalizationInput {
-                scheme,
-                authority,
-                path,
-                query,
-                fragment,
-                op: NormalizationOp {
-                    case_pct_normalization: true,
-                },
-            },
-            whatwg_serialization: false,
-            _ty_str: PhantomData,
-        }
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for NormalizationTask<'a, RiAbsoluteStr<S>> {
-    #[inline]
-    fn from(iri: &'a RiAbsoluteString<S>) -> Self {
-        Self::from(iri.as_slice())
-    }
-}
-
-impl<'a, T: ?Sized + AsRef<str>> NormalizationTask<'a, T> {
-    /// Enables normalization for the task.
+    /// Enables the case normalization and percent-encoding normalization.
     #[inline]
     pub fn enable_normalization(&mut self) {
         self.input.op.case_pct_normalization = true;
     }
 
-    /// Enables WHATWG URL Standard serialization for the task.
+    /// Returns `Self` with normalization enabled.
     #[inline]
-    pub fn enable_whatwg_serialization(&mut self) {
-        self.whatwg_serialization = true;
-    }
-
-    /// Resolves the IRI, and writes it to the buffer.
-    fn write_to_buf<'b, B: Buffer<'b>, S: Spec>(
-        &self,
-        mut buf: B,
-    ) -> Result<&'b [u8], TaskError<Error>>
-    where
-        TaskError<Error>: From<B::ExtendError>,
-    {
-        if !self.whatwg_serialization {
-            self.input
-                .ensure_rfc3986_normalizable()
-                .map_err(TaskError::Process)?;
-        }
-
-        let buf_offset = buf.as_bytes().len();
-        let mut writer = FmtWritableBuffer::new(&mut buf);
-        match write!(writer, "{}", NormalizedInner::<S>::from_input(self.input)) {
-            Ok(_) => Ok(&buf.into_bytes()[buf_offset..]),
-            Err(_) => Err(writer.take_error_unwrap().into()),
-        }
-    }
-
-    /// Returns the estimated maximum size required for IRI normalization/resolution.
-    ///
-    /// With a buffer of the returned size, IRI normalization/resolution would
-    /// succeed without OOM error. The operation may succeed with smaller
-    /// buffer than this function estimates, but it is not guaranteed.
-    ///
-    /// Note that this is `O(N)` operation (where N is input length).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// let max_size = task.estimate_max_buf_size_for_resolution();
-    /// let mut buf = vec![0_u8; max_size];
-    /// let resolved = task.write_to_byte_slice(&mut buf[..])?;
-    ///
-    /// assert_eq!(resolved, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    /// # Ok::<_, Error>(())
-    /// ```
     #[must_use]
-    pub fn estimate_max_buf_size_for_resolution(&self) -> usize {
-        let known_exact = self.input.scheme.len()
-            + self.input.authority.map_or(0, |s| s.len() + 2)
-            + self.input.query.map_or(0, |s| s.len() + 1)
-            + self.input.fragment.map_or(0, |s| s.len() + 1);
-        let path_max = match &self.input.path {
-            Path::Done(s) => s.len(),
-            Path::NeedsProcessing(path) => path.len(),
-        };
+    pub fn and_normalize(mut self) -> Self {
+        self.enable_normalization();
+        self
+    }
 
-        known_exact + path_max
+    /// Checks if the path is normalizable by RFC 3986 algorithm.
+    ///
+    /// Returns `Ok(())` when normalizable, returns `Err(_)` if not.
+    #[inline]
+    pub fn ensure_rfc3986_normalizable(&self) -> Result<(), Error> {
+        self.input.ensure_rfc3986_normalizable()
     }
 }
 
-impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiStr<S>> {
-    type OutputBorrowed = RiStr<S>;
-    #[cfg(feature = "alloc")]
-    type OutputOwned = RiString<S>;
-    type ProcessError = Error;
-
-    /// Processes the data, and writes it to the newly allocated buffer.
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * failed to allocate memory, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// assert_eq!(
-    ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
-        let mut s = String::new();
-        self.write_to_buf::<_, S>(&mut s)?;
-        Ok(RiString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
-    }
-
-    /// Processes the data, and writes it to the given byte slice.
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * buffer is not large enough, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// // Long enough!
-    /// let mut buf = [0_u8; 128];
-    /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
-    ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// This returns error when the buffer is not long enough for processing.
-    /// You can get maximum required buffer size by
-    /// [`estimate_max_buf_size_for_resolution`] method.
-    ///
-    /// [`estimate_max_buf_size_for_resolution`]: `NormalizationTask::estimate_max_buf_size_for_resolution`
-    fn write_to_byte_slice(
-        self,
-        buf: &mut [u8],
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let buf = ByteSliceBuf::new(buf);
-        let s = self.write_to_buf::<_, S>(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
-    }
-
-    /// Processes the data, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if failed to process data.
-    ///
-    /// # Panics
-    ///
-    /// This panics if failed to allocate memory.
-    /// To avoid panic on allocation failure, use [`try_append_to_std_string`].
-    ///
-    /// [`try_append_to_std_string`]: `ProcessAndWrite::try_append_to_std_string`
-    #[cfg(feature = "alloc")]
-    fn append_to_std_string(
-        self,
-        buf: &mut String,
-    ) -> Result<&Self::OutputBorrowed, Self::ProcessError> {
-        match self.try_append_to_std_string(buf) {
-            Ok(v) => Ok(v),
-            Err(TaskError::Buffer(e)) => panic!("buffer error: {}", e),
-            Err(TaskError::Process(e)) => Err(e),
-        }
-    }
-
-    /// Processes the data, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * failed to allocate memory, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// let mut buf = String::from("Result: ");
-    ///
-    /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
-    /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    /// }
-    /// # }
-    /// # Ok::<_, iri_string::validate::Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    fn try_append_to_std_string(
-        self,
-        buf: &mut String,
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let s = self.write_to_buf::<_, S>(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s = <&RiStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
+impl<S: Spec> fmt::Display for Normalized<'_, RiStr<S>> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        NormalizedInner::<S>::from_input(self.input).fmt(f)
     }
 }
 
-impl<S: Spec> ProcessAndWrite for &NormalizationTask<'_, RiAbsoluteStr<S>> {
-    type OutputBorrowed = RiAbsoluteStr<S>;
-    #[cfg(feature = "alloc")]
-    type OutputOwned = RiAbsoluteString<S>;
-    type ProcessError = Error;
-
-    /// Processes the data, and writes it to the newly allocated buffer.
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * failed to allocate memory, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// assert_eq!(
-    ///     task.allocate_and_write()?,
-    ///     "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF"
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    fn allocate_and_write(self) -> Result<Self::OutputOwned, TaskError<Self::ProcessError>> {
-        let mut s = String::new();
-        self.write_to_buf::<_, S>(&mut s)?;
-        Ok(RiAbsoluteString::try_from(s).expect("[consistency] the resolved IRI must be valid"))
+impl<S: Spec> fmt::Display for Normalized<'_, RiAbsoluteStr<S>> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        NormalizedInner::<S>::from_input(self.input).fmt(f)
     }
+}
 
-    /// Processes the data, and writes it to the given byte slice.
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * buffer is not large enough, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// // Long enough!
-    /// let mut buf = [0_u8; 128];
-    /// let normalized = task.write_to_byte_slice(&mut buf[..])?;
-    ///
-    /// assert_eq!(normalized, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// This returns error when the buffer is not long enough for processing.
-    /// You can get maximum required buffer size by
-    /// [`estimate_max_buf_size_for_resolution`] method.
-    ///
-    /// [`estimate_max_buf_size_for_resolution`]: `NormalizationTask::estimate_max_buf_size_for_resolution`
-    fn write_to_byte_slice(
-        self,
-        buf: &mut [u8],
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let buf = ByteSliceBuf::new(buf);
-        let s = self.write_to_buf::<_, S>(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s =
-            <&RiAbsoluteStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
+#[cfg(feature = "alloc")]
+impl<S: Spec> ToDedicatedString for Normalized<'_, RiStr<S>> {
+    type Target = RiString<S>;
+
+    fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
+        let s = self.try_to_string()?;
+        Ok(TryFrom::try_from(s).expect("[validity] the normalization result must be a valid IRI"))
     }
+}
 
-    /// Processes the data, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if failed to process data.
-    ///
-    /// # Panics
-    ///
-    /// This panics if failed to allocate memory.
-    /// To avoid panic on allocation failure, use [`try_append_to_std_string`].
-    ///
-    /// [`try_append_to_std_string`]: `ProcessAndWrite::try_append_to_std_string`
-    #[cfg(feature = "alloc")]
-    fn append_to_std_string(
-        self,
-        buf: &mut String,
-    ) -> Result<&Self::OutputBorrowed, Self::ProcessError> {
-        match self.try_append_to_std_string(buf) {
-            Ok(v) => Ok(v),
-            Err(TaskError::Buffer(e)) => panic!("buffer error: {}", e),
-            Err(TaskError::Process(e)) => Err(e),
-        }
+#[cfg(feature = "alloc")]
+impl<S: Spec> From<Normalized<'_, RiStr<S>>> for RiString<S> {
+    #[inline]
+    fn from(v: Normalized<'_, RiStr<S>>) -> Self {
+        v.to_dedicated_string()
     }
+}
 
-    /// Processes the data, and appends it to the buffer inside the provided [`String`].
-    ///
-    /// # Failures
-    ///
-    /// This fails if:
-    ///
-    /// * failed to allocate memory, or
-    /// * failed to process data.
-    ///
-    /// To see examples of unresolvable IRIs, visit the [module
-    /// documentation][`self`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::normalize::NormalizationTask;
-    /// use iri_string::task::ProcessAndWrite;
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://e%78ample%2ecom/a/../slash%2fslash/\u{03B1}%ce%b1%ff")?;
-    /// let task = NormalizationTask::from(iri);
-    ///
-    /// let mut buf = String::from("Result: ");
-    ///
-    /// let result: Result<&IriStr, _> = task.try_append_to_std_string(&mut buf);
-    /// if let Ok(s) = result {
-    ///     assert_eq!(s, "http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    ///     assert_eq!(buf, "Result: http://example.com/slash%2Fslash/\u{03B1}\u{03B1}%FF");
-    /// }
-    /// # }
-    /// # Ok::<_, iri_string::validate::Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    fn try_append_to_std_string(
-        self,
-        buf: &mut String,
-    ) -> Result<&Self::OutputBorrowed, TaskError<Self::ProcessError>> {
-        let s = self.write_to_buf::<_, S>(buf)?;
-        // Convert the type.
-        // This should never fail (unless the crate has bugs), but do the
-        // validation here for extra safety.
-        let s =
-            <&RiAbsoluteStr<S>>::try_from(s).expect("[consistency] the resolved IRI must be valid");
-        Ok(s)
+#[cfg(feature = "alloc")]
+impl<S: Spec> From<&Normalized<'_, RiStr<S>>> for RiString<S> {
+    #[inline]
+    fn from(v: &Normalized<'_, RiStr<S>>) -> Self {
+        v.to_dedicated_string()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<S: Spec> ToDedicatedString for Normalized<'_, RiAbsoluteStr<S>> {
+    type Target = RiAbsoluteString<S>;
+
+    fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
+        let s = self.try_to_string()?;
+        Ok(TryFrom::try_from(s).expect("[validity] the normalization result must be a valid IRI"))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<S: Spec> From<Normalized<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
+    #[inline]
+    fn from(v: Normalized<'_, RiAbsoluteStr<S>>) -> Self {
+        v.to_dedicated_string()
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<S: Spec> From<&Normalized<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
+    #[inline]
+    fn from(v: &Normalized<'_, RiAbsoluteStr<S>>) -> Self {
+        v.to_dedicated_string()
     }
 }
 
@@ -1023,7 +724,10 @@ mod tests_display {
 #[cfg(test)]
 #[cfg(feature = "alloc")]
 mod tests {
-    use crate::types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr};
+    use crate::{
+        format::ToDedicatedString,
+        types::{IriAbsoluteStr, IriReferenceStr, IriStr, UriStr},
+    };
 
     // `&[(expected, &[source_for_expected], &[iri_with_different_normalization_result])]`
     const CASES: &[(&str, &[&str], &[&str])] = &[
@@ -1087,22 +791,20 @@ mod tests {
             let expected = IriStr::new(*expected).expect("must be a valid IRI");
 
             assert_eq!(
-                expected
-                    .try_normalize()
-                    .expect("normalized IRI must be normalizable"),
+                expected.normalize().to_dedicated_string(),
                 expected,
                 "IRI normalization must be idempotent"
             );
 
             for src in *sources {
                 let src = IriStr::new(*src).expect("must be a valid IRI");
-                let normalized = src.try_normalize().expect("should be normalizable");
+                let normalized = src.normalize().to_dedicated_string();
                 assert_eq!(normalized, expected);
             }
 
             for different in *different_iris {
                 let different = IriStr::new(*different).expect("must be a valid IRI");
-                let normalized = different.try_normalize().expect("should be normalizable");
+                let normalized = different.normalize().to_dedicated_string();
                 assert_ne!(
                     normalized, expected,
                     "{:?} should not be normalized to {:?}",
@@ -1116,7 +818,7 @@ mod tests {
     fn normalize_percent_encoded_non_ascii_in_uri() {
         let uri = UriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid URI");
-        let normalized = uri.try_normalize().expect("should be normalizable");
+        let normalized = uri.normalize().to_dedicated_string();
         assert_eq!(normalized, "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1");
     }
 
@@ -1124,7 +826,7 @@ mod tests {
     fn normalize_percent_encoded_non_ascii_in_iri() {
         let iri = IriStr::new("http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1")
             .expect("must be a valid IRI");
-        let normalized = iri.try_normalize().expect("should be normalizable");
+        let normalized = iri.normalize().to_dedicated_string();
         assert_eq!(
             normalized, "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
             "U+03B1 is an unreserved character"
@@ -1137,9 +839,7 @@ mod tests {
             IriAbsoluteStr::new("HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff")
                 .expect("must be a valid IRI");
         let iri: &IriReferenceStr = iri_base.as_ref();
-        let normalized = iri
-            .try_resolve_against(iri_base)
-            .expect("should produce valid result");
+        let normalized = iri.resolve_against(iri_base).to_dedicated_string();
         assert_eq!(
             &*normalized,
             "HTTP://%55%73%65%72:%50%61%73%73@EXAMPLE.COM/path/PATH/%ce%b1%ff"
@@ -1153,8 +853,9 @@ mod tests {
                 .expect("must be a valid IRI");
         let iri: &IriReferenceStr = iri_base.as_ref();
         let normalized = iri
-            .try_resolve_normalize_against(iri_base)
-            .expect("should produce valid result");
+            .resolve_against(iri_base)
+            .and_normalize()
+            .to_dedicated_string();
         assert_eq!(
             &*normalized,
             "http://User:Pass@example.com/path/PATH/\u{03B1}%FF"
@@ -1164,14 +865,14 @@ mod tests {
     #[test]
     fn normalize_non_ascii_only_host() {
         let uri = UriStr::new("SCHEME://Alpha%ce%b1/").expect("must be a valid URI");
-        let normalized = uri.try_normalize().expect("should be normalizable");
+        let normalized = uri.normalize().to_dedicated_string();
         assert_eq!(normalized, "scheme://Alpha%CE%B1/");
     }
 
     #[test]
     fn normalize_host_with_sub_delims() {
         let uri = UriStr::new("SCHEME://PLUS%2bPLUS/").expect("must be a valid URI");
-        let normalized = uri.try_normalize().expect("should be normalizable");
+        let normalized = uri.normalize().to_dedicated_string();
         assert_eq!(
             normalized, "scheme://plus%2Bplus/",
             "hexdigits in percent-encoding triplets should be normalized to uppercase"
@@ -1183,11 +884,11 @@ mod tests {
         let uri = UriStr::new("scheme:..///not-a-host").expect("must be a valid URI");
         assert!(!uri.is_normalized_whatwg());
 
-        let normalized = uri.try_normalize_whatwg().expect("cannot allocate memory");
+        let normalized = uri.normalize().to_dedicated_string();
         assert_eq!(normalized, "scheme:/.//not-a-host");
         assert!(normalized.is_normalized_whatwg());
 
-        let normalized_again = uri.try_normalize_whatwg().expect("cannot allocate memory");
+        let normalized_again = uri.normalize().to_dedicated_string();
         assert_eq!(normalized_again, normalized);
         assert!(normalized_again.is_normalized_whatwg());
     }
