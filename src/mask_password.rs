@@ -15,7 +15,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
 
 /// Returns the range of the password to hide.
-fn password_range_to_hide<S: Spec>(iri: &RiReferenceStr<S>) -> Option<Range<usize>> {
+pub(crate) fn password_range_to_hide<S: Spec>(iri: &RiReferenceStr<S>) -> Option<Range<usize>> {
     /// Spec-agnostic internal implementation of `password_range_to_hide`.
     fn inner(iri: &str, userinfo: &str) -> Option<Range<usize>> {
         // Length (including `//`) before the `authority` compontent.

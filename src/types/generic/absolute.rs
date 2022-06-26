@@ -1,7 +1,7 @@
 //! Absolute IRI (without fragment part).
 
 use crate::components::AuthorityComponents;
-use crate::mask_password::PasswordMasked;
+use crate::mask_password::{password_range_to_hide, PasswordMasked};
 use crate::normalize::{Error, NormalizationInput, Normalized};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
@@ -431,6 +431,107 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[must_use]
     pub fn authority_components(&self) -> Option<AuthorityComponents<'_>> {
         AuthorityComponents::from_iri(self.as_ref())
+    }
+}
+
+impl<S: Spec> RiAbsoluteString<S> {
+    /// Removes the password completely (including separator colon) from `self` even if it is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:password@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "http://user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Even if the password is empty, the password and separator will be removed.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "http://user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) => v,
+            None => return,
+        };
+        let separator_colon = pw_range.start - 1;
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component and
+            // the leading separator colon is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(separator_colon..pw_range.end);
+            debug_assert!(
+                RiAbsoluteStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
+    }
+
+    /// Replaces the non-empty password in `self` to the empty password.
+    ///
+    /// This leaves the separator colon if the password part was available.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:password@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "http://user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the password is empty, it is left as is.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "http://user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_nonempty_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) if !v.is_empty() => v,
+            _ => return,
+        };
+        debug_assert_eq!(
+            self.as_str().as_bytes().get(pw_range.start - 1).copied(),
+            Some(b':'),
+            "[validity] the password component must be prefixed with a separator colon"
+        );
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(pw_range);
+            debug_assert!(
+                RiAbsoluteStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
     }
 }
 
