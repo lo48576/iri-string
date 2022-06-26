@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+* Bump MSRV to 1.60.0.
 * Support escaping username and password by `percent_encode::PercentEncode`.
 * Add `format::ToStringFallible` trait.
 * Add `format::ToDedicatedString` trait.
@@ -64,6 +65,7 @@
     + This replaces `normalize::NormalizationTask` type in previous versions.
 
 ### Changed (breaking)
+* Bump MSRV to 1.60.0.
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
 * Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
 * Change return types of `{BorrowedIri}::encode_to_uri` to
