@@ -219,11 +219,15 @@ macro_rules! impl_conversion_between_uri {
             /// ```
             #[inline]
             pub fn try_encode_to_uri_inline(&mut self) -> Result<(), TryReserveError> {
-                try_percent_encode_iri_inline(self.as_inner_mut())?;
-                debug_assert!(
-                    <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
-                    "[consistency] the content must be valid at any time"
-                );
+                unsafe {
+                    // SAFETY: IRI is valid after it is encoded to URI (by percent encoding).
+                    let buf = self.as_inner_mut();
+                    try_percent_encode_iri_inline(buf)?;
+                    debug_assert!(
+                        <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
+                        "[consistency] the content must be valid at any time"
+                    );
+                }
                 Ok(())
             }
 
