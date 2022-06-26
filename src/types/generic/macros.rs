@@ -550,7 +550,7 @@ macro_rules! define_custom_string_owned {
             #[inline]
             #[must_use]
             // TODO: Use wrapper type to enforce validation on finish?
-            pub(crate) fn as_inner_mut(&mut self) -> &mut alloc::string::String {
+            pub(crate) unsafe fn as_inner_mut(&mut self) -> &mut alloc::string::String {
                 &mut self.inner
             }
 
