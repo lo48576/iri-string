@@ -48,9 +48,8 @@
 //! * `serde`
 //!     + Enables serde support.
 //!     + Implement `Serailize` and `Deserialize` traits for IRI / URI types.
-//! * `nom-std`
-//!     + Enabled by default.
-//!     + Enables optimization for the internal parsers using std capability.
+//! * `memchr`
+//!     + Enables faster internal character search.
 //!
 //! # Rationale
 //!
