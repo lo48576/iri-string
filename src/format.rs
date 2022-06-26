@@ -45,10 +45,10 @@ impl fmt::Write for ByteBufWriter<'_> {
 }
 
 /// Writes to the bytes buffer.
-pub fn write_to_slice<T: fmt::Display>(
-    buf: &mut [u8],
-    value: T,
-) -> Result<&str, CapacityOverflowError> {
+pub fn write_to_slice<'a, T: fmt::Display>(
+    buf: &'a mut [u8],
+    value: &T,
+) -> Result<&'a str, CapacityOverflowError> {
     let mut writer = ByteBufWriter {
         buffer: buf,
         cursor: 0,
@@ -95,7 +95,7 @@ impl fmt::Write for StringWriter<'_> {
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub fn try_append_to_string<T: fmt::Display>(
     dest: &mut String,
-    value: T,
+    value: &T,
 ) -> Result<(), TryReserveError> {
     let mut writer = StringWriter {
         buffer: dest,

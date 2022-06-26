@@ -15,6 +15,19 @@
 * Add `{OwnedIri}::try_encode_to_uri_inline` method.
 * Add `{OwnedIri}::try_encode_into_uri` method.
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
+* Remove `normalize::NormalizationTask` type.
+* Revome functions under `resolve` module.
+* Add `normalize::Normalized` type.
+* Remove `normalize::NormalizationTask` type.
+    + Use `normalize::Normalized` instead.
+* Remove some methods of `resolve::FixedBaseResolver`.
+* Change return type of `resolve::FixedBaseResolver::resolve()` method to `noramlize::Normalized`.
+* Rename `{BorrowedIri}::is_normalized()` methods to `{BorrowedIri}::is_normalized_rfc3986()`.
+* Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
+* Remove some methods of borrowed IRI string types.
+* Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
+* Remove `BufferError` type.
+* Remove `task` module.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -47,6 +60,8 @@
 * Add `format::try_append_to_string` function.
 * Add `{OwnedIri}::try_encode_to_uri_inline` method.
 * Add `{OwnedIri}::try_encode_into_uri` method.
+* Add `normalize::Normalized` type.
+    + This replaces `normalize::NormalizationTask` type in previous versions.
 
 ### Changed (breaking)
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
@@ -56,6 +71,67 @@
     + The code `borrowed.encode_to_uri()` in older versions should be rewritten
       to `borrowed.encode_to_uri().to_dedicated_string()`.
 * Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+* Remove `normalize::NormalizationTask` type.
+    + Use `normalized::Normalized` type instead.
+* Revome functions under `resolve` module.
+    + List of removed functions:
+        - `resolve::resolve()`
+        - `resolve::resolve_normalize()`
+        - `resolve::resolve_whatwg()`
+        - `resolve::resolve_normalize_whatwg()`
+        - `resolve::try_resolve()`
+        - `resolve::try_resolve_normalize()`
+        - `resolve::try_resolve_whatwg()`
+        - `resolve::try_resolve_normalize_whatwg()`
+* Remove `normalize::NormalizationTask` type.
+    + Use `normalize::Normalized` instead.
+* Remove some methods of `resolve::FixedBaseResolver`.
+    + List fo removed methods:
+        - `resolve::FixedBaseResolver::try_resolve()`
+        - `resolve::FixedBaseResolver::try_resolve_normalize()`
+        - `resolve::FixedBaseResolver::resolve_normalize()`
+        - `resolve::FixedBaseResolver::create_task()`
+        - `resolve::FixedBaseResolver::create_normalizing_task()`
+* Change return type of `resolve::FixedBaseResolver::resolve()` to `noramlize::Normalized`.
+* Rename `{BorrowedIri}::is_normalized` methods to `{BorrowedIri}::is_normalized_rfc3986`.
+    + List of renamed methods:
+        - `types::RiStr::is_normalized` to `types::RiStr::is_normalized_rfc3986`
+        - `types::RiAbsoluteStr::is_normalized` to `types::RiAbsoluteStr::is_normalized_rfc3986`
+* Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
+    + List of affected methods:
+        - `types::RiStr::normalize()`
+        - `types::RiAbsoluteStr::normalize()`
+* Remove some methods of borrowed IRI string types.
+    + List of removed methods:
+        - `types::RiReferenceStr::try_resolve_against()`
+        - `types::RiReferenceStr::try_resolve_whatwg_against()`
+        - `types::RiReferenceStr::resolve_whatwg_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_against()`
+        - `types::RiReferenceStr::resolve_normalize_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_whatwg_against()`
+        - `types::RiReferenceStr::resolve_normalize_whatwg_against()`
+        - `types::RiStr::try_normalize()`
+        - `types::RiStr::try_normalize_whatwg()`
+        - `types::RiStr::normalize_whatwg()`
+        - `types::RiAbsoluteStr::try_normalize()`
+        - `types::RiAbsoluteStr::try_normalize_whatwg()`
+        - `types::RiAbsoluteStr::normalize_whatwg()`
+        - `types::RiRelativeStr::try_resolve_against()`
+        - `types::RiRelativeStr::try_resolve_whatwg_against()`
+        - `types::RiRelativeStr::resolve_whatwg_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_against()`
+        - `types::RiRelativeStr::resolve_normalize_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_whatwg_against()`
+        - `types::RiRelativeStr::resolve_normalize_whatwg_against()`
+* Change return type of `{BorrowedIri}::resolve()` method to `normalize::Normalized`.
+    + List of affected methods:
+        - `types::RiReferenceStr::resolve_against()`
+        - `types::RiRelativeStr::resolve_against()`
+* Remove `BufferError` type.
+* Remove `task` module.
+    + List of removed items:
+        - `task::Error` type
+        - `task::ProcessAndWrite` trait
 
 ### Changed (non-breaking)
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.

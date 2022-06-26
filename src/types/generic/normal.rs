@@ -1,21 +1,14 @@
 //! Usual absolute IRI (fragment part being allowed).
 
 #[cfg(feature = "alloc")]
-use core::convert::Infallible;
-
-#[cfg(feature = "alloc")]
 use alloc::string::String;
 
 use crate::components::AuthorityComponents;
-#[cfg(feature = "alloc")]
-use crate::normalize::NormalizationTask;
-use crate::normalize::{Error, NormalizationInput};
+use crate::normalize::{Error, NormalizationInput, Normalized};
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
 use crate::spec::Spec;
-#[cfg(feature = "alloc")]
-use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiFragmentString, RiReferenceString};
@@ -229,91 +222,40 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
-    /// assert!(!iri.is_normalized());
+    /// assert!(!iri.is_normalized_rfc3986());
     ///
-    /// let normalized = iri.try_normalize()?;
+    /// let normalized = iri.normalize().to_dedicated_string();
     /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
-    /// assert!(normalized.is_normalized());
+    /// assert!(normalized.is_normalized_rfc3986());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("http://example.com/.///foo")?;
+    /// assert!(!iri.is_normalized_rfc3986());
+    ///
+    /// // Already normalized, but WHATWG URL Standard serialization is applied.
+    /// assert!(iri.is_normalized_whatwg());
+    /// assert!(!iri.is_normalized_rfc3986());
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
     #[inline]
-    pub fn is_normalized(&self) -> bool {
+    pub fn is_normalized_rfc3986(&self) -> bool {
         trusted_parser::is_normalized::<S>(self.as_str(), false)
-    }
-
-    /// Returns the normalized IRI.
-    ///
-    /// If you want to avoid serialization errors (except for memory allocation
-    /// failure), use [`normalize_whatwg`][`Self::normalize_whatwg`] method.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
-    ///
-    /// let normalized = iri.try_normalize()?;
-    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_normalize(&self) -> Result<RiString<S>, TaskError<Error>> {
-        NormalizationTask::from(self).allocate_and_write()
-    }
-
-    /// Returns the normalized IRI.
-    ///
-    /// If you want to avoid serialization errors (except for memory allocation
-    /// failure), use [`normalize_whatwg`][`Self::normalize_whatwg`] method.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
-    ///
-    /// let normalized = iri.try_normalize()?;
-    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_normalize()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn normalize(&self) -> Result<RiString<S>, TaskError<Error>> {
-        self.try_normalize()
     }
 
     /// Returns `true` if the IRI is already normalized in the sense of WHATWG spec.
@@ -325,21 +267,18 @@ impl<S: Spec> RiStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriStr;
     ///
     /// let iri = IriStr::new("scheme:a/..//not-a-host")?;
     /// assert!(!iri.is_normalized_whatwg());
     ///
-    /// let normalized = iri.try_normalize_whatwg()?;
+    /// let normalized = iri.normalize().to_dedicated_string();
     /// assert_eq!(normalized, "scheme:/.//not-a-host");
     /// assert!(normalized.is_normalized_whatwg());
-    /// assert!(!normalized.is_normalized(), "not normalized in the sense of RFC 3987");
+    /// assert!(!normalized.is_normalized_rfc3986(), "not normalized in the sense of RFC 3987");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
@@ -349,113 +288,27 @@ impl<S: Spec> RiStr<S> {
         trusted_parser::is_normalized::<S>(self.as_str(), true)
     }
 
-    /// Returns the normalized IRI serialized using WHATWG URL Standard.
-    ///
-    /// # WHATWG Serialization
-    ///
-    /// Consider combining scheme `a`, no host, and path `//p`. Naive
-    /// implementation will generate result string `a://p`, but it is not
-    /// intended result since it is an IRI that consists of scheme `a`, host
-    /// `p`, and path `` (empty). In such case RFC 3986/3987 don't define the
-    /// correct result, so `normalize` method fails with
-    /// [`normalize::Error`][`crate::normalize::Error`] (wrapped by
-    /// [`task::Error::Process`][`TaskError::Process`]).
-    ///
-    /// To prevent such errors but still to keep normalization
-    /// idempotent, [WHATWG URL Standard][WHATWG-URL] spec requires the
-    /// normalization result for such cases to be `a:/.//p`.
-    ///
-    /// See <https://url.spec.whatwg.org/#url-serializing> (or archive
-    /// <https://web.archive.org/web/20220204115552/https://url.spec.whatwg.org/#url-serializing>).
+    /// Returns the normalized IRI.
     ///
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriStr;
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriAbsoluteStr;
     ///
-    /// let iri1 = IriStr::new("scheme:/..//bar")?;
-    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
     ///
-    /// let iri2 = IriStr::new("scheme:..///bar")?;
-    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// let normalized = iri.normalize().to_dedicated_string();
+    /// assert_eq!(normalized, "http://example.com/baz?query");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
-    ///
-    /// [WHATWG-URL]: https://url.spec.whatwg.org/
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
-    pub fn try_normalize_whatwg(&self) -> Result<RiString<S>, TaskError<Infallible>> {
-        let mut task = NormalizationTask::from(self);
-        task.enable_whatwg_serialization();
-        task.allocate_and_write().map_err(|e| match e {
-            TaskError::Buffer(e) => TaskError::Buffer(e),
-            TaskError::Process(_) => {
-                panic!("WHATWG normalization algorithm should not fail")
-            }
-        })
-    }
-
-    /// Returns the normalized IRI serialized using WHATWG URL Standard.
-    ///
-    /// # WHATWG Serialization
-    ///
-    /// Consider combining scheme `a`, no host, and path `//p`. Naive
-    /// implementation will generate result string `a://p`, but it is not
-    /// intended result since it is an IRI that consists of scheme `a`, host
-    /// `p`, and path `` (empty). In such case RFC 3986/3987 don't define the
-    /// correct result, so `normalize` method fails with
-    /// [`normalize::Error`][`crate::normalize::Error`] (wrapped by
-    /// [`task::Error::Process`][`TaskError::Process`]).
-    ///
-    /// To prevent such errors but still to keep normalization
-    /// idempotent, [WHATWG URL Standard][WHATWG-URL] spec requires the
-    /// normalization result for such cases to be `a:/.//p`.
-    ///
-    /// See <https://url.spec.whatwg.org/#url-serializing> (or archive
-    /// <https://web.archive.org/web/20220204115552/https://url.spec.whatwg.org/#url-serializing>).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriStr;
-    ///
-    /// let iri1 = IriStr::new("scheme:/..//bar")?;
-    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
-    ///
-    /// let iri2 = IriStr::new("scheme:..///bar")?;
-    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// [WHATWG-URL]: https://url.spec.whatwg.org/
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_normalize_whatwg()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn normalize_whatwg(&self) -> Result<RiString<S>, TaskError<Infallible>> {
-        self.try_normalize_whatwg()
+    #[must_use]
+    pub fn normalize(&self) -> Normalized<'_, Self> {
+        Normalized::from_input(NormalizationInput::from(self)).and_normalize()
     }
 }
 

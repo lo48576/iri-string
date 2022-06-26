@@ -10,7 +10,7 @@ use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
 use crate::format::eq_str_display;
-use crate::normalize::{is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost};
+use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
@@ -359,7 +359,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
         // Check `host`.
         let host = authority_components.host();
         let host_is_normalized = if is_ascii_only_host(host) {
-            eq_str_display(host, &DisplayNormalizedAsciiOnlyHost::new(host))
+            eq_str_display(host, &NormalizedAsciiOnlyHost::new(host))
         } else {
             // If the host is not ASCII-only, conversion to lowercase is not performed.
             is_pct_case_normalized::<S>(host)
