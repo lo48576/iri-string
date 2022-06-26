@@ -419,7 +419,7 @@ impl<'a> Iterator for PathSegmentsIter<'a> {
         let prefix_len = self.path.len_prefix();
         if (prefix_len != 0) && (self.cursor == prefix_len - 1) {
             debug_assert!(has_leading_slash);
-            let end = self.path.1.find('/').unwrap_or_else(|| self.path.1.len()) + prefix_len;
+            let end = self.path.1.find('/').unwrap_or(self.path.1.len()) + prefix_len;
             self.cursor = end;
             return Some(PathSegment {
                 has_leading_slash,

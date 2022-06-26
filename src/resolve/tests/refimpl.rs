@@ -112,7 +112,7 @@ fn remove_dot_segments(mut input: String) -> String {
                     .find('/')
                     .map_or_else(|| input.len(), |pos| pos + 1)
             } else {
-                input.find('/').unwrap_or_else(|| input.len())
+                input.find('/').unwrap_or(input.len())
             };
             output.extend(input.drain(..first_seg_end));
         }
