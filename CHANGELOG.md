@@ -26,6 +26,8 @@
 * Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
 * Remove some methods of borrowed IRI string types.
 * Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
+* Remove `BufferError` type.
+* Remove `task` module.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -125,6 +127,11 @@
     + List of affected methods:
         - `types::RiReferenceStr::resolve_against()`
         - `types::RiRelativeStr::resolve_against()`
+* Remove `BufferError` type.
+* Remove `task` module.
+    + List of removed items:
+        - `task::Error` type
+        - `task::ProcessAndWrite` trait
 
 ### Changed (non-breaking)
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
