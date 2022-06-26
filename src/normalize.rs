@@ -33,7 +33,6 @@
 //! ```
 //! # #[cfg(feature = "alloc")] {
 //! use iri_string::normalize::Error;
-//! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("foo:.///bar")?;
@@ -49,7 +48,6 @@
 //!
 //! ```
 //! # #[cfg(feature = "alloc")] {
-//! use iri_string::task::Error as TaskError;
 //! use iri_string::types::{IriAbsoluteStr, IriReferenceStr};
 //!
 //! let base = IriAbsoluteStr::new("scheme:")?;

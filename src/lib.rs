@@ -126,7 +126,6 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub(crate) mod buffer;
 pub mod build;
 pub mod components;
 pub mod convert;
@@ -137,13 +136,10 @@ pub mod percent_encode;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;
-pub mod task;
 #[cfg(test)]
 mod tests;
 pub mod types;
 pub mod validate;
-
-pub use crate::buffer::Error as BufferError;
 
 /// Renamed to [`percent_encode`] module.
 ///
