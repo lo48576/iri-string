@@ -30,23 +30,12 @@ See the [documentation](https://docs.rs/iri-string) for details.
 #### memchr
 * `memchr`
     + Enable optimization for internal parsers, using [`memchr`] crate.
-* `memchr-std`
-    + Enable `std` feature for `memchr`.
-    + This may make the parsing even faster. For detail, see README of `memchr` crate.
 
 [`memchr`]: https://crates.io/crates/memchr
 
 #### serde
 * `serde`
     + Implements `Serialize` and `Deserialize` traits for string types.
-* `serde-alloc`
-    + Enables deriving serialization and deserialization impls which requires heap memory allocation.
-    + If you enable `alloc` and `serde` features at the same time, you should also enable `serde-alloc` feature.
-    + This automatically enables `alloc` feature.
-* `serde-std`
-    + Enables deriving serialization and deserialization impls which requires std stuff.
-    + If you enable `std` and `serde` features at the same time, you should also enable `serde-std` feature.
-    + This automatically enables `std` feature.
 
 ## CI
 

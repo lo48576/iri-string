@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * Bump MSRV to 1.60.0.
+* Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
 * Support escaping username and password by `percent_encode::PercentEncode`.
 * Add `format::ToStringFallible` trait.
 * Add `format::ToDedicatedString` trait.
@@ -66,6 +67,10 @@
 
 ### Changed (breaking)
 * Bump MSRV to 1.60.0.
+* Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
+    + Now `alloc` and/or `std` features are automatically enabled when all of
+      dependent featuers are enabled.
+        - See [Announcing Rust 1.60.0 | Rust Blog](https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html#new-syntax-for-cargo-features).
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
 * Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
 * Change return types of `{BorrowedIri}::encode_to_uri` to

@@ -106,15 +106,9 @@ FEATURES = "memchr"
 FEATURES = "serde"
 
 [env.feat-serde-alloc]
-FEATURES = "serde-alloc"
-
-[env.feat-serde-std]
-FEATURES = "serde-std"
-
-[env.feat-serde-alloc-independent]
 FEATURES = "serde,alloc"
 
-[env.feat-serde-std-independent]
+[env.feat-serde-std]
 FEATURES = "serde,std"
 
 [env.feat-all]
@@ -164,8 +158,6 @@ cargo make --profile feat-memchr ci
 cargo make --profile feat-serde ci
 cargo make --profile feat-serde-alloc ci
 cargo make --profile feat-serde-std ci
-cargo make --profile feat-serde-alloc-independent ci
-cargo make --profile feat-serde-std-independent ci
 cargo make --profile feat-all ci
 cargo make --profile minimal-deps-feat-none ci
 cargo make --profile minimal-deps-feat-default ci

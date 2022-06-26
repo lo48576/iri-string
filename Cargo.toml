@@ -29,25 +29,9 @@ bench = false
 default = ["std"]
 
 # Enable features that requires `alloc`.
-alloc = []
+alloc = ["serde?/alloc"]
 # Enable features that requires `std`.
-std = ["alloc"]
-
-# Enable `std` feature for `memchr` crate.
-#
-# If users want to enable `memchr` and `std` at the same time, then they should
-# also enable `memchr-std` feature.
-memchr-std = ["std", "memchr/std"]
-# Enable `alloc` feature for `serde` crate.
-#
-# If users want to enable `serde` and `alloc` at the same time, then they should
-# also enable `serde-alloc` feature.
-serde-alloc = ["alloc", "serde/alloc"]
-# Enable `std` feature for `serde` crate.
-#
-# If users want to enable `serde` and `std` at the same time, then they should
-# also enable `serde-std` feature.
-serde-std = ["serde-alloc", "serde/std", "std"]
+std = ["alloc", "memchr?/std", "serde?/std"]
 
 [dependencies]
 memchr = { version = "2.4.1", default-features = false, optional = true }
