@@ -71,7 +71,7 @@ fn until_query(i: &str) -> (&str, &str) {
 /// The string must starts with `?`, or `#`, or be empty.
 #[must_use]
 fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
-    match i.as_bytes().get(0).copied() {
+    match i.as_bytes().first().copied() {
         None => (None, None),
         Some(b'?') => {
             let rest = &i[1..];
@@ -261,7 +261,7 @@ pub(crate) fn extract_query_absolute_iri(i: &str) -> Option<&str> {
         None
     } else {
         debug_assert_eq!(
-            i.as_bytes().get(0),
+            i.as_bytes().first(),
             Some(&b'?'),
             "`absolute-IRI` string must not have `fragment part"
         );
