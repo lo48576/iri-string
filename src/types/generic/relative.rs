@@ -1,7 +1,9 @@
 //! Relative IRI reference.
 
 use crate::components::AuthorityComponents;
-use crate::mask_password::{password_range_to_hide, PasswordMasked};
+#[cfg(feature = "alloc")]
+use crate::mask_password::password_range_to_hide;
+use crate::mask_password::PasswordMasked;
 use crate::normalize::Normalized;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]

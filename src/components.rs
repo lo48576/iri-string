@@ -2,7 +2,6 @@
 
 mod authority;
 
-use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::parser::trusted as trusted_parser;
@@ -29,8 +28,6 @@ pub(crate) struct RiReferenceComponents<'a, S: Spec> {
     pub(crate) query_start: Option<NonZeroUsize>,
     /// Fragment start (after the leading `#`).
     pub(crate) fragment_start: Option<NonZeroUsize>,
-    /// Spec.
-    pub(crate) _spec: PhantomData<fn() -> S>,
 }
 
 impl<'a, S: Spec> RiReferenceComponents<'a, S> {

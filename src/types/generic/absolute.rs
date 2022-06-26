@@ -1,7 +1,9 @@
 //! Absolute IRI (without fragment part).
 
 use crate::components::AuthorityComponents;
-use crate::mask_password::{password_range_to_hide, PasswordMasked};
+#[cfg(feature = "alloc")]
+use crate::mask_password::password_range_to_hide;
+use crate::mask_password::PasswordMasked;
 use crate::normalize::{Error, NormalizationInput, Normalized};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
@@ -434,6 +436,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<S: Spec> RiAbsoluteString<S> {
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
     ///
