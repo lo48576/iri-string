@@ -247,6 +247,8 @@ fn take_first_char(s: &str) -> Option<(char, &str)> {
 mod tests {
     use super::*;
 
+    use alloc::string::ToString;
+
     use crate::spec::{IriSpec, UriSpec};
 
     #[test]

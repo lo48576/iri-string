@@ -606,6 +606,8 @@ impl<S: Spec> From<&Normalized<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
 mod tests_display {
     use super::*;
 
+    use alloc::string::ToString;
+
     use crate::spec::{IriSpec, UriSpec};
 
     #[test]
