@@ -5,7 +5,6 @@
 pub(crate) mod authority;
 
 use core::cmp::Ordering;
-use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
@@ -138,7 +137,6 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
         authority_end,
         query_start,
         fragment_start,
-        _spec: PhantomData,
     }
 }
 
