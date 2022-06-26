@@ -1,6 +1,7 @@
 //! Absolute IRI (without fragment part).
 
 use crate::components::AuthorityComponents;
+use crate::mask_password::PasswordMasked;
 use crate::normalize::{Error, NormalizationInput, Normalized};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
@@ -230,6 +231,33 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[must_use]
     pub fn normalize(&self) -> Normalized<'_, Self> {
         Normalized::from_input(NormalizationInput::from(self)).and_normalize()
+    }
+
+    /// Returns the proxy to the IRI with password masking feature.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://user:password@example.com/path?query")?;
+    /// let masked = iri.mask_password();
+    /// assert_eq!(masked.to_dedicated_string(), "http://user:@example.com/path?query");
+    ///
+    /// assert_eq!(
+    ///     masked.replace_password("${password}").to_string(),
+    ///     "http://user:${password}@example.com/path?query"
+    /// );
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn mask_password(&self) -> PasswordMasked<'_, Self> {
+        PasswordMasked::new(self)
     }
 }
 
