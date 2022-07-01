@@ -4,35 +4,43 @@
 
 * Bump MSRV to 1.60.0.
 * Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
+    + Now `alloc` and/or `std` features for additional dependencies are
+      automatically enabled when all of dependent featuers are enabled.
+        - See [Announcing Rust 1.60.0 | Rust Blog](https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html#new-syntax-for-cargo-features).
 * Support escaping username and password by `percent_encode::PercentEncode`.
-* Add `format::ToStringFallible` trait.
-* Add `format::ToDedicatedString` trait.
-* Add `format::write_to_slice` function and `format::CapacityOverflow` type.
-* Add `format::try_append_to_string` function.
-* Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
-* Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
-* Change return types of `{BorrowedIri}::encode_to_uri` to
-  `convert::MappedToUri<'_, Self>`.
+* Add `format` module that contains utilities for types with `Display` trait impl.
+    + Add `format::ToStringFallible` trait.
+    + Add `format::ToDedicatedString` trait.
+    + Add `format::write_to_slice` function and `format::CapacityOverflow` type.
+    + Add `format::try_append_to_string` function.
+* Remove `task` module and `task::ProcessAndWrite` trait.
+    + Remove `task` module.
+    + Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
+    + Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
+* Remove "task" types.
+    + Remove `normalize::NormalizationTask` type.
+    + Remove `normalize::NormalizationTask` type.
+        - Use `normalize::Normalized` instead.
+* Change return types of some functions from task types or string types to `Display`-able types.
+    + Change return types of `{BorrowedIri}::encode_to_uri` to
+      `convert::MappedToUri<'_, Self>`.
+    + Change return type of `resolve::FixedBaseResolver::resolve()` method to `noramlize::Normalized`.
+    + Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
+    + Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
+    + Remove `BufferError` type.
 * Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
 * Add `{OwnedIri}::try_encode_to_uri_inline` method.
 * Add `{OwnedIri}::try_encode_into_uri` method.
-* Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
-* Remove `normalize::NormalizationTask` type.
+* Make the methods impl of `convert::MappedToUri<'_, T>` generic over the spec.
 * Revome functions under `resolve` module.
 * Add `normalize::Normalized` type.
-* Remove `normalize::NormalizationTask` type.
-    + Use `normalize::Normalized` instead.
 * Remove some methods of `resolve::FixedBaseResolver`.
-* Change return type of `resolve::FixedBaseResolver::resolve()` method to `noramlize::Normalized`.
 * Rename `{BorrowedIri}::is_normalized()` methods to `{BorrowedIri}::is_normalized_rfc3986()`.
-* Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
 * Remove some methods of borrowed IRI string types.
-* Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
-* Remove `BufferError` type.
-* Remove `task` module.
-* Add `mask_password` module.
-* Add `{BorrowedIri}::mask_password` method.
-* Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
+* Support password masking.
+    + Add `mask_password` module.
+    + Add `{BorrowedIri}::mask_password` method.
+    + Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
   methods.
 
 ### Added
@@ -95,8 +103,8 @@
 ### Changed (breaking)
 * Bump MSRV to 1.60.0.
 * Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
-    + Now `alloc` and/or `std` features are automatically enabled when all of
-      dependent featuers are enabled.
+    + Now `alloc` and/or `std` features for additional dependencies are
+      automatically enabled when all of dependent featuers are enabled.
         - See [Announcing Rust 1.60.0 | Rust Blog](https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html#new-syntax-for-cargo-features).
 * Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
 * Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
