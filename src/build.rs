@@ -22,17 +22,6 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
 use crate::validate;
 
-/// Normalization mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Normalization {
-    /// No normalization.
-    None,
-    /// RFC 3986 algorithm.
-    Rfc3986,
-    /// WHATWG URL Standard algorithm.
-    Whatwg,
-}
-
 /// Port builder.
 ///
 /// This type is intended to be created by `From` trait implementations, and
@@ -206,35 +195,31 @@ struct AuthorityBuilder<'a> {
 
 impl AuthorityBuilder<'_> {
     /// Writes the authority to the given formatter.
-    fn fmt_write_to<S: Spec>(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-        normalize: Normalization,
-    ) -> fmt::Result {
+    fn fmt_write_to<S: Spec>(&self, f: &mut fmt::Formatter<'_>, normalize: bool) -> fmt::Result {
         match &self.userinfo.0 {
             UserinfoRepr::None => {}
             UserinfoRepr::Direct(userinfo) => {
-                if normalize == Normalization::None {
-                    userinfo.fmt(f)?;
-                } else {
+                if normalize {
                     PctCaseNormalized::<S>::new(userinfo).fmt(f)?;
+                } else {
+                    userinfo.fmt(f)?;
                 }
                 f.write_char('@')?;
             }
             UserinfoRepr::UserPass(user, password) => {
                 if let Some(user) = user {
-                    if normalize == Normalization::None {
-                        f.write_str(user)?;
-                    } else {
+                    if normalize {
                         PctCaseNormalized::<S>::new(user).fmt(f)?;
+                    } else {
+                        f.write_str(user)?;
                     }
                 }
                 if let Some(password) = password {
                     f.write_char(':')?;
-                    if normalize == Normalization::None {
-                        password.fmt(f)?;
-                    } else {
+                    if normalize {
                         PctCaseNormalized::<S>::new(password).fmt(f)?;
+                    } else {
+                        password.fmt(f)?;
                     }
                 }
                 f.write_char('@')?;
@@ -243,10 +228,10 @@ impl AuthorityBuilder<'_> {
 
         match self.host {
             HostRepr::String(host) => {
-                if normalize == Normalization::None {
-                    f.write_str(host)?;
-                } else {
+                if normalize {
                     normalize::normalize_host_port::<S>(f, host)?;
+                } else {
+                    f.write_str(host)?;
                 }
             }
             #[cfg(feature = "std")]
@@ -261,7 +246,7 @@ impl AuthorityBuilder<'_> {
             PortBuilderRepr::Integer(v) => write!(f, ":{v}")?,
             PortBuilderRepr::String(v) => {
                 // Omit empty port if the normalization is enabled.
-                if !(v.is_empty() && (normalize != Normalization::None)) {
+                if !(v.is_empty() && normalize) {
                     write!(f, ":{v}")?;
                 }
             }
@@ -313,7 +298,7 @@ impl Default for HostRepr<'_> {
 /// builder.scheme("http");
 /// builder.host("example.com");
 /// builder.path("/foo/../");
-/// builder.normalize_whatwg();
+/// builder.normalize();
 ///
 /// // 3. Validate and create the result.
 /// let built = builder.build::<IriStr>()?;
@@ -333,7 +318,7 @@ impl Default for HostRepr<'_> {
 ///
 /// # Ok::<_, Error>(())
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Builder<'a> {
     /// Scheme.
     scheme: Option<&'a str>,
@@ -346,21 +331,7 @@ pub struct Builder<'a> {
     /// Fragment (without the leading `#`).
     fragment: Option<&'a str>,
     /// Normalization mode.
-    normalize: Normalization,
-}
-
-impl Default for Builder<'_> {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            scheme: None,
-            authority: None,
-            path: "",
-            query: None,
-            fragment: None,
-            normalize: Normalization::None,
-        }
-    }
+    normalize: bool,
 }
 
 impl<'a> Builder<'a> {
@@ -399,10 +370,10 @@ impl<'a> Builder<'a> {
     fn fmt_write_to<S: Spec>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(scheme) = self.scheme {
             // Write the scheme.
-            if self.normalize == Normalization::None {
-                f.write_str(scheme)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_scheme(f, scheme)?;
+            } else {
+                f.write_str(scheme)?;
             }
             f.write_char(':')?;
         }
@@ -412,10 +383,11 @@ impl<'a> Builder<'a> {
             authority.fmt_write_to::<S>(f, self.normalize)?;
         }
 
-        if self.normalize == Normalization::None {
+        if !self.normalize {
+            // No normalization.
             f.write_str(self.path)?;
         } else if self.scheme.is_some() || self.authority.is_some() {
-            // Apply full normalization.
+            // Apply full syntax-based normalization.
             let op = normalize::NormalizationOp {
                 case_pct_normalization: true,
             };
@@ -432,19 +404,19 @@ impl<'a> Builder<'a> {
 
         if let Some(query) = self.query {
             f.write_char('?')?;
-            if self.normalize == Normalization::None {
-                f.write_str(query)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_query::<S>(f, query)?;
+            } else {
+                f.write_str(query)?;
             }
         }
 
         if let Some(fragment) = self.fragment {
             f.write_char('#')?;
-            if self.normalize == Normalization::None {
-                f.write_str(fragment)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_fragment::<S>(f, fragment)?;
+            } else {
+                f.write_str(fragment)?;
             }
         }
 
@@ -946,10 +918,13 @@ impl<'a> Builder<'a> {
     /// ```
     #[inline]
     pub fn unset_normalize(&mut self) {
-        self.normalize = Normalization::None;
+        self.normalize = false;
     }
 
-    /// Normalizes the result using syntax-based normalization.
+    /// Normalizes the result using RFC 3986 syntax-based normalization and
+    /// WHATWG URL Standard algorithm.
+    ///
+    /// # Normalization
     ///
     /// If `scheme` or `authority` component is present, the build result
     /// will fully normalized using full syntax-based normalization:
@@ -965,71 +940,11 @@ impl<'a> Builder<'a> {
     /// absense of the `authority` components, and will remove extra `..`
     /// segments which should not be ignored.
     ///
-    /// # Examples
+    /// # WHATWG URL Standard
     ///
-    /// Absolute IRI:
-    ///
-    /// ```
-    /// # use iri_string::build::Error;
-    /// use iri_string::build::Builder;
-    /// use iri_string::types::IriReferenceStr;
-    ///
-    /// let mut builder = Builder::new();
-    /// builder.scheme("http");
-    /// // `%75%73%65%72` is "user".
-    /// builder.userinfo("%75%73%65%72");
-    /// builder.host("EXAMPLE.COM");
-    /// builder.port("");
-    /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
-    ///
-    /// builder.normalize_rfc3986();
-    ///
-    /// let iri = builder.build::<IriReferenceStr>()?;
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(iri.to_string(), "http://user@example.com/bar/baz/");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// Relative IRI reference:
-    ///
-    /// ```
-    /// # use iri_string::build::Error;
-    /// use iri_string::build::Builder;
-    /// use iri_string::types::IriReferenceStr;
-    ///
-    /// let mut builder = Builder::new();
-    /// // `%75%73%65%72` is "user".
-    /// builder.userinfo("%75%73%65%72");
-    /// builder.host("EXAMPLE.COM");
-    /// builder.port("");
-    /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
-    ///
-    /// builder.normalize_rfc3986();
-    ///
-    /// let with_authority = builder.clone().build::<IriReferenceStr>()?;
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(with_authority.to_string(), "//user@example.com/bar/baz/");
-    /// # }
-    ///
-    /// builder.unset_authority();
-    ///
-    /// let without_authority = builder.clone().build::<IriReferenceStr>()?;
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(without_authority.to_string(), "/foo/../../bar/./baz/.");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// [RFC 3986 6.2.2.1]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.1
-    /// [RFC 3986 6.2.2.2]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.2
-    /// [RFC 3986 6.2.2.3]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.3
-    #[inline]
-    pub fn normalize_rfc3986(&mut self) {
-        self.normalize = Normalization::Rfc3986;
-    }
-
-    /// Normalizes the result using WHATWG URL Standard algorithm.
+    /// If you need to avoid WHATWG URL Standard serialization, use
+    /// [`Built::ensure_rfc3986_normalizable`] method to test if the result is
+    /// normalizable without WHATWG spec.
     ///
     /// # Examples
     ///
@@ -1046,7 +961,7 @@ impl<'a> Builder<'a> {
     /// builder.port("");
     /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
     ///
-    /// builder.normalize_whatwg();
+    /// builder.normalize();
     ///
     /// let iri = builder.build::<IriReferenceStr>()?;
     /// # #[cfg(feature = "alloc")] {
@@ -1055,8 +970,8 @@ impl<'a> Builder<'a> {
     /// # Ok::<_, Error>(())
     /// ```
     #[inline]
-    pub fn normalize_whatwg(&mut self) {
-        self.normalize = Normalization::Whatwg;
+    pub fn normalize(&mut self) {
+        self.normalize = true;
     }
 }
 
@@ -1095,6 +1010,18 @@ impl<T: ?Sized> Clone for Built<'_, T> {
 /// Implements conversions to a string.
 macro_rules! impl_stringifiers {
     ($borrowed:ident, $owned:ident) => {
+        impl<S: Spec> Built<'_, $borrowed<S>> {
+            /// Returns Ok`(())` if the IRI is normalizable by the RFC 3986 algorithm.
+            #[inline]
+            pub fn ensure_rfc3986_normalizable(&self) -> Result<(), normalize::Error> {
+                if self.builder.authority.is_none() {
+                    let path = normalize::PathToNormalize::from_single_path(self.builder.path);
+                    path.ensure_rfc3986_normalizable_with_authority_absent()?;
+                }
+                Ok(())
+            }
+        }
+
         impl<S: Spec> fmt::Display for Built<'_, $borrowed<S>> {
             #[inline]
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -1298,10 +1225,6 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
     if !is_path_acceptable {
         return Err(validate::Error::new().into());
     }
-    if (builder.normalize == Normalization::Rfc3986) && builder.authority.is_none() {
-        let path = normalize::PathToNormalize::from_single_path(builder.path);
-        path.ensure_rfc3986_normalizable_with_authority_absent()?;
-    }
 
     if let Some(query) = builder.query {
         parser::validate_query::<S>(query)?;
@@ -1418,30 +1341,26 @@ mod tests {
     }
 
     #[test]
-    fn normalize_rfc3986_double_slash_prefix() {
+    fn normalize_double_slash_prefix() {
         let mut builder = Builder::new();
         builder.scheme("scheme");
         builder.path("/..//bar");
+        builder.normalize();
+        let built = builder
+            .build::<IriStr>()
+            .expect("normalizable by WHATWG URL Standard serialization");
         // Naive application of RFC 3986 normalization/resolution algorithm
         // results in `scheme://bar`, but this is unintentional. `bar` should be
         // the second path segment, not a host. So this should be rejected.
-        builder.normalize_rfc3986();
-        assert!(builder.build::<IriStr>().is_err());
-    }
-
-    #[test]
-    fn normalize_whawtg_double_slash_prefix() {
-        let mut builder = Builder::new();
-        builder.scheme("scheme");
-        builder.path("/..//bar");
+        assert!(
+            built.ensure_rfc3986_normalizable().is_err(),
+            "not normalizable by RFC 3986 algorithm"
+        );
         // In contrast to RFC 3986, WHATWG URL Standard defines serialization
         // algorithm and handles this case specially. In this case, the result
         // is `scheme:/.//bar`, this won't be considered fully normalized from
         // the RFC 3986 point of view, but more normalization would be
         // impossible and this would practically work in most situations.
-        builder.normalize_whatwg();
-        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
-        let built = builder.build::<IriStr>().expect("normalizable");
         #[cfg(feature = "alloc")]
         assert_eq!(built.to_string(), "scheme:/.//bar");
     }
