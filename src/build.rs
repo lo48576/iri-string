@@ -414,7 +414,8 @@ impl<'a> Builder<'a> {
 
         if self.normalize == Normalization::None {
             f.write_str(self.path)?;
-        } else {
+        } else if self.scheme.is_some() || self.authority.is_some() {
+            // Apply full normalization.
             let op = normalize::NormalizationOp {
                 case_pct_normalization: true,
             };
@@ -423,6 +424,10 @@ impl<'a> Builder<'a> {
                 op,
                 self.authority.is_some(),
             )?;
+        } else {
+            // The IRI reference starts with `path` component.
+            // Skip path segment normalization.
+            PctCaseNormalized::<S>::new(self.path).fmt(f)?;
         }
 
         if let Some(query) = self.query {
@@ -944,9 +949,25 @@ impl<'a> Builder<'a> {
         self.normalize = Normalization::None;
     }
 
-    /// Normalizes the result using RFC 3986 normalization algorithm.
+    /// Normalizes the result using syntax-based normalization.
+    ///
+    /// If `scheme` or `authority` component is present, the build result
+    /// will fully normalized using full syntax-based normalization:
+    ///
+    /// * case normalization ([RFC 3986 6.2.2.1]),
+    /// * percent-encoding normalization ([RFC 3986 6.2.2.2]), and
+    /// * path segment normalization ([RFC 3986 6.2.2.2]).
+    ///
+    /// However, if neither `scheme` nor `authority` is present, i.e. the
+    /// IRI reference to be built starts with the `path` component, path segment
+    /// normalization will be omitted.
+    /// This is because the path segment normalization depends on presence or
+    /// absense of the `authority` components, and will remove extra `..`
+    /// segments which should not be ignored.
     ///
     /// # Examples
+    ///
+    /// Absolute IRI:
     ///
     /// ```
     /// # use iri_string::build::Error;
@@ -969,6 +990,40 @@ impl<'a> Builder<'a> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// Relative IRI reference:
+    ///
+    /// ```
+    /// # use iri_string::build::Error;
+    /// use iri_string::build::Builder;
+    /// use iri_string::types::IriReferenceStr;
+    ///
+    /// let mut builder = Builder::new();
+    /// // `%75%73%65%72` is "user".
+    /// builder.userinfo("%75%73%65%72");
+    /// builder.host("EXAMPLE.COM");
+    /// builder.port("");
+    /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
+    ///
+    /// builder.normalize_rfc3986();
+    ///
+    /// let with_authority = builder.clone().build::<IriReferenceStr>()?;
+    /// # #[cfg(feature = "alloc")] {
+    /// assert_eq!(with_authority.to_string(), "//user@example.com/bar/baz/");
+    /// # }
+    ///
+    /// builder.unset_authority();
+    ///
+    /// let without_authority = builder.clone().build::<IriReferenceStr>()?;
+    /// # #[cfg(feature = "alloc")] {
+    /// assert_eq!(without_authority.to_string(), "/foo/../../bar/./baz/.");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [RFC 3986 6.2.2.1]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.1
+    /// [RFC 3986 6.2.2.2]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.2
+    /// [RFC 3986 6.2.2.3]: https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.2.3
     #[inline]
     pub fn normalize_rfc3986(&mut self) {
         self.normalize = Normalization::Rfc3986;
