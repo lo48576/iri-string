@@ -42,6 +42,7 @@
     + Add `{BorrowedIri}::mask_password` method.
     + Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
       methods.
+* Remove deprecated `percent_encoding` module and aliases defined in it.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -174,6 +175,12 @@
     + List of removed items:
         - `task::Error` type
         - `task::ProcessAndWrite` trait
+* Remove deprecated `percent_encoding` module and aliases defined in it.
+    + List of removed items:
+        - `percent_encoding` module.
+        - `percent_encoding::PercentEncoded` type alias.
+        - `percent_encoding::PercentEncodedForIri` type alias.
+        - `percent_encoding::PercentEncodedForUri` type alias.
 
 ### Changed (non-breaking)
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
