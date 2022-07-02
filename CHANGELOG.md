@@ -41,7 +41,7 @@
     + Add `mask_password` module.
     + Add `{BorrowedIri}::mask_password` method.
     + Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
-  methods.
+      methods.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
