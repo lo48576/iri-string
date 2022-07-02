@@ -94,7 +94,7 @@ use crate::types::{RiAbsoluteString, RiString};
 pub use self::error::Error;
 pub(crate) use self::path::{Path, PathToNormalize};
 pub(crate) use self::pct_case::{
-    is_pct_case_normalized, DisplayPctCaseNormalize, NormalizedAsciiOnlyHost,
+    is_pct_case_normalized, NormalizedAsciiOnlyHost, PctCaseNormalized,
 };
 
 /// Normalization operation.
@@ -428,7 +428,7 @@ fn normalize_authority<S: Spec>(f: &mut fmt::Formatter<'_>, authority: &str) -> 
         Some((userinfo, host_port)) => {
             // Don't lowercase `userinfo` even if it is ASCII only. `userinfo`
             // is not a part of `host`.
-            DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
+            PctCaseNormalized::<S>::new(userinfo).fmt(f)?;
             f.write_char('@')?;
             host_port
         }
@@ -460,14 +460,14 @@ pub(crate) fn normalize_host_port<S: Spec>(
         // If the host is ASCII characters only, make plain alphabets lower case.
         NormalizedAsciiOnlyHost::new(host_port).fmt(f)
     } else {
-        DisplayPctCaseNormalize::<S>::new(host_port).fmt(f)
+        PctCaseNormalized::<S>::new(host_port).fmt(f)
     }
 }
 
 /// Writes the normalized query without the '?' prefix.
 pub(crate) fn normalize_query<S: Spec>(f: &mut fmt::Formatter<'_>, query: &str) -> fmt::Result {
     // Apply percent-encoding normalization.
-    DisplayPctCaseNormalize::<S>::new(query).fmt(f)
+    PctCaseNormalized::<S>::new(query).fmt(f)
 }
 
 /// Writes the normalized query without the '#' prefix.
@@ -476,7 +476,7 @@ pub(crate) fn normalize_fragment<S: Spec>(
     fragment: &str,
 ) -> fmt::Result {
     // Apply percent-encoding normalization.
-    DisplayPctCaseNormalize::<S>::new(fragment).fmt(f)
+    PctCaseNormalized::<S>::new(fragment).fmt(f)
 }
 
 /// Normalized OR resolved IRI.

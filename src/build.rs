@@ -13,7 +13,7 @@ use alloc::string::ToString;
 use crate::format::Censored;
 #[cfg(feature = "alloc")]
 use crate::format::{ToDedicatedString, ToStringFallible};
-use crate::normalize::{self, DisplayPctCaseNormalize};
+use crate::normalize::{self, PctCaseNormalized};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
 use crate::spec::Spec;
@@ -217,7 +217,7 @@ impl AuthorityBuilder<'_> {
                 if normalize == Normalization::None {
                     userinfo.fmt(f)?;
                 } else {
-                    DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
+                    PctCaseNormalized::<S>::new(userinfo).fmt(f)?;
                 }
                 f.write_char('@')?;
             }
@@ -226,7 +226,7 @@ impl AuthorityBuilder<'_> {
                     if normalize == Normalization::None {
                         f.write_str(user)?;
                     } else {
-                        DisplayPctCaseNormalize::<S>::new(user).fmt(f)?;
+                        PctCaseNormalized::<S>::new(user).fmt(f)?;
                     }
                 }
                 if let Some(password) = password {
@@ -234,7 +234,7 @@ impl AuthorityBuilder<'_> {
                     if normalize == Normalization::None {
                         password.fmt(f)?;
                     } else {
-                        DisplayPctCaseNormalize::<S>::new(password).fmt(f)?;
+                        PctCaseNormalized::<S>::new(password).fmt(f)?;
                     }
                 }
                 f.write_char('@')?;
@@ -294,8 +294,8 @@ impl Default for HostRepr<'_> {
 ///
 /// 1. Create builder by [`Builder::new()`][`Self::new`].
 /// 2. Set (or unset) components and set normalization mode as you wish.
-/// 3. Validate by [`Builder::build()`][`Self::build`] and get [`DisplayBuild`] value.
-/// 4. Use [`core::fmt::Display`] trait to serialize the resulting [`DisplayBuild`],
+/// 3. Validate by [`Builder::build()`][`Self::build`] and get [`Built`] value.
+/// 4. Use [`core::fmt::Display`] trait to serialize the resulting [`Built`],
 ///    or use [`From`]/[`Into`] traits to convert into an allocated string types.
 ///
 /// ```
@@ -477,7 +477,7 @@ impl<'a> Builder<'a> {
     /// # Ok::<_, Error>(())
     /// ```
     #[inline]
-    pub fn build<T>(self) -> Result<DisplayBuild<'a, T>, Error>
+    pub fn build<T>(self) -> Result<Built<'a, T>, Error>
     where
         T: ?Sized + Buildable<'a>,
     {
@@ -1014,20 +1014,20 @@ impl<'a> Builder<'a> {
 ///
 /// This can be stringified or directly printed by `std::fmt::Display`, but note
 /// that this `Display` **does not hide the password part**. Be careful **not to
-/// print the value using `Display for DisplayBuild<_>` in public context**.
+/// print the value using `Display for Built<_>` in public context**.
 ///
 /// [`From`]: `core::convert::From`
 /// [`Into`]: `core::convert::Into`
 /// [`Display`]: `core::fmt::Display`
 #[derive(Debug)]
-pub struct DisplayBuild<'a, T: ?Sized> {
+pub struct Built<'a, T: ?Sized> {
     /// Builder with the validated content.
     builder: Builder<'a>,
     /// String type.
     _ty_str: PhantomData<fn() -> T>,
 }
 
-impl<T: ?Sized> Clone for DisplayBuild<'_, T> {
+impl<T: ?Sized> Clone for Built<'_, T> {
     #[inline]
     fn clone(&self) -> Self {
         Self {
@@ -1040,7 +1040,7 @@ impl<T: ?Sized> Clone for DisplayBuild<'_, T> {
 /// Implements conversions to a string.
 macro_rules! impl_stringifiers {
     ($borrowed:ident, $owned:ident) => {
-        impl<S: Spec> fmt::Display for DisplayBuild<'_, $borrowed<S>> {
+        impl<S: Spec> fmt::Display for Built<'_, $borrowed<S>> {
             #[inline]
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 self.builder.fmt_write_to::<S>(f)
@@ -1048,7 +1048,7 @@ macro_rules! impl_stringifiers {
         }
 
         #[cfg(feature = "alloc")]
-        impl<S: Spec> ToDedicatedString for DisplayBuild<'_, $borrowed<S>> {
+        impl<S: Spec> ToDedicatedString for Built<'_, $borrowed<S>> {
             type Target = $owned<S>;
 
             #[inline]
@@ -1060,17 +1060,17 @@ macro_rules! impl_stringifiers {
         }
 
         #[cfg(feature = "alloc")]
-        impl<S: Spec> From<DisplayBuild<'_, $borrowed<S>>> for $owned<S> {
+        impl<S: Spec> From<Built<'_, $borrowed<S>>> for $owned<S> {
             #[inline]
-            fn from(builder: DisplayBuild<'_, $borrowed<S>>) -> Self {
+            fn from(builder: Built<'_, $borrowed<S>>) -> Self {
                 (&builder).into()
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl<S: Spec> From<&DisplayBuild<'_, $borrowed<S>>> for $owned<S> {
+        impl<S: Spec> From<&Built<'_, $borrowed<S>>> for $owned<S> {
             #[inline]
-            fn from(builder: &DisplayBuild<'_, $borrowed<S>>) -> Self {
+            fn from(builder: &Built<'_, $borrowed<S>>) -> Self {
                 let s = builder.to_string();
                 Self::try_from(s).expect("[validity] the IRI to be built is already validated")
             }
@@ -1130,10 +1130,10 @@ impl From<normalize::Error> for Error {
 pub trait Buildable<'a>: private::Sealed<'a> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
             _ty_str: PhantomData,
         })
@@ -1142,13 +1142,13 @@ impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiReferenceStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
             return Err(validate::Error::new().into());
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
             _ty_str: PhantomData,
         })
@@ -1157,7 +1157,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
             return Err(validate::Error::new().into());
         }
@@ -1166,7 +1166,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
             _ty_str: PhantomData,
         })
@@ -1175,13 +1175,13 @@ impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiAbsoluteStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_some() {
             return Err(validate::Error::new().into());
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
             _ty_str: PhantomData,
         })
@@ -1261,12 +1261,12 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
 
 /// Private module to put the trait to seal.
 mod private {
-    use super::{Builder, DisplayBuild, Error};
+    use super::{Builder, Built, Error};
 
     /// A trait for types buildable by the [`Builder`].
     pub trait Sealed<'a> {
         /// Validates the content of the builder and returns the validated type if possible.
-        fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error>;
+        fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error>;
     }
 }
 
