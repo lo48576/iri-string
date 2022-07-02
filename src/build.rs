@@ -20,7 +20,7 @@ use crate::spec::Spec;
 use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
-use crate::validate;
+use crate::validate::Error;
 
 /// Port builder.
 ///
@@ -284,7 +284,7 @@ impl Default for HostRepr<'_> {
 ///    or use [`From`]/[`Into`] traits to convert into an allocated string types.
 ///
 /// ```
-/// # use iri_string::build::Error;
+/// # use iri_string::validate::Error;
 /// use iri_string::build::Builder;
 /// # #[cfg(not(feature = "alloc"))]
 /// # use iri_string::types::IriStr;
@@ -340,7 +340,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -428,7 +428,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriStr;
     /// # #[cfg(feature = "alloc")]
@@ -479,7 +479,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -502,7 +502,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -530,7 +530,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -559,7 +559,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -586,7 +586,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -603,7 +603,7 @@ impl<'a> Builder<'a> {
     /// You can specify `(user, password)` pair.
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -638,7 +638,7 @@ impl<'a> Builder<'a> {
     /// `(None, None)` is considered as an empty userinfo.
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -661,7 +661,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -692,7 +692,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -720,7 +720,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "std")] {
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
@@ -746,7 +746,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -769,7 +769,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -797,7 +797,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -820,7 +820,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -846,7 +846,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -869,7 +869,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -893,7 +893,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -949,7 +949,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -1065,49 +1065,6 @@ impl_stringifiers!(RiStr, RiString);
 impl_stringifiers!(RiAbsoluteStr, RiAbsoluteString);
 impl_stringifiers!(RiRelativeStr, RiRelativeString);
 
-/// IRI build error.
-#[derive(Debug, Clone)]
-pub enum Error {
-    /// Build result won't be a valid IRI.
-    Validate(validate::Error),
-    /// Build result won't be normalizable with the specified algorithm.
-    Normalize(normalize::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self {
-            Self::Validate(_) => "build result won't be a valid IRI",
-            Self::Normalize(_) => "build result won't be normalizable with the specified algorithm",
-        };
-        f.write_str(msg)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Validate(e) => Some(e),
-            Self::Normalize(e) => Some(e),
-        }
-    }
-}
-
-impl From<validate::Error> for Error {
-    #[inline]
-    fn from(e: validate::Error) -> Self {
-        Self::Validate(e)
-    }
-}
-
-impl From<normalize::Error> for Error {
-    #[inline]
-    fn from(e: normalize::Error) -> Self {
-        Self::Normalize(e)
-    }
-}
-
 /// A trait for borrowed IRI string types buildable by the [`Builder`].
 pub trait Buildable<'a>: private::Sealed<'a> {}
 
@@ -1126,7 +1083,7 @@ impl<'a, S: Spec> Buildable<'a> for RiReferenceStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1141,10 +1098,10 @@ impl<'a, S: Spec> Buildable<'a> for RiStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
         if builder.fragment.is_some() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1159,7 +1116,7 @@ impl<'a, S: Spec> Buildable<'a> for RiAbsoluteStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_some() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
         validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1203,7 +1160,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
 
         if let PortBuilderRepr::String(s) = authority.port.0 {
             if !s.bytes().all(|b| b.is_ascii_digit()) {
-                return Err(validate::Error::new().into());
+                return Err(Error::new());
             }
         }
     }
@@ -1223,7 +1180,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
             && (prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':'))
     };
     if !is_path_acceptable {
-        return Err(validate::Error::new().into());
+        return Err(Error::new());
     }
 
     if let Some(query) = builder.query {
