@@ -6,7 +6,7 @@ use core::ops::Range;
 use crate::parser::str::rfind;
 use crate::spec::{Spec, UriSpec};
 
-use super::pct_case::DisplayPctCaseNormalize;
+use super::pct_case::PctCaseNormalized;
 use super::{Error, NormalizationOp};
 
 /// Path that is (possibly) not yet processed or being processed.
@@ -263,7 +263,7 @@ impl PathToNormalize<'_> {
 
                 // Write the segment name.
                 if op.case_pct_normalization {
-                    write!(f, "{}", DisplayPctCaseNormalize::<S>::new(segname))?;
+                    write!(f, "{}", PctCaseNormalized::<S>::new(segname))?;
                 } else {
                     f.write_str(segname)?;
                 }

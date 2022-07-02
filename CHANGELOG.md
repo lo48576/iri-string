@@ -52,18 +52,18 @@
     + This trait allows users to convert `Display`-able values into `String`,
       but without panicking on OOM.
     + List of types that implements this trait:
-        - `build::DisplayBuild<'_, RiReferenceStr<S>>`
-        - `build::DisplayBuild<'_, RiStr<S>>`
-        - `build::DisplayBuild<'_, RiAbsoluteStr<S>>`
-        - `build::DisplayBuild<'_, RiRelativeStr<S>>`
+        - `build::Built<'_, RiReferenceStr<S>>`
+        - `build::Built<'_, RiStr<S>>`
+        - `build::Built<'_, RiAbsoluteStr<S>>`
+        - `build::Built<'_, RiRelativeStr<S>>`
 * Add `format::ToDedicatedString` trait.
     + This trait allows users to convert `Display`-able values into owned
       dedicated IRI string types, with or without panicking on OOM.
     + List of added implementations:
-        - `build::DisplayBuild<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
-        - `build::DisplayBuild<'_, RiStr<S>>` (Target = `RiString<S>`)
-        - `build::DisplayBuild<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
-        - `build::DisplayBuild<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+        - `build::Built<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
+        - `build::Built<'_, RiStr<S>>` (Target = `RiString<S>`)
+        - `build::Built<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
+        - `build::Built<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
         - `convert::MappedToUri<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
         - `convert::MappedToUri<'_, RiStr<S>>` (Target = `RiString<S>`)
         - `convert::MappedToUri<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
