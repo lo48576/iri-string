@@ -43,6 +43,13 @@
     + Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
       methods.
 * Remove deprecated `percent_encoding` module and aliases defined in it.
+* Unify normalization of `build::Builder`.
+    + Add `build::Builder::normalize()` method.
+    + Add `build::Built::ensure_rfc3986_normalizable()` method.
+    + Change return type of `build::Builder::build()`.
+    + Remove `build::Builder::normalize_rfc3986()` and
+      `build::Builder::normalize_whatwg()` methods.
+    + Remove `build::Error` type.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -100,6 +107,8 @@
         - `types::RiAbsoluteString::remove_nonempty_password_inline()`
         - `types::RiRelativeString::remove_password_inline()`
         - `types::RiRelativeString::remove_nonempty_password_inline()`
+* Add `build::Builder::normalize()` method.
+* Add `build::Built::ensure_rfc3986_normalizable()` method.
 
 ### Changed (breaking)
 * Bump MSRV to 1.60.0.
@@ -181,6 +190,14 @@
         - `percent_encoding::PercentEncoded` type alias.
         - `percent_encoding::PercentEncodedForIri` type alias.
         - `percent_encoding::PercentEncodedForUri` type alias.
+* Change return type of `build::Builder::build()`.
+    + Now it returns `Result<(), validate::Error>` instead of
+      `Result<(), build::Error>`.
+* Remove `build::Builder::normalize_rfc3986()` and
+  `build::Builder::normalize_whatwg()` methods.
+    + Use `build::Builder::normalize()` and
+      `build::Builder::ensure_rfc3986_normalizable()` instead.
+* Remove `build::Error` type.
 
 ### Changed (non-breaking)
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
