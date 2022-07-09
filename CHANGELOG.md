@@ -50,6 +50,8 @@
     + Remove `build::Builder::normalize_rfc3986()` and
       `build::Builder::normalize_whatwg()` methods.
     + Remove `build::Error` type.
+* Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
+* Reject user with colon characters on IRI build.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -198,11 +200,15 @@
     + Use `build::Builder::normalize()` and
       `build::Builder::ensure_rfc3986_normalizable()` instead.
 * Remove `build::Error` type.
+* Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
+    + Now user part should be non-optional (but possibly empty) `&str`.
 
 ### Changed (non-breaking)
 * Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
     + Now methods of `convert::MappedToUri<'_, T>` can be called for
       `{BorrowedIri}<S> where S: Spec`.
+* Reject user with colon characters on IRI build.
+    + Now `build::Builder::build()` fails when `user` part contains a colon (`:`).
 
 ## [0.5.6]
 
