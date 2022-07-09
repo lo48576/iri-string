@@ -116,12 +116,12 @@ impl fmt::Debug for UserinfoBuilder<'_> {
 impl<'a> UserinfoBuilder<'a> {
     /// Decomposes the userinfo into `user` and `password`.
     #[must_use]
-    fn to_user_password(&self) -> Option<(Option<&'a str>, Option<&'a str>)> {
+    fn to_user_password(&self) -> Option<(&'a str, Option<&'a str>)> {
         match &self.0 {
             UserinfoRepr::None => None,
             UserinfoRepr::Direct(s) => match find_split(s, b':') {
-                None => Some((Some(s), None)),
-                Some((user, password)) => Some((Some(user), Some(password))),
+                None => Some((s, None)),
+                Some((user, password)) => Some((user, Some(password))),
             },
             UserinfoRepr::UserPass(user, password) => Some((*user, *password)),
         }
@@ -138,27 +138,13 @@ impl<'a> From<&'a str> for UserinfoBuilder<'a> {
 impl<'a> From<(&'a str, &'a str)> for UserinfoBuilder<'a> {
     #[inline]
     fn from((user, password): (&'a str, &'a str)) -> Self {
-        Self(UserinfoRepr::UserPass(Some(user), Some(password)))
+        Self(UserinfoRepr::UserPass(user, Some(password)))
     }
 }
 
 impl<'a> From<(&'a str, Option<&'a str>)> for UserinfoBuilder<'a> {
     #[inline]
     fn from((user, password): (&'a str, Option<&'a str>)) -> Self {
-        Self(UserinfoRepr::UserPass(Some(user), password))
-    }
-}
-
-impl<'a> From<(Option<&'a str>, &'a str)> for UserinfoBuilder<'a> {
-    #[inline]
-    fn from((user, password): (Option<&'a str>, &'a str)) -> Self {
-        Self(UserinfoRepr::UserPass(user, Some(password)))
-    }
-}
-
-impl<'a> From<(Option<&'a str>, Option<&'a str>)> for UserinfoBuilder<'a> {
-    #[inline]
-    fn from((user, password): (Option<&'a str>, Option<&'a str>)) -> Self {
         Self(UserinfoRepr::UserPass(user, password))
     }
 }
@@ -179,7 +165,7 @@ enum UserinfoRepr<'a> {
     /// Direct `userinfo` content.
     Direct(&'a str),
     /// User name and password.
-    UserPass(Option<&'a str>, Option<&'a str>),
+    UserPass(&'a str, Option<&'a str>),
 }
 
 /// URI/IRI authority builder.
@@ -207,12 +193,10 @@ impl AuthorityBuilder<'_> {
                 f.write_char('@')?;
             }
             UserinfoRepr::UserPass(user, password) => {
-                if let Some(user) = user {
-                    if normalize {
-                        PctCaseNormalized::<S>::new(user).fmt(f)?;
-                    } else {
-                        f.write_str(user)?;
-                    }
+                if normalize {
+                    PctCaseNormalized::<S>::new(user).fmt(f)?;
+                } else {
+                    f.write_str(user)?;
                 }
                 if let Some(password) = password {
                     f.write_char(':')?;
@@ -580,8 +564,11 @@ impl<'a> Builder<'a> {
 
     /// Sets the userinfo.
     ///
-    /// Note that `(None, None)` is considered as an empty userinfo, rather than
+    /// `userinfo` component always have `user` part (but it can be empty).
+    ///
+    /// Note that `("", None)` is considered as an empty userinfo, rather than
     /// unset userinfo.
+    /// Also note that the user part cannot have colon characters.
     ///
     /// # Examples
     ///
@@ -616,26 +603,10 @@ impl<'a> Builder<'a> {
     ///     "//user:pass@"
     /// );
     /// # }
-    ///
-    /// builder.userinfo((None, "pass"));
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(
-    ///     builder.clone().build::<IriReferenceStr>()?.to_string(),
-    ///     "//:pass@"
-    /// );
-    /// # }
-    ///
-    /// builder.userinfo((Some("user"), Some("pass")));
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(
-    ///     builder.build::<IriReferenceStr>()?.to_string(),
-    ///     "//user:pass@"
-    /// );
-    /// # }
     /// # Ok::<_, Error>(())
     /// ```
     ///
-    /// `(None, None)` is considered as an empty userinfo.
+    /// `("", None)` is considered as an empty userinfo.
     ///
     /// ```
     /// # use iri_string::validate::Error;
@@ -643,7 +614,7 @@ impl<'a> Builder<'a> {
     /// use iri_string::types::IriReferenceStr;
     ///
     /// let mut builder = Builder::new();
-    /// builder.userinfo((None, None));
+    /// builder.userinfo(("", None));
     ///
     /// let iri = builder.build::<IriReferenceStr>()?;
     /// # #[cfg(feature = "alloc")] {
@@ -1141,11 +1112,15 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
                 parser::validate_userinfo::<S>(userinfo)?;
             }
             UserinfoRepr::UserPass(user, password) => {
+                // `user` is not allowed to have a colon, since the characters
+                // after the colon is parsed as the password.
+                if user.contains(':') {
+                    return Err(Error::new());
+                }
+
                 // Note that the syntax of components inside `authority`
                 // (`user` and `password`) is not specified by RFC 3986.
-                if let Some(user) = user {
-                    parser::validate_userinfo::<S>(user)?;
-                }
+                parser::validate_userinfo::<S>(user)?;
                 if let Some(password) = password {
                     parser::validate_userinfo::<S>(password)?;
                 }
@@ -1235,9 +1210,7 @@ mod tests {
         let mut builder = Builder::new();
         builder.userinfo("arbitrary-valid-string");
         builder.userinfo("user:password");
-        builder.userinfo((None, None));
         builder.userinfo(("user", None));
-        builder.userinfo((None, "password"));
         builder.userinfo(("user", "password"));
     }
 
