@@ -568,6 +568,7 @@ impl<'a> Builder<'a> {
     ///
     /// Note that `("", None)` is considered as an empty userinfo, rather than
     /// unset userinfo.
+    /// Also note that the user part cannot have colon characters.
     ///
     /// # Examples
     ///
@@ -1111,6 +1112,12 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
                 parser::validate_userinfo::<S>(userinfo)?;
             }
             UserinfoRepr::UserPass(user, password) => {
+                // `user` is not allowed to have a colon, since the characters
+                // after the colon is parsed as the password.
+                if user.contains(':') {
+                    return Err(Error::new());
+                }
+
                 // Note that the syntax of components inside `authority`
                 // (`user` and `password`) is not specified by RFC 3986.
                 parser::validate_userinfo::<S>(user)?;
