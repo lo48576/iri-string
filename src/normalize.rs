@@ -92,7 +92,7 @@ use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
 use crate::types::{RiAbsoluteString, RiString};
 
 pub use self::error::Error;
-pub(crate) use self::path::{Path, PathToNormalize};
+pub(crate) use self::path::{Path, PathCharacteristic, PathToNormalize};
 pub(crate) use self::pct_case::{
     is_pct_case_normalized, NormalizedAsciiOnlyHost, PctCaseNormalized,
 };
