@@ -168,13 +168,13 @@ fn build_normalized_relative() {
             .clone()
             .build::<IriRelativeStr>()
             .expect("should be valid relative IRI reference");
-        assert_eq_display!(built, case.normalized_iri);
+        assert_eq_display!(built, case.normalized_iri, "case={case:#?}");
 
         if case.is_uri_class() {
             let built_uri = builder
                 .build::<UriReferenceStr>()
                 .expect("should be valid relative URI reference");
-            assert_eq_display!(built_uri, case.normalized_uri);
+            assert_eq_display!(built_uri, case.normalized_uri, "case={case:#?}");
         }
     }
 }
@@ -209,4 +209,314 @@ fn build_normalizedness() {
             "RFC3986-normalizedness should be consistently judged: case={case:#?}"
         );
     }
+}
+
+/// `Builder::port` should accept `u8` value.
+#[test]
+fn set_port_u8() {
+    let mut builder = Builder::new();
+    builder.port(8_u8);
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(built, "//:8", "should accept `u8`");
+}
+
+/// `Builder::port` should accept `u16` value.
+#[test]
+fn set_port_u16() {
+    let mut builder = Builder::new();
+    builder.port(65535_u16);
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(built, "//:65535", "should accept `u16`");
+}
+
+/// `Builder::port` should accept `&str` value.
+#[test]
+fn set_port_str() {
+    let mut builder = Builder::new();
+    builder.port("8080");
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(built, "//:8080", "should accept `&str`");
+}
+
+/// `Builder::port` should accept `&str` value even it is quite large.
+#[test]
+fn set_port_str_large() {
+    let mut builder = Builder::new();
+    builder.port("12345678901234567890");
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(
+        built,
+        "//:12345678901234567890",
+        "should accept `&str` even it is quite large"
+    );
+}
+
+/// `Builder::ip_address` should accept `std::net::Ipv4Addr` value.
+#[test]
+#[cfg(feature = "std")]
+fn set_ip_address_ipv4addr() {
+    let mut builder = Builder::new();
+    builder.ip_address(std::net::Ipv4Addr::new(192, 0, 2, 0));
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(built, "//192.0.2.0", "should accept `std::net::Ipv4Addr`");
+}
+
+/// `Builder::ip_address` should accept `std::net::Ipv6Addr` value.
+#[test]
+#[cfg(feature = "std")]
+fn set_ip_address_ipv6addr() {
+    let mut builder = Builder::new();
+    builder.ip_address(std::net::Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1));
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(
+        built,
+        "//[2001:db8::1]",
+        "should accept `std::net::Ipv6Addr`"
+    );
+}
+
+/// `Builder::ip_address` should accept `std::net::IpAddr` value.
+#[test]
+#[cfg(feature = "std")]
+fn set_ip_address_ipaddr() {
+    let mut builder = Builder::new();
+    builder.ip_address(std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 0, 2, 0)));
+    let built = builder
+        .clone()
+        .build::<UriReferenceStr>()
+        .expect("should be valid URI reference");
+    assert_eq_display!(built, "//192.0.2.0", "should accept `std::net::IpAddr`");
+}
+
+/// `Builder::userinfo` should accept `&str`.
+#[test]
+fn set_userinfo_str() {
+    let mut builder = Builder::new();
+    {
+        builder.userinfo("user:password");
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//user:password@", "should accept `&str`");
+    }
+    {
+        builder.userinfo("arbitrary-valid-string");
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//arbitrary-valid-string@", "should accept `&str`");
+    }
+    {
+        builder.userinfo("arbitrary:valid:string");
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//arbitrary:valid:string@", "should accept `&str`");
+    }
+}
+
+/// `Builder::userinfo` should accept `(&str, &str)`.
+#[test]
+fn set_userinfo_pair_str_str() {
+    let mut builder = Builder::new();
+    {
+        builder.userinfo(("user", "password"));
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//user:password@", "should accept `&str`");
+    }
+    {
+        builder.userinfo(("", ""));
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//:@", "empty user and password should be preserved");
+    }
+}
+
+/// `Builder::userinfo` should accept `(&str, Option<&str>)`.
+#[test]
+fn set_userinfo_pair_str_optstr() {
+    let mut builder = Builder::new();
+    {
+        builder.userinfo(("user", Some("password")));
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(
+            built,
+            "//user:password@",
+            "should accept `(&str, Option<&str>)`"
+        );
+    }
+    {
+        builder.userinfo(("", Some("")));
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(built, "//:@", "empty user and password should be preserved");
+    }
+    {
+        builder.userinfo(("user", None));
+        let built = builder
+            .clone()
+            .build::<UriReferenceStr>()
+            .expect("should be valid URI reference");
+        assert_eq_display!(
+            built,
+            "//user@",
+            "password given as `None` should be absent"
+        );
+    }
+}
+
+/// Builder should reject a colon in user.
+#[test]
+fn user_with_colon() {
+    let mut builder = Builder::new();
+    builder.userinfo(("us:er", Some("password")));
+    let result = builder.clone().build::<UriReferenceStr>();
+    assert!(result.is_err(), "`user` part cannot have a colon");
+}
+
+/// Builder should be able to build a normalized IRI even it requires WHATWG URL
+/// Standard serialization.
+#[test]
+fn normalize_double_slash_prefix() {
+    let mut builder = Builder::new();
+    builder.scheme("scheme");
+    builder.path("/..//bar");
+    builder.normalize();
+    let built = builder
+        .build::<IriStr>()
+        .expect("normalizable by WHATWG URL Standard serialization");
+    // Naive application of RFC 3986 normalization/resolution algorithm
+    // results in `scheme://bar`, but this is unintentional. `bar` should be
+    // the second path segment, not a host. So this should be rejected.
+    assert!(
+        built.ensure_rfc3986_normalizable().is_err(),
+        "not normalizable by RFC 3986 algorithm"
+    );
+    // In contrast to RFC 3986, WHATWG URL Standard defines serialization
+    // algorithm and handles this case specially. In this case, the result
+    // is `scheme:/.//bar`, this won't be considered fully normalized from
+    // the RFC 3986 point of view, but more normalization would be
+    // impossible and this would practically work in most situations.
+    assert_eq_display!(built, "scheme:/.//bar");
+}
+
+/// Builder should be able to build a normalized IRI even it requires WHATWG URL
+/// Standard serialization.
+#[test]
+fn absolute_double_slash_path_without_authority() {
+    let mut builder = Builder::new();
+    builder.scheme("scheme");
+    builder.path("//bar");
+
+    // Should fail without normalization.
+    {
+        let result = builder.clone().build::<IriStr>();
+        assert!(
+            result.is_err(),
+            "`scheme://bar` is unintended so the build should fail"
+        );
+    }
+
+    // With normalization, the build succeeds.
+    builder.normalize();
+    let built = builder
+        .build::<IriStr>()
+        .expect("normalizable by WHATWG URL Standard serialization");
+    // Naive application of RFC 3986 normalization/resolution algorithm
+    // results in `scheme://bar`, but this is unintentional. `bar` should be
+    // the second path segment, not a host. So this should be rejected.
+    assert!(
+        built.ensure_rfc3986_normalizable().is_err(),
+        "not normalizable by RFC 3986 algorithm"
+    );
+    // In contrast to RFC 3986, WHATWG URL Standard defines serialization
+    // algorithm and handles this case specially. In this case, the result
+    // is `scheme:/.//bar`, this won't be considered fully normalized from
+    // the RFC 3986 point of view, but more normalization would be
+    // impossible and this would practically work in most situations.
+    assert_eq_display!(built, "scheme:/.//bar");
+}
+
+/// Authority requires the path to be empty or absolute (without normalization enabled).
+#[test]
+fn authority_and_relative_path() {
+    let mut builder = Builder::new();
+    builder.host("example.com");
+    builder.path("relative/path");
+    assert!(
+        builder.clone().build::<IriReferenceStr>().is_err(),
+        "authority requires the path to be empty or absolute"
+    );
+
+    // Even if normalization is enabled, the relative path is unacceptable.
+    builder.normalize();
+    assert!(
+        builder.build::<IriReferenceStr>().is_err(),
+        "authority requires the path to be empty or absolute"
+    );
+}
+
+#[test]
+fn no_authority_and_double_slash_prefix_without_normalization() {
+    let mut builder = Builder::new();
+    // This would be interpreted as "network-path reference" (see RFC 3986
+    // section 4.2), so this should be rejected.
+    builder.path("//double-slash");
+    assert!(builder.build::<IriReferenceStr>().is_err());
+}
+
+#[test]
+fn no_authority_and_double_slash_prefix_with_normalization() {
+    let mut builder = Builder::new();
+    builder.path("//double-slash");
+    builder.normalize();
+    let built = builder
+        .build::<IriReferenceStr>()
+        .expect("normalizable by WHATWG URL Standard serialization");
+    assert_eq_display!(built, "/.//double-slash");
+    assert!(built.ensure_rfc3986_normalizable().is_err());
+}
+
+#[test]
+fn no_authority_and_relative_first_segment_colon() {
+    let mut builder = Builder::new();
+    // This would be interpreted as scheme `foo` and host `bar`,
+    // so this should be rejected.
+    builder.path("foo:bar");
+    assert!(builder.clone().build::<IriReferenceStr>().is_err());
+
+    // Normalization does not change the situation.
+    builder.normalize();
+    assert!(builder.build::<IriReferenceStr>().is_err());
 }

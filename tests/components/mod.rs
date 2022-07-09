@@ -114,7 +114,7 @@ impl<'a> Components<'a> {
 
         if let Some(host) = self.host {
             if self.user.is_some() || self.password.is_some() {
-                builder.userinfo((self.user, self.password));
+                builder.userinfo((self.user.unwrap_or(""), self.password));
             } else if clean {
                 builder.unset_userinfo();
             }
@@ -270,6 +270,7 @@ macro_rules! components {
     };
 }
 
+#[allow(clippy::needless_update)] // For `components!` macro.
 pub static TEST_CASES: &[TestCase<'static>] = test_cases![
     {
         name: "typical example URI",
@@ -327,5 +328,71 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         // would be decoded to ASCII or not.
         normalized_uri: "http://usER:passWORD@%CE%B1.CoM/",
         normalized_iri: "http://usER:passWORD@\u{03B1}.CoM/",
+    },
+    {
+        name: "URI with all components set",
+        composed: "http://user:password@example.com:80/path/to/somewhere?query#fragment",
+        components: {
+            scheme: "http",
+            user: "user",
+            password: "password",
+            host: "example.com",
+            port: "80",
+            path: "/path/to/somewhere",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "http://user:password@example.com:80/path/to/somewhere?query#fragment",
+        normalized_iri: "http://user:password@example.com:80/path/to/somewhere?query#fragment",
+    },
+    {
+        name: "URI that cannot be normalized by pure RFC 3986",
+        composed: "scheme:/.//bar",
+        components: {
+            scheme: "scheme",
+            path: "/.//bar",
+        },
+        normalized_uri: "scheme:/.//bar",
+        normalized_iri: "scheme:/.//bar",
+    },
+    {
+        name: "Relative URI reference as a relative path `..`",
+        description: "Relative path without scheme and authority should not be normalized",
+        composed: "..",
+        components: {
+            path: "..",
+        },
+        normalized_uri: "..",
+        normalized_iri: "..",
+    },
+    {
+        name: "Relative URI reference as a relative path",
+        description: "Relative path without scheme and authority should not be normalized",
+        composed: "../foo/..",
+        components: {
+            path: "../foo/..",
+        },
+        normalized_uri: "../foo/..",
+        normalized_iri: "../foo/..",
+    },
+    {
+        name: "Relative URI reference as a relative path",
+        description: "Relative path without scheme and authority should not be normalized",
+        composed: "foo/../p%61th",
+        components: {
+            path: "foo/../p%61th",
+        },
+        normalized_uri: "foo/../path",
+        normalized_iri: "foo/../path",
+    },
+    {
+        name: "Relative path in an absolute URI",
+        composed: "scheme:foo/../p%61th",
+        components: {
+            scheme: "scheme",
+            path: "foo/../p%61th",
+        },
+        normalized_uri: "scheme:/path",
+        normalized_iri: "scheme:/path",
     },
 ];
