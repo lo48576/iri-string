@@ -13,7 +13,7 @@ use alloc::string::ToString;
 use crate::format::Censored;
 #[cfg(feature = "alloc")]
 use crate::format::{ToDedicatedString, ToStringFallible};
-use crate::normalize::{self, PctCaseNormalized};
+use crate::normalize::{self, PathCharacteristic, PctCaseNormalized};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
 use crate::spec::Spec;
@@ -351,7 +351,11 @@ impl<'a> Builder<'a> {
     /// The IRI string to be built should be a valid IRI reference.
     /// Callers are responsible to validate the component values before calling
     /// this method.
-    fn fmt_write_to<S: Spec>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt_write_to<S: Spec>(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        path_is_absolute: bool,
+    ) -> fmt::Result {
         if let Some(scheme) = self.scheme {
             // Write the scheme.
             if self.normalize {
@@ -370,7 +374,7 @@ impl<'a> Builder<'a> {
         if !self.normalize {
             // No normalization.
             f.write_str(self.path)?;
-        } else if self.scheme.is_some() || self.authority.is_some() {
+        } else if self.scheme.is_some() || self.authority.is_some() || path_is_absolute {
             // Apply full syntax-based normalization.
             let op = normalize::NormalizationOp {
                 case_pct_normalization: true,
@@ -381,7 +385,7 @@ impl<'a> Builder<'a> {
                 self.authority.is_some(),
             )?;
         } else {
-            // The IRI reference starts with `path` component.
+            // The IRI reference starts with `path` component, and the path is relative.
             // Skip path segment normalization.
             PctCaseNormalized::<S>::new(self.path).fmt(f)?;
         }
@@ -897,19 +901,22 @@ impl<'a> Builder<'a> {
     ///
     /// # Normalization
     ///
-    /// If `scheme` or `authority` component is present, the build result
-    /// will fully normalized using full syntax-based normalization:
+    /// If `scheme` or `authority` component is present or the path is absolute,
+    /// the build result will fully normalized using full syntax-based normalization:
     ///
     /// * case normalization ([RFC 3986 6.2.2.1]),
     /// * percent-encoding normalization ([RFC 3986 6.2.2.2]), and
     /// * path segment normalization ([RFC 3986 6.2.2.2]).
     ///
-    /// However, if neither `scheme` nor `authority` is present, i.e. the
-    /// IRI reference to be built starts with the `path` component, path segment
-    /// normalization will be omitted.
+    /// However, if both `scheme` and `authority` is absent and the path is relative
+    /// (including empty), i.e. the IRI reference to be built starts with the
+    /// relative `path` component, path segment normalization will be omitted.
     /// This is because the path segment normalization depends on presence or
     /// absense of the `authority` components, and will remove extra `..`
     /// segments which should not be ignored.
+    ///
+    /// Note that `path` must already be empty or start with a slash **before
+    /// the normalizaiton** if `authority` is present.
     ///
     /// # WHATWG URL Standard
     ///
@@ -964,6 +971,8 @@ impl<'a> Builder<'a> {
 pub struct Built<'a, T: ?Sized> {
     /// Builder with the validated content.
     builder: Builder<'a>,
+    /// Whether the path is absolute.
+    path_is_absolute: bool,
     /// String type.
     _ty_str: PhantomData<fn() -> T>,
 }
@@ -973,6 +982,7 @@ impl<T: ?Sized> Clone for Built<'_, T> {
     fn clone(&self) -> Self {
         Self {
             builder: self.builder.clone(),
+            path_is_absolute: self.path_is_absolute,
             _ty_str: PhantomData,
         }
     }
@@ -996,7 +1006,7 @@ macro_rules! impl_stringifiers {
         impl<S: Spec> fmt::Display for Built<'_, $borrowed<S>> {
             #[inline]
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                self.builder.fmt_write_to::<S>(f)
+                self.builder.fmt_write_to::<S>(f, self.path_is_absolute)
             }
         }
 
@@ -1041,10 +1051,11 @@ pub trait Buildable<'a>: private::Sealed<'a> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
         Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1056,10 +1067,11 @@ impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
         if builder.scheme.is_none() {
             return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
         Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1074,10 +1086,11 @@ impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
         if builder.fragment.is_some() {
             return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
         Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1089,10 +1102,11 @@ impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
         if builder.scheme.is_some() {
             return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
         Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1100,7 +1114,9 @@ impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiRelativeStr<S> {}
 
 /// Checks whether the builder output is valid IRI reference.
-fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<(), Error> {
+///
+/// Returns whether the path is absolute.
+fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<bool, Error> {
     if let Some(scheme) = builder.scheme {
         parser::validate_scheme(scheme)?;
     }
@@ -1140,20 +1156,54 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
         }
     }
 
-    let is_path_acceptable = if builder.authority.is_some() {
-        // The path should be absolute or empty.
-        builder.path.is_empty() || builder.path.starts_with('/')
-    } else if builder.scheme.is_some() {
-        // The path should not start with '//'.
-        !builder.path.starts_with("//")
+    let path_is_absolute: bool;
+    let mut is_path_acceptable;
+    if builder.normalize {
+        if builder.scheme.is_some() || builder.authority.is_some() || builder.path.starts_with('/')
+        {
+            if builder.authority.is_some() {
+                // Note that the path should already be in an absolute form before normalization.
+                is_path_acceptable = builder.path.is_empty() || builder.path.starts_with('/');
+            } else {
+                is_path_acceptable = true;
+            }
+            let op = normalize::NormalizationOp {
+                case_pct_normalization: true,
+            };
+            let path_characteristic = PathCharacteristic::from_path_to_display::<S>(
+                &normalize::PathToNormalize::from_single_path(builder.path),
+                op,
+                builder.authority.is_some(),
+            );
+            path_is_absolute = path_characteristic.is_absolute();
+            is_path_acceptable = is_path_acceptable
+                && match path_characteristic {
+                    PathCharacteristic::CommonAbsolute | PathCharacteristic::CommonRelative => true,
+                    PathCharacteristic::StartsWithDoubleSlash
+                    | PathCharacteristic::RelativeFirstSegmentHasColon => {
+                        builder.scheme.is_some() || builder.authority.is_some()
+                    }
+                };
+        } else {
+            path_is_absolute = false;
+            // If the path is relative (where neither scheme nor authority is
+            // available), the first segment should not contain a colon.
+            is_path_acceptable = prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':');
+        }
     } else {
-        // If the path is relative (where neither scheme nor authority available),
-        //
-        // * the path should not start with `//`, and
-        // * the first segment should not contain a colon.
-        !builder.path.starts_with("//")
-            && (prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':'))
-    };
+        path_is_absolute = builder.path.starts_with('/');
+        is_path_acceptable = if builder.authority.is_some() {
+            // The path should be absolute or empty.
+            path_is_absolute || builder.path.is_empty()
+        } else if builder.scheme.is_some() || path_is_absolute {
+            // The path should not start with '//'.
+            !builder.path.starts_with("//")
+        } else {
+            // If the path is relative (where neither scheme nor authority is
+            // available), the first segment should not contain a colon.
+            prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':')
+        };
+    }
     if !is_path_acceptable {
         return Err(Error::new());
     }
@@ -1166,7 +1216,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
         parser::validate_fragment::<S>(fragment)?;
     }
 
-    Ok(())
+    Ok(path_is_absolute)
 }
 
 /// Private module to put the trait to seal.

@@ -52,6 +52,7 @@
     + Remove `build::Error` type.
 * Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
 * Reject user with colon characters on IRI build.
+* Allow builders to normalize `path` component of relative IRIs if safely possible.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -209,6 +210,7 @@
       `{BorrowedIri}<S> where S: Spec`.
 * Reject user with colon characters on IRI build.
     + Now `build::Builder::build()` fails when `user` part contains a colon (`:`).
+* Allow builders to normalize `path` component of relative IRIs if safely possible.
 
 ## [0.5.6]
 
