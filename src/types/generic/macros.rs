@@ -980,21 +980,3 @@ macro_rules! impl_trivial_conv_between_iri {
         impl_cmp2_as_str!($from_owned<S>, $to_owned<T>);
     };
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        spec::{IriSpec, UriSpec},
-        types::{RiAbsoluteStr, RiReferenceStr},
-    };
-
-    #[test]
-    fn compare_different_types()
-    where
-        RiAbsoluteStr<UriSpec>: PartialEq<RiReferenceStr<IriSpec>>,
-        RiReferenceStr<IriSpec>: PartialEq<RiAbsoluteStr<UriSpec>>,
-        RiAbsoluteStr<IriSpec>: PartialEq<RiReferenceStr<UriSpec>>,
-        RiReferenceStr<UriSpec>: PartialEq<RiAbsoluteStr<IriSpec>>,
-    {
-    }
-}

@@ -330,3 +330,13 @@ fn invalid_percent_encoding() {
         assert_non_convertible::<UriRelativeStr>(uri);
     }
 }
+
+#[test]
+fn compare_different_types()
+where
+    UriAbsoluteStr: PartialEq<IriReferenceStr>,
+    IriReferenceStr: PartialEq<UriAbsoluteStr>,
+    IriAbsoluteStr: PartialEq<UriReferenceStr>,
+    UriReferenceStr: PartialEq<IriAbsoluteStr>,
+{
+}
