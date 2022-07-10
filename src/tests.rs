@@ -21,54 +21,6 @@ pub(crate) struct Components<'a> {
     fragment: Option<&'a str>,
 }
 
-impl<'a> Components<'a> {
-    #[inline]
-    #[must_use]
-    pub(crate) fn new(
-        scheme: Option<&'a str>,
-        authority: Option<&'a str>,
-        path: &'a str,
-        query: Option<&'a str>,
-        fragment: Option<&'a str>,
-    ) -> Self {
-        assert!(
-            authority.is_some() || !path.starts_with("//"),
-            "when `authority` is absent, `path` should not start with `//`: \
-             authority={:?}, path={:?}",
-            authority,
-            path
-        );
-        assert!(
-            authority.is_none() || (path.is_empty() || path.starts_with('/')),
-            "when `authority` is present, `path` should be empty or \
-             start with `/`: authority={:?}, path={:?}",
-            authority,
-            path
-        );
-        assert!(
-            scheme.is_some()
-                || authority.is_some()
-                || !path
-                    .split('/')
-                    .next()
-                    .map_or(false, |seg| seg.contains(':')),
-            "when `scheme` and `authority` is absent, the first segment of \
-             `path` should not contain a colon: scheme={:?}, authority={:?}, path={:?}",
-            scheme,
-            authority,
-            path
-        );
-
-        Self {
-            scheme,
-            authority,
-            path,
-            query,
-            fragment,
-        }
-    }
-}
-
 impl fmt::Display for Components<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(scheme) = self.scheme {
@@ -124,19 +76,6 @@ pub(crate) struct WritableByteBuffer<'a> {
 }
 
 impl<'a> WritableByteBuffer<'a> {
-    pub(crate) fn new(buf: &'a mut [u8]) -> Self {
-        Self { buf, len: 0 }
-    }
-
-    pub(crate) fn clear(&mut self) {
-        self.len = 0;
-    }
-
-    pub(crate) fn as_str(&self) -> &str {
-        core::str::from_utf8(&self.buf[..self.len])
-            .expect("data written by `fmt::Write` must be valid UTF-8 sequences")
-    }
-
     fn rest(&mut self) -> &mut [u8] {
         &mut self.buf[self.len..]
     }

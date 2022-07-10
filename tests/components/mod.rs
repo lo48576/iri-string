@@ -66,7 +66,7 @@ impl TestCase<'_> {
 }
 
 /// Components.
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Components<'a> {
     /// `scheme`.
     pub scheme: Option<&'a str>,

@@ -5,9 +5,60 @@ mod components;
 mod utils;
 
 use iri_string::build::Builder;
+use iri_string::format::write_to_slice;
 use iri_string::types::*;
 
-use self::components::{TestCase, TEST_CASES};
+use self::components::{Components, TestCase, TEST_CASES};
+
+/// Pairs of components and composed IRI should be consistent.
+///
+/// This also (implicitly) tests that build-and-decompose and decompose-and-build
+/// operations are identity conversions.
+#[test]
+fn consistent_components_and_composed() {
+    for case in TEST_CASES.iter().copied() {
+        let mut builder = Builder::new();
+        case.components.feed_builder(&mut builder, false);
+
+        // composed -> components.
+        let built = builder
+            .build::<IriReferenceStr>()
+            .expect("should be valid IRI reference");
+        assert_eq_display!(built, case.composed);
+
+        // components -> composed.
+        let composed = IriReferenceStr::new(case.composed).expect("should be valid IRI reference");
+        let scheme = composed.scheme_str();
+        let (user, password, host, port) = match composed.authority_components() {
+            None => (None, None, None, None),
+            Some(authority) => {
+                let (user, password) = match authority.userinfo() {
+                    None => (None, None),
+                    Some(userinfo) => match userinfo.find(':').map(|pos| userinfo.split_at(pos)) {
+                        Some((user, password)) => (Some(user), Some(&password[1..])),
+                        None => (Some(userinfo), None),
+                    },
+                };
+                (user, password, Some(authority.host()), authority.port())
+            }
+        };
+        let path = composed.path_str();
+        let query = composed.query().map(|s| s.as_str());
+        let fragment = composed.fragment().map(|s| s.as_str());
+
+        let roundtrip_result = Components {
+            scheme,
+            user,
+            password,
+            host,
+            port,
+            path,
+            query,
+            fragment,
+        };
+        assert_eq!(roundtrip_result, case.components, "case={case:#?}");
+    }
+}
 
 fn assert_builds_for_case(case: &TestCase<'_>, builder: &Builder<'_>) {
     if case.is_iri_class() {
@@ -199,7 +250,7 @@ fn build_normalizedness() {
         );
 
         let mut buf = [0_u8; 512];
-        let s = iri_string::format::write_to_slice(&mut buf, &built).expect("not enough buffer");
+        let s = write_to_slice(&mut buf, &built).expect("not enough buffer");
         let built_slice = IriStr::new(s).expect("should be valid IRI reference");
         assert!(built_slice.is_normalized_whatwg(), "should be normalized");
         let slice_judge = built_slice.is_normalized_rfc3986();
