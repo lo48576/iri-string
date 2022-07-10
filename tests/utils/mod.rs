@@ -174,7 +174,7 @@ macro_rules! assert_eq_display {
         match (&$left, &$right) {
             (left, right) => {
                 assert!(
-                    utils::eq_display_str(left, right),
+                    utils::eq_display_str(left, right.as_ref()),
                     "`eq_str_display(left, right)`\n  left: `{left}`,\n right: `{right}`",
                 );
                 #[cfg(feature = "alloc")]
@@ -190,7 +190,7 @@ macro_rules! assert_eq_display {
         match (&$left, &$right) {
             (left, right) => {
                 assert!(
-                    utils::eq_display_str(left, right),
+                    utils::eq_display_str(left, right.as_ref()),
                     "{}",
                     format_args!(
                         "{}: {}",

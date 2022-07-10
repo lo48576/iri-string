@@ -1,4 +1,5 @@
 //! Components.
+#![allow(dead_code)]
 
 use core::fmt;
 
@@ -19,6 +20,8 @@ pub struct TestCase<'a> {
     pub normalized_uri: &'a str,
     /// Normalized string as IRI.
     pub normalized_iri: &'a str,
+    /// Different IRIs.
+    pub different_iris: &'a [&'a str],
 }
 
 impl TestCase<'_> {
@@ -205,50 +208,6 @@ impl fmt::Display for Components<'_> {
     }
 }
 
-macro_rules! test_cases {
-    ($({$($toks:tt)*}),* $(,)?) => {
-        &[ $( test_case! { $($toks)* } ),* ]
-    }
-}
-
-macro_rules! test_case {
-    // With description.
-    (
-        name: $name:expr,
-        description: $description:expr,
-        composed: $composed:expr,
-        components: { $($components:tt)* },
-        normalized_uri: $normalized_uri:expr,
-        normalized_iri: $normalized_iri:expr,
-    ) => {
-        TestCase {
-            name: Some($name),
-            description: Some($description),
-            composed: $composed,
-            components: components! { $($components)* },
-            normalized_uri: $normalized_uri,
-            normalized_iri: $normalized_iri,
-        }
-    };
-    // Without description.
-    (
-        name: $name:expr,
-        composed: $composed:expr,
-        components: { $($components:tt)* },
-        normalized_uri: $normalized_uri:expr,
-        normalized_iri: $normalized_iri:expr,
-    ) => {
-        TestCase {
-            name: Some($name),
-            description: None,
-            composed: $composed,
-            components: components! { $($components)* },
-            normalized_uri: $normalized_uri,
-            normalized_iri: $normalized_iri,
-        }
-    };
-}
-
 macro_rules! components {
     () => {
         Components::default()
@@ -268,6 +227,68 @@ macro_rules! components {
     (@field; $field:ident: $expr:expr) => {
         Some($expr)
     };
+}
+
+macro_rules! test_case {
+    // Name.
+    (@field=name; name: $value:expr, $($rest:tt)*) => {
+        $value
+    };
+    // Description.
+    (@field=description; description: $value:expr, $($rest:tt)*) => {
+        Some($value)
+    };
+    (@field=description;) => {
+        None
+    };
+    // Composed.
+    (@field=composed; composed: $value:expr, $($rest:tt)*) => {
+        $value
+    };
+    // Components.
+    (@field=components; components: { $($toks:tt)* }, $($rest:tt)*) => {
+        components! { $($toks)* }
+    };
+    // Normalized URI.
+    (@field=normalized_uri; normalized_uri: $value:expr, $($rest:tt)*) => {
+        $value
+    };
+    // Normalized IRI.
+    (@field=normalized_iri; normalized_iri: $value:expr, $($rest:tt)*) => {
+        $value
+    };
+    // Different IRIs.
+    (@field=different_iris; different_iris: $value:expr, $($rest:tt)*) => {
+        $value
+    };
+    (@field=different_iris;) => {
+        &[]
+    };
+    // Fallback.
+    (@field=$name:ident; $field:ident: { $($toks:tt)* }, $($rest:tt)*) => {
+        test_case!(@field=$name; $($rest)*)
+    };
+    // Fallback.
+    (@field=$name:ident; $field:ident: $value:expr, $($rest:tt)*) => {
+        test_case!(@field=$name; $($rest)*)
+    };
+    ($($args:tt)*) => {
+        TestCase {
+            name: Some(test_case!(@field=name; $($args)*)),
+            description: test_case!(@field=description; $($args)*),
+            composed: test_case!(@field=composed; $($args)*),
+            components: test_case!(@field=components; $($args)*),
+            normalized_uri: test_case!(@field=normalized_uri; $($args)*),
+            normalized_iri: test_case!(@field=normalized_iri; $($args)*),
+            different_iris: test_case!(@field=different_iris; $($args)*),
+        }
+    };
+}
+
+macro_rules! test_cases {
+    ($({$($toks:tt)*}),* $(,)?) => {
+        &[ $( test_case! { $($toks)* } ),* ]
+    }
 }
 
 #[allow(clippy::needless_update)] // For `components!` macro.
@@ -347,13 +368,23 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
     },
     {
         name: "URI that cannot be normalized by pure RFC 3986",
-        composed: "scheme:/.//bar",
+        composed: "scheme:/.//not-a-host",
         components: {
             scheme: "scheme",
-            path: "/.//bar",
+            path: "/.//not-a-host",
         },
-        normalized_uri: "scheme:/.//bar",
-        normalized_iri: "scheme:/.//bar",
+        normalized_uri: "scheme:/.//not-a-host",
+        normalized_iri: "scheme:/.//not-a-host",
+    },
+    {
+        name: "URI that cannot be normalized by pure RFC 3986",
+        composed: "scheme:..///not-a-host",
+        components: {
+            scheme: "scheme",
+            path: "..///not-a-host",
+        },
+        normalized_uri: "scheme:/.//not-a-host",
+        normalized_iri: "scheme:/.//not-a-host",
     },
     {
         name: "Relative URI reference as a relative path `..`",
@@ -394,5 +425,185 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         },
         normalized_uri: "scheme:/path",
         normalized_iri: "scheme:/path",
+    },
+    {
+        name: "Non-normalized URI",
+        composed: "HTTPs://EXaMPLE.COM/pA/Th?Query#Frag",
+        components: {
+            scheme: "HTTPs",
+            host: "EXaMPLE.COM",
+            path: "/pA/Th",
+            query: "Query",
+            fragment: "Frag",
+        },
+        normalized_uri: "https://example.com/pA/Th?Query#Frag",
+        normalized_iri: "https://example.com/pA/Th?Query#Frag",
+        different_iris: &[
+            "https://example.com/pa/th?Query#Frag",
+            "https://example.com/pA/Th?query#Frag",
+            "https://example.com/pA/Th?Query#frag",
+        ],
+    },
+    {
+        name: "UUID URN",
+        composed: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        components: {
+            scheme: "urn",
+            path: "uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        },
+        normalized_uri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        normalized_iri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        different_iris: &[
+            "urn:UUID:7f1450df-6678-465b-a881-188f9b6ec822",
+            "urn:uuid:7F1450DF-6678-465B-A881-188F9B6EC822",
+        ],
+    },
+    {
+        name: "UUID URN",
+        composed: "URN:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        components: {
+            scheme: "URN",
+            path: "uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        },
+        normalized_uri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        normalized_iri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        different_iris: &[
+            "urn:UUID:7f1450df-6678-465b-a881-188f9b6ec822",
+            "urn:uuid:7F1450DF-6678-465B-A881-188F9B6EC822",
+        ],
+    },
+    {
+        name: "UUID URN",
+        composed: "URN:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        components: {
+            scheme: "URN",
+            path: "uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        },
+        normalized_uri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        normalized_iri: "urn:uuid:7f1450df-6678-465b-a881-188f9b6ec822",
+        different_iris: &[
+            "urn:UUID:7f1450df-6678-465b-a881-188f9b6ec822",
+            "urn:uuid:7F1450DF-6678-465B-A881-188F9B6EC822",
+        ],
+    },
+    {
+        name: "IRI with percent-encoded unreserved characters and non-valid UTF-8 bytes",
+        composed: "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/",
+            query: "a=%CE%B1&b=%CE%CE%B1%B1",
+        },
+        normalized_uri: "http://example.com/?a=%CE%B1&b=%CE%CE%B1%B1",
+        normalized_iri: "http://example.com/?a=\u{03B1}&b=%CE\u{03B1}%B1",
+    },
+    {
+        name: "not ASCII-only host",
+        composed: "SCHEME://Alpha%ce%b1/",
+        components: {
+            scheme: "SCHEME",
+            host: "Alpha%ce%b1",
+            path: "/",
+        },
+        normalized_uri: "scheme://Alpha%CE%B1/",
+        normalized_iri: "scheme://Alpha\u{03B1}/",
+    },
+    {
+        name: "URI with percent-encoded unreserevd and reserved characters",
+        description: "Tilde character (0x7e) is unreserved and bang (0x21) is reserved",
+        composed: "http://example.com/%7E%41%73%63%69%69%21",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/%7E%41%73%63%69%69%21",
+        },
+        normalized_uri: "http://example.com/~Ascii%21",
+        normalized_iri: "http://example.com/~Ascii%21",
+    },
+    {
+        name: "not ASCII-only host",
+        description: "Plus character (0x2B) is reserved (sub-delim), so it should not be decoded in host part",
+        composed: "SCHEME://PLUS%2bPLUS/",
+        components: {
+            scheme: "SCHEME",
+            host: "PLUS%2bPLUS",
+            path: "/",
+        },
+        normalized_uri: "scheme://plus%2Bplus/",
+        normalized_iri: "scheme://plus%2Bplus/",
+    },
+    {
+        name: "empty port",
+        // <https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3>:
+        //
+        // > URI producers and normalizers should omit the port component
+        // > and its ":" delimiter if port is empty or if its value would
+        // > be the same as that of the scheme's default.
+        description: "According to RFC 3986 section 3.2.3, empty port should be omitted by normalization",
+        composed: "https://example.com:/",
+        components: {
+            scheme: "https",
+            host: "example.com",
+            port: "",
+            path: "/",
+        },
+        normalized_uri: "https://example.com/",
+        normalized_iri: "https://example.com/",
+    },
+    {
+        name: "URI with a dot-dot segment",
+        composed: "http://example.com/a/b/c/%2e%2e/d/e",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/a/b/c/%2e%2e/d/e",
+        },
+        normalized_uri: "http://example.com/a/b/d/e",
+        normalized_iri: "http://example.com/a/b/d/e",
+    },
+    {
+        name: "URI with a dot-dot segment",
+        composed: "http://example.com/a/b/c/%2E%2E/d/e",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/a/b/c/%2E%2E/d/e",
+        },
+        normalized_uri: "http://example.com/a/b/d/e",
+        normalized_iri: "http://example.com/a/b/d/e",
+    },
+    {
+        name: "URI with a dot-dot segment",
+        composed: "http://example.com/a/b/c/../d/e",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/a/b/c/../d/e",
+        },
+        normalized_uri: "http://example.com/a/b/d/e",
+        normalized_iri: "http://example.com/a/b/d/e",
+    },
+    {
+        name: "URI with a dot-dot segment",
+        composed: "http://example.com/a/b/c/.%2e/d/e",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/a/b/c/.%2e/d/e",
+        },
+        normalized_uri: "http://example.com/a/b/d/e",
+        normalized_iri: "http://example.com/a/b/d/e",
+    },
+    {
+        name: "URI with dot segments",
+        composed: "http://example.com/a/./././././b/c/.%2e/d/e",
+        components: {
+            scheme: "http",
+            host: "example.com",
+            path: "/a/./././././b/c/.%2e/d/e",
+        },
+        normalized_uri: "http://example.com/a/b/d/e",
+        normalized_iri: "http://example.com/a/b/d/e",
     },
 ];
