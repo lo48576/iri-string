@@ -77,9 +77,6 @@
 //! # Ok::<_, iri_string::validate::Error>(())
 //! ```
 
-#[cfg(test)]
-mod tests;
-
 use crate::components::RiReferenceComponents;
 use crate::normalize::{NormalizationInput, Normalized};
 use crate::spec::Spec;

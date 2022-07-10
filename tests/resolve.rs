@@ -1,28 +1,18 @@
-//! Tests for resolvers.
+//! Tests for IRI resolution.
 
-#[cfg(not(test))]
-compile_error!("`tests` module should be enable only when `cfg(tests)`");
+#[macro_use]
+mod utils;
+#[cfg(feature = "alloc")]
+mod resolve_refimpl;
+
+use iri_string::format::write_to_slice;
+#[cfg(feature = "alloc")]
+use iri_string::format::ToDedicatedString;
+use iri_string::resolve::FixedBaseResolver;
+use iri_string::types::*;
 
 #[cfg(feature = "alloc")]
-mod refimpl;
-
-use super::*;
-
-use crate::format::write_to_slice;
-#[cfg(feature = "alloc")]
-use crate::format::ToDedicatedString;
-use crate::types::{IriAbsoluteStr, IriReferenceStr};
-
-#[cfg(feature = "alloc")]
-use self::refimpl::resolve as resolve_refimpl;
-
-fn abs_iri(s: &str) -> &IriAbsoluteStr {
-    IriAbsoluteStr::new(s).expect("test case should be valid")
-}
-
-fn iri_ref(s: &str) -> &IriReferenceStr {
-    IriReferenceStr::new(s).expect("test case should be valid")
-}
+use self::resolve_refimpl::resolve as resolve_refimpl;
 
 /// Test cases for strict resolvers.
 // [(base, [(input, output)])]
@@ -207,19 +197,20 @@ const TEST_CASES: &[(&str, &[(&str, &str)])] = &[
 ];
 
 #[test]
-#[cfg(feature = "alloc")]
-fn test_resolve_standalone() {
+fn resolve() {
     for (base, pairs) in TEST_CASES {
-        let base = abs_iri(base);
-        for (input, expected) in *pairs {
-            let input = iri_ref(input);
-            let got = input.resolve_against(base).to_dedicated_string();
+        let base = IriAbsoluteStr::new(base).expect("should be valid base IRI");
+
+        for (target, expected) in *pairs {
+            let target = IriReferenceStr::new(target).expect("should be valid IRI reference");
+            let resolved = target.resolve_against(base);
+            assert_eq_display!(resolved, expected, "base={base:?}, target={target:?}");
+
+            #[cfg(feature = "alloc")]
             assert_eq!(
-                AsRef::<str>::as_ref(&got),
+                resolved.to_dedicated_string().as_str(),
                 *expected,
-                "base = {:?}, input = {:?}",
-                base,
-                input
+                "base={base:?}, target={target:?}"
             );
         }
     }
@@ -227,29 +218,51 @@ fn test_resolve_standalone() {
 
 #[test]
 #[cfg(feature = "alloc")]
-fn test_resolve_standalone_same_result_as_reference_impl() {
+fn fixed_base_resolver() {
     for (base, pairs) in TEST_CASES {
-        let base = abs_iri(base);
-        for (input, expected) in *pairs {
-            let input = iri_ref(input);
-            let got = input.resolve_against(base).to_dedicated_string();
-            assert_eq!(
-                AsRef::<str>::as_ref(&got),
-                *expected,
-                "base = {:?}, input = {:?}",
-                base,
-                input
-            );
+        let base = IriAbsoluteStr::new(base).expect("should be valid base IRI");
+        let resolver = FixedBaseResolver::new(base);
 
-            let referernce_result = resolve_refimpl(input, base);
-            assert_eq!(got, referernce_result);
+        for (target, expected) in *pairs {
+            let target = IriReferenceStr::new(target).expect("should be valid IRI reference");
+            let resolved = resolver.resolve(target);
+
+            assert_eq_display!(resolved, expected, "base={base:?}, target={target:?}");
+            #[cfg(feature = "alloc")]
+            assert_eq!(
+                resolved.to_dedicated_string().as_str(),
+                *expected,
+                "base={base:?}, target={target:?}"
+            );
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn same_result_as_reference_impl() {
+    for (base, pairs) in TEST_CASES {
+        let base = IriAbsoluteStr::new(base).expect("should be valid base IRI");
+
+        for (target, expected) in *pairs {
+            let target = IriReferenceStr::new(target).expect("should be valid IRI reference");
+            let resolved = target.resolve_against(base).to_dedicated_string();
+
+            let expected_refimpl = resolve_refimpl(target, base);
+            assert_eq!(
+                *expected, expected_refimpl,
+                "base={base:?}, target={target:?}"
+            );
+            assert_eq!(
+                resolved, expected_refimpl,
+                "base={base:?}, target={target:?}"
+            );
         }
     }
 }
 
 #[test]
-#[cfg(feature = "alloc")]
-fn test_resolve_percent_encoded_dots() {
+fn percent_encoded_dots() {
     // [(base, ref, result)]
     const TEST_CASES: &[(&str, &str, &str)] = &[
         ("scheme:", ".", "scheme:"),
@@ -279,91 +292,58 @@ fn test_resolve_percent_encoded_dots() {
     ];
 
     for (base, reference, expected) in TEST_CASES {
-        let base = abs_iri(base);
-        let reference = iri_ref(reference);
-        let got = reference.resolve_against(base).to_dedicated_string();
-        assert_eq!(got, *expected);
+        let base = IriAbsoluteStr::new(base).expect("should be valid base IRI");
+        let reference = IriReferenceStr::new(reference).expect("should be valid IRI reference");
+
+        let resolved = reference.resolve_against(base);
+        assert_eq_display!(resolved, *expected);
+        #[cfg(feature = "alloc")]
+        assert_eq!(resolved.to_dedicated_string(), *expected);
     }
 }
 
 #[test]
-#[cfg(feature = "alloc")]
-fn test_fixed_base_resolver() {
-    for (base, pairs) in TEST_CASES {
-        let base = abs_iri(base);
-        let resolver = FixedBaseResolver::new(base);
-        for (input, expected) in *pairs {
-            let input = iri_ref(input);
-            let got = resolver.resolve(input).to_dedicated_string();
-            assert_eq!(
-                AsRef::<str>::as_ref(&got),
-                *expected,
-                "base = {:?}, input = {:?}",
-                base,
-                input
-            );
-        }
-    }
-}
-
-#[test]
-fn test_fixed_base_resolver_write_to_slice() {
-    let mut buf = [0_u8; 128];
-    for (base, pairs) in TEST_CASES {
-        let base = abs_iri(base);
-        let resolver = FixedBaseResolver::new(base);
-        for (input, expected) in *pairs {
-            let input = iri_ref(input);
-            let resolved = resolver.resolve(input);
-            let got =
-                write_to_slice(&mut buf, &resolved).expect("`buf` should have enough capacity");
-            assert_eq!(
-                AsRef::<str>::as_ref(&got),
-                *expected,
-                "base = {:?}, input = {:?}",
-                base,
-                input
-            );
-        }
-    }
-}
-
-#[test]
-fn test_fixed_base_resolver_write_to_slice_should_never_panic() {
-    let mut buf_small = [0_u8; 2];
-    let mut buf_empty = [];
-
-    for (base, pairs) in TEST_CASES {
-        let base = abs_iri(base);
-        let resolver = FixedBaseResolver::new(base);
-        for (input, _) in *pairs {
-            let input = iri_ref(input);
-            let resolved = resolver.resolve(input);
-            let result_small = write_to_slice(&mut buf_small, &resolved);
-            assert!(
-                result_small.is_err(),
-                "expected to fail due to too small destination buffer"
-            );
-            let result_empty = write_to_slice(&mut buf_empty, &resolved);
-            assert!(
-                result_empty.is_err(),
-                "expected to fail due to too small destination buffer"
-            );
-        }
-    }
-}
-
-#[test]
-fn test_task_live_longer_than_fixed_base_resolver() {
+fn write_to_slice_dont_require_extra_capacity() {
     let mut buf = [0_u8; 128];
 
-    let base = abs_iri("http://example.com/");
-    let reference = iri_ref("foo/bar");
+    for (base, pairs) in TEST_CASES {
+        let base = IriAbsoluteStr::new(base).expect("should be valid base IRI");
+        let resolver = FixedBaseResolver::new(base);
+
+        for (target, expected) in *pairs {
+            if expected.is_empty() {
+                continue;
+            }
+
+            let target = IriReferenceStr::new(target).expect("should be valid IRI reference");
+            let resolved = resolver.resolve(target);
+
+            let result_small = write_to_slice(&mut buf[..expected.len() - 1], &resolved);
+            assert!(result_small.is_err(), "should fail due to too small buffer");
+
+            let result_enough = write_to_slice(&mut buf[..expected.len()], &resolved);
+            assert!(result_enough.is_ok(), "buffer should have enough size");
+            assert_eq!(
+                result_enough.unwrap(),
+                *expected,
+                "correct result should be written"
+            );
+        }
+    }
+}
+
+#[test]
+fn resolution_result_live_longer_than_fixed_base_resolver() {
+    let mut buf = [0_u8; 128];
+
+    let base = IriAbsoluteStr::new("http://example.com/").expect("should be valid base IRI");
+    let reference = IriReferenceStr::new("foo/bar").expect("should be valid IRI reference");
 
     let resolved = {
         let resolver = FixedBaseResolver::new(base);
         resolver.resolve(reference)
     };
+    // Note that `the result of `resolver.resolve()` is still alive here.
     let result = write_to_slice(&mut buf, &resolved).expect("`buf` should have enough capacity");
     assert_eq!(result, "http://example.com/foo/bar");
 }
