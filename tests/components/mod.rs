@@ -606,4 +606,846 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         normalized_uri: "http://example.com/a/b/d/e",
         normalized_iri: "http://example.com/a/b/d/e",
     },
+    // START: Combination.
+    {
+        name: "Empty relative IRI",
+        composed: "",
+        components: {
+            path: "",
+        },
+        normalized_uri: "",
+        normalized_iri: "",
+    },
+    {
+        name: "Combination: fragment",
+        composed: "#fragment",
+        components: {
+            fragment: "fragment",
+        },
+        normalized_uri: "#fragment",
+        normalized_iri: "#fragment",
+    },
+    {
+        name: "Combination: query",
+        composed: "?query",
+        components: {
+            query: "query",
+        },
+        normalized_uri: "?query",
+        normalized_iri: "?query",
+    },
+    {
+        name: "Combination: query+fragment",
+        composed: "?query#fragment",
+        components: {
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "?query#fragment",
+        normalized_iri: "?query#fragment",
+    },
+    {
+        name: "Combination: path",
+        composed: "/pa/th",
+        components: {
+            path: "/pa/th",
+        },
+        normalized_uri: "/pa/th",
+        normalized_iri: "/pa/th",
+    },
+    {
+        name: "Combination: path+fragment",
+        composed: "/pa/th#fragment",
+        components: {
+            path: "/pa/th",
+            fragment: "fragment",
+        },
+        normalized_uri: "/pa/th#fragment",
+        normalized_iri: "/pa/th#fragment",
+    },
+    {
+        name: "Combination: path+query",
+        composed: "/pa/th?query",
+        components: {
+            path: "/pa/th",
+            query: "query",
+        },
+        normalized_uri: "/pa/th?query",
+        normalized_iri: "/pa/th?query",
+    },
+    {
+        name: "Combination: path+query+fragment",
+        composed: "/pa/th?query#fragment",
+        components: {
+            path: "/pa/th",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "/pa/th?query#fragment",
+        normalized_iri: "/pa/th?query#fragment",
+    },
+    {
+        name: "Combination: authority",
+        composed: "//authority",
+        components: {
+            host: "authority",
+        },
+        normalized_uri: "//authority",
+        normalized_iri: "//authority",
+    },
+    {
+        name: "Combination: authority+fragment",
+        composed: "//authority#fragment",
+        components: {
+            host: "authority",
+            fragment: "fragment",
+        },
+        normalized_uri: "//authority#fragment",
+        normalized_iri: "//authority#fragment",
+    },
+    {
+        name: "Combination: authority+query",
+        composed: "//authority?query",
+        components: {
+            host: "authority",
+            query: "query",
+        },
+        normalized_uri: "//authority?query",
+        normalized_iri: "//authority?query",
+    },
+    {
+        name: "Combination: authority+query+fragment",
+        composed: "//authority?query#fragment",
+        components: {
+            host: "authority",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "//authority?query#fragment",
+        normalized_iri: "//authority?query#fragment",
+    },
+    {
+        name: "Combination: authority+path",
+        composed: "//authority/pa/th",
+        components: {
+            host: "authority",
+            path: "/pa/th",
+        },
+        normalized_uri: "//authority/pa/th",
+        normalized_iri: "//authority/pa/th",
+    },
+    {
+        name: "Combination: authority+path+fragment",
+        composed: "//authority/pa/th#fragment",
+        components: {
+            host: "authority",
+            path: "/pa/th",
+            fragment: "fragment",
+        },
+        normalized_uri: "//authority/pa/th#fragment",
+        normalized_iri: "//authority/pa/th#fragment",
+    },
+    {
+        name: "Combination: authority+path+query",
+        composed: "//authority/pa/th?query",
+        components: {
+            host: "authority",
+            path: "/pa/th",
+            query: "query",
+        },
+        normalized_uri: "//authority/pa/th?query",
+        normalized_iri: "//authority/pa/th?query",
+    },
+    {
+        name: "Combination: authority+path+query+fragment",
+        composed: "//authority/pa/th?query#fragment",
+        components: {
+            host: "authority",
+            path: "/pa/th",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "//authority/pa/th?query#fragment",
+        normalized_iri: "//authority/pa/th?query#fragment",
+    },
+    {
+        name: "Combination: scheme",
+        composed: "scheme:",
+        components: {
+            scheme: "scheme",
+        },
+        normalized_uri: "scheme:",
+        normalized_iri: "scheme:",
+    },
+    {
+        name: "Combination: scheme+fragment",
+        composed: "scheme:#fragment",
+        components: {
+            scheme: "scheme",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme:#fragment",
+        normalized_iri: "scheme:#fragment",
+    },
+    {
+        name: "Combination: scheme+query",
+        composed: "scheme:?query",
+        components: {
+            scheme: "scheme",
+            query: "query",
+        },
+        normalized_uri: "scheme:?query",
+        normalized_iri: "scheme:?query",
+    },
+    {
+        name: "Combination: scheme+query+fragment",
+        composed: "scheme:?query#fragment",
+        components: {
+            scheme: "scheme",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme:?query#fragment",
+        normalized_iri: "scheme:?query#fragment",
+    },
+    {
+        name: "Combination: scheme+path",
+        composed: "scheme:/pa/th",
+        components: {
+            scheme: "scheme",
+            path: "/pa/th",
+        },
+        normalized_uri: "scheme:/pa/th",
+        normalized_iri: "scheme:/pa/th",
+    },
+    {
+        name: "Combination: scheme+path+fragment",
+        composed: "scheme:/pa/th#fragment",
+        components: {
+            scheme: "scheme",
+            path: "/pa/th",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme:/pa/th#fragment",
+        normalized_iri: "scheme:/pa/th#fragment",
+    },
+    {
+        name: "Combination: scheme+path+query",
+        composed: "scheme:/pa/th?query",
+        components: {
+            scheme: "scheme",
+            path: "/pa/th",
+            query: "query",
+        },
+        normalized_uri: "scheme:/pa/th?query",
+        normalized_iri: "scheme:/pa/th?query",
+    },
+    {
+        name: "Combination: scheme+path+query+fragment",
+        composed: "scheme:/pa/th?query#fragment",
+        components: {
+            scheme: "scheme",
+            path: "/pa/th",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme:/pa/th?query#fragment",
+        normalized_iri: "scheme:/pa/th?query#fragment",
+    },
+    {
+        name: "Combination: scheme+authority",
+        composed: "scheme://authority",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+        },
+        normalized_uri: "scheme://authority",
+        normalized_iri: "scheme://authority",
+    },
+    {
+        name: "Combination: scheme+authority+fragment",
+        composed: "scheme://authority#fragment",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme://authority#fragment",
+        normalized_iri: "scheme://authority#fragment",
+    },
+    {
+        name: "Combination: scheme+authority+query",
+        composed: "scheme://authority?query",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            query: "query",
+        },
+        normalized_uri: "scheme://authority?query",
+        normalized_iri: "scheme://authority?query",
+    },
+    {
+        name: "Combination: scheme+authority+query+fragment",
+        composed: "scheme://authority?query#fragment",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme://authority?query#fragment",
+        normalized_iri: "scheme://authority?query#fragment",
+    },
+    {
+        name: "Combination: scheme+authority+path",
+        composed: "scheme://authority/pa/th",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            path: "/pa/th",
+        },
+        normalized_uri: "scheme://authority/pa/th",
+        normalized_iri: "scheme://authority/pa/th",
+    },
+    {
+        name: "Combination: scheme+authority+path+fragment",
+        composed: "scheme://authority/pa/th#fragment",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            path: "/pa/th",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme://authority/pa/th#fragment",
+        normalized_iri: "scheme://authority/pa/th#fragment",
+    },
+    {
+        name: "Combination: scheme+authority+path+query",
+        composed: "scheme://authority/pa/th?query",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            path: "/pa/th",
+            query: "query",
+        },
+        normalized_uri: "scheme://authority/pa/th?query",
+        normalized_iri: "scheme://authority/pa/th?query",
+    },
+    {
+        name: "Combination: scheme+authority+path+query+fragment",
+        composed: "scheme://authority/pa/th?query#fragment",
+        components: {
+            scheme: "scheme",
+            host: "authority",
+            path: "/pa/th",
+            query: "query",
+            fragment: "fragment",
+        },
+        normalized_uri: "scheme://authority/pa/th?query#fragment",
+        normalized_iri: "scheme://authority/pa/th?query#fragment",
+    },
+    // END: Combination.
+    {
+        name: "1 slash following to the scheme",
+        composed: "scheme:/",
+        components: {
+            scheme: "scheme",
+            path: "/",
+        },
+        normalized_uri: "scheme:/",
+        normalized_iri: "scheme:/",
+    },
+    {
+        name: "2 slashes following to the scheme",
+        composed: "scheme://",
+        components: {
+            scheme: "scheme",
+            host: "",
+        },
+        normalized_uri: "scheme://",
+        normalized_iri: "scheme://",
+    },
+    {
+        name: "3 slashes following to the scheme",
+        composed: "scheme:///",
+        components: {
+            scheme: "scheme",
+            host: "",
+            path: "/",
+        },
+        normalized_uri: "scheme:///",
+        normalized_iri: "scheme:///",
+    },
+    {
+        name: "4 slashes following to the scheme",
+        composed: "scheme:////",
+        components: {
+            scheme: "scheme",
+            host: "",
+            path: "//",
+        },
+        normalized_uri: "scheme:////",
+        normalized_iri: "scheme:////",
+    },
+    {
+        name: "5 slashes following to the scheme",
+        composed: "scheme://///",
+        components: {
+            scheme: "scheme",
+            host: "",
+            path: "///",
+        },
+        normalized_uri: "scheme://///",
+        normalized_iri: "scheme://///",
+    },
+    {
+        name: "1 slash",
+        composed: "/",
+        components: {
+            path: "/",
+        },
+        normalized_uri: "/",
+        normalized_iri: "/",
+    },
+    {
+        name: "2 slash",
+        composed: "//",
+        components: {
+            host: "",
+        },
+        normalized_uri: "//",
+        normalized_iri: "//",
+    },
+    {
+        name: "3 slash",
+        composed: "///",
+        components: {
+            host: "",
+            path: "/",
+        },
+        normalized_uri: "///",
+        normalized_iri: "///",
+    },
+    {
+        name: "4 slash",
+        composed: "////",
+        components: {
+            host: "",
+            path: "//",
+        },
+        normalized_uri: "////",
+        normalized_iri: "////",
+    },
+    {
+        name: "5 slash",
+        composed: "/////",
+        components: {
+            host: "",
+            path: "///",
+        },
+        normalized_uri: "/////",
+        normalized_iri: "/////",
+    },
+    {
+        name: "IPv4 address",
+        composed: "//192.0.2.0",
+        components: {
+            host: "192.0.2.0",
+        },
+        normalized_uri: "//192.0.2.0",
+        normalized_iri: "//192.0.2.0",
+    },
+    {
+        name: "IPv4 address with port",
+        composed: "//192.0.2.0:80",
+        components: {
+            host: "192.0.2.0",
+            port: "80",
+        },
+        normalized_uri: "//192.0.2.0:80",
+        normalized_iri: "//192.0.2.0:80",
+    },
+    {
+        name: "IPv4 address",
+        composed: "//255.255.255.255",
+        components: {
+            host: "255.255.255.255",
+        },
+        normalized_uri: "//255.255.255.255",
+        normalized_iri: "//255.255.255.255",
+    },
+    {
+        name: "IPv4 address with port",
+        composed: "//255.255.255.255:65536",
+        components: {
+            host: "255.255.255.255",
+            port: "65536",
+        },
+        normalized_uri: "//255.255.255.255:65536",
+        normalized_iri: "//255.255.255.255:65536",
+    },
+    {
+        name: "IPv4 address",
+        composed: "//0.0.0.0",
+        components: {
+            host: "0.0.0.0",
+        },
+        normalized_uri: "//0.0.0.0",
+        normalized_iri: "//0.0.0.0",
+    },
+    {
+        name: "IPv4 address with port",
+        composed: "//0.0.0.0:0",
+        components: {
+            host: "0.0.0.0",
+            port: "0",
+        },
+        normalized_uri: "//0.0.0.0:0",
+        normalized_iri: "//0.0.0.0:0",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:db8::]",
+        components: {
+            host: "[2001:db8::]",
+        },
+        normalized_uri: "//[2001:db8::]",
+        normalized_iri: "//[2001:db8::]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:db8::]:80",
+        components: {
+            host: "[2001:db8::]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:db8::]:80",
+        normalized_iri: "//[2001:db8::]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::]",
+        components: {
+            host: "[2001:0db8::]",
+        },
+        normalized_uri: "//[2001:0db8::]",
+        normalized_iri: "//[2001:0db8::]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::]:80",
+        components: {
+            host: "[2001:0db8::]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::]:80",
+        normalized_iri: "//[2001:0db8::]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8:0:0:0:0:0:ffff]",
+        components: {
+            host: "[2001:0db8:0:0:0:0:0:ffff]",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0:0:ffff]",
+        normalized_iri: "//[2001:0db8:0:0:0:0:0:ffff]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8:0:0:0:0:0:ffff]:80",
+        components: {
+            host: "[2001:0db8:0:0:0:0:0:ffff]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0:0:ffff]:80",
+        normalized_iri: "//[2001:0db8:0:0:0:0:0:ffff]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0DB8:0000:0000:0000:000A:BCDE:FFFF]",
+        components: {
+            host: "[2001:0DB8:0000:0000:0000:000A:BCDE:FFFF]",
+        },
+        normalized_uri: "//[2001:0db8:0000:0000:0000:000a:bcde:ffff]",
+        normalized_iri: "//[2001:0db8:0000:0000:0000:000a:bcde:ffff]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0DB8:0000:0000:0000:000A:BCDE:FFFF]:80",
+        components: {
+            host: "[2001:0DB8:0000:0000:0000:000A:BCDE:FFFF]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0000:0000:0000:000a:bcde:ffff]:80",
+        normalized_iri: "//[2001:0db8:0000:0000:0000:000a:bcde:ffff]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::]",
+        components: {
+            host: "[2001:0db8::]",
+        },
+        normalized_uri: "//[2001:0db8::]",
+        normalized_iri: "//[2001:0db8::]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::]:80",
+        components: {
+            host: "[2001:0db8::]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::]:80",
+        normalized_iri: "//[2001:0db8::]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0DB8:0:0:0:0::1]",
+        components: {
+            host: "[2001:0DB8:0:0:0:0::1]",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0::1]",
+        normalized_iri: "//[2001:0db8:0:0:0:0::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0DB8:0:0:0:0::1]:80",
+        components: {
+            host: "[2001:0DB8:0:0:0:0::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0::1]:80",
+        normalized_iri: "//[2001:0db8:0:0:0:0::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::89ab:cdef:89AB:CDEF]",
+        components: {
+            host: "[2001:0db8::89ab:cdef:89AB:CDEF]",
+        },
+        normalized_uri: "//[2001:0db8::89ab:cdef:89ab:cdef]",
+        normalized_iri: "//[2001:0db8::89ab:cdef:89ab:cdef]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::89ab:cdef:89AB:CDEF]:80",
+        components: {
+            host: "[2001:0db8::89ab:cdef:89AB:CDEF]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::89ab:cdef:89ab:cdef]:80",
+        normalized_iri: "//[2001:0db8::89ab:cdef:89ab:cdef]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::1]",
+        components: {
+            host: "[2001:0db8::1]",
+        },
+        normalized_uri: "//[2001:0db8::1]",
+        normalized_iri: "//[2001:0db8::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::1]:80",
+        components: {
+            host: "[2001:0db8::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::1]:80",
+        normalized_iri: "//[2001:0db8::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8:0::1]",
+        components: {
+            host: "[2001:0db8:0::1]",
+        },
+        normalized_uri: "//[2001:0db8:0::1]",
+        normalized_iri: "//[2001:0db8:0::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8:0::1]:80",
+        components: {
+            host: "[2001:0db8:0::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0::1]:80",
+        normalized_iri: "//[2001:0db8:0::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8:0:0::1]",
+        components: {
+            host: "[2001:0db8:0:0::1]",
+        },
+        normalized_uri: "//[2001:0db8:0:0::1]",
+        normalized_iri: "//[2001:0db8:0:0::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8:0:0::1]:80",
+        components: {
+            host: "[2001:0db8:0:0::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0:0::1]:80",
+        normalized_iri: "//[2001:0db8:0:0::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8:0:0:0::1]",
+        components: {
+            host: "[2001:0db8:0:0:0::1]",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0::1]",
+        normalized_iri: "//[2001:0db8:0:0:0::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8:0:0:0::1]:80",
+        components: {
+            host: "[2001:0db8:0:0:0::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0::1]:80",
+        normalized_iri: "//[2001:0db8:0:0:0::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8:0:0:0:0::1]",
+        components: {
+            host: "[2001:0db8:0:0:0:0::1]",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0::1]",
+        normalized_iri: "//[2001:0db8:0:0:0:0::1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8:0:0:0:0::1]:80",
+        components: {
+            host: "[2001:0db8:0:0:0:0::1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8:0:0:0:0::1]:80",
+        normalized_iri: "//[2001:0db8:0:0:0:0::1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::0:1]",
+        components: {
+            host: "[2001:0db8::0:1]",
+        },
+        normalized_uri: "//[2001:0db8::0:1]",
+        normalized_iri: "//[2001:0db8::0:1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::0:1]:80",
+        components: {
+            host: "[2001:0db8::0:1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::0:1]:80",
+        normalized_iri: "//[2001:0db8::0:1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::0:0:1]",
+        components: {
+            host: "[2001:0db8::0:0:1]",
+        },
+        normalized_uri: "//[2001:0db8::0:0:1]",
+        normalized_iri: "//[2001:0db8::0:0:1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::0:0:1]:80",
+        components: {
+            host: "[2001:0db8::0:0:1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::0:0:1]:80",
+        normalized_iri: "//[2001:0db8::0:0:1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::0:0:0:1]",
+        components: {
+            host: "[2001:0db8::0:0:0:1]",
+        },
+        normalized_uri: "//[2001:0db8::0:0:0:1]",
+        normalized_iri: "//[2001:0db8::0:0:0:1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::0:0:0:1]:80",
+        components: {
+            host: "[2001:0db8::0:0:0:1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::0:0:0:1]:80",
+        normalized_iri: "//[2001:0db8::0:0:0:1]:80",
+    },
+    {
+        name: "IPv6 address",
+        composed: "//[2001:0db8::0:0:0:0:1]",
+        components: {
+            host: "[2001:0db8::0:0:0:0:1]",
+        },
+        normalized_uri: "//[2001:0db8::0:0:0:0:1]",
+        normalized_iri: "//[2001:0db8::0:0:0:0:1]",
+    },
+    {
+        name: "IPv6 address with port",
+        composed: "//[2001:0db8::0:0:0:0:1]:80",
+        components: {
+            host: "[2001:0db8::0:0:0:0:1]",
+            port: "80",
+        },
+        normalized_uri: "//[2001:0db8::0:0:0:0:1]:80",
+        normalized_iri: "//[2001:0db8::0:0:0:0:1]:80",
+    },
+    {
+        name: "IPvFuture address",
+        composed: "//[v9999.this-is-future-version-of-ip-address:::::::::]",
+        components: {
+            host: "[v9999.this-is-future-version-of-ip-address:::::::::]",
+        },
+        normalized_uri: "//[v9999.this-is-future-version-of-ip-address:::::::::]",
+        normalized_iri: "//[v9999.this-is-future-version-of-ip-address:::::::::]",
+    },
+    {
+        name: "IPvFuture address with port",
+        composed: "//[v9999.this-is-future-version-of-ip-address:::::::::]:80",
+        components: {
+            host: "[v9999.this-is-future-version-of-ip-address:::::::::]",
+            port: "80",
+        },
+        normalized_uri: "//[v9999.this-is-future-version-of-ip-address:::::::::]:80",
+        normalized_iri: "//[v9999.this-is-future-version-of-ip-address:::::::::]:80",
+    },
+    {
+        name: "Too large port",
+        description: "RFC 3986 accepts `*DIGIT` as `port` component",
+        composed: "//localhost:999999999",
+        components: {
+            host: "localhost",
+            port: "999999999",
+        },
+        normalized_uri: "//localhost:999999999",
+        normalized_iri: "//localhost:999999999",
+    },
+    {
+        name: "Port only",
+        description: "`host` can be empty",
+        composed: "//:999999999",
+        components: {
+            host: "",
+            port: "999999999",
+        },
+        normalized_uri: "//:999999999",
+        normalized_iri: "//:999999999",
+    },
 ];
