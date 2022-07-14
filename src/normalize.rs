@@ -375,7 +375,19 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
 
         // Process and write the path.
         match self.input.path {
-            Path::Done(s) => f.write_str(s)?,
+            Path::Done(s) => {
+                if self.input.op.case_pct_normalization {
+                    // Normalize the path.
+                    PathToNormalize::from_single_path(s).fmt_write_normalize::<S, _>(
+                        f,
+                        self.input.op,
+                        self.input.authority.is_some(),
+                    )?
+                } else {
+                    // No normalization.
+                    f.write_str(s)?
+                }
+            }
             Path::NeedsProcessing(path) => {
                 path.fmt_write_normalize::<S, _>(f, self.input.op, self.input.authority.is_some())?
             }

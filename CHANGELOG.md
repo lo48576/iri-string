@@ -53,6 +53,7 @@
 * Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
 * Reject user with colon characters on IRI build.
 * Allow builders to normalize `path` component of relative IRIs if safely possible.
+* Make the resolution result of an empty IRI reference normalizable.
 
 ### Added
 * Support escaping username and password by `percent_encode::PercentEncode`.
@@ -211,6 +212,11 @@
 * Reject user with colon characters on IRI build.
     + Now `build::Builder::build()` fails when `user` part contains a colon (`:`).
 * Allow builders to normalize `path` component of relative IRIs if safely possible.
+
+### Fixed
+* Make the resolution result of an empty IRI reference normalizable.
+    + There was a bug that the resolution result of an empty IRI is not normalized
+      even when `.and_normalize()` is called.
 
 ## [0.5.6]
 
