@@ -1448,4 +1448,60 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         normalized_uri: "//:999999999",
         normalized_iri: "//:999999999",
     },
+    {
+        name: "Trailing slash should remain after normalization",
+        description: "Trailing slash should remain after normalization if the path ends with slash",
+        composed: "https://example.com/../../",
+        components: {
+            scheme: "https",
+            host: "example.com",
+            path: "/../../",
+        },
+        normalized_uri: "https://example.com/",
+        normalized_iri: "https://example.com/",
+    },
+    {
+        name: "Slash should remain",
+        description: "Slash should remain after normalization if the IRI ends with a dot segment",
+        composed: "https://example.com/..",
+        components: {
+            scheme: "https",
+            host: "example.com",
+            path: "/..",
+        },
+        normalized_uri: "https://example.com/",
+        normalized_iri: "https://example.com/",
+    },
+    {
+        name: "Slash should remain",
+        description: "Slash should remain after normalization if the IRI ends with a dot segment",
+        composed: "https://example.com/.",
+        components: {
+            scheme: "https",
+            host: "example.com",
+            path: "/.",
+        },
+        normalized_uri: "https://example.com/",
+        normalized_iri: "https://example.com/",
+    },
+    {
+        name: "WHATWG URL Standard serialization",
+        composed: "scheme:/a/b/../..//c",
+        components: {
+            scheme: "scheme",
+            path: "/a/b/../..//c",
+        },
+        normalized_uri: "scheme:/.//c",
+        normalized_iri: "scheme:/.//c",
+    },
+    {
+        name: "WHATWG URL Standard serialization",
+        composed: "scheme:/a/b/../..//c",
+        components: {
+            scheme: "scheme",
+            path: "/a/b/../..//c",
+        },
+        normalized_uri: "scheme:/.//c",
+        normalized_iri: "scheme:/.//c",
+    },
 ];
