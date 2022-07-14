@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0]
+
 * Bump MSRV to 1.60.0.
 * Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
     + Now `alloc` and/or `std` features for additional dependencies are
@@ -832,7 +834,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.6...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.6.0...develop>
+[0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
