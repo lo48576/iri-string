@@ -30,9 +30,10 @@
     + Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
     + Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
     + Remove `BufferError` type.
-* Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
-* Add `{OwnedIri}::try_encode_to_uri_inline` method.
-* Add `{OwnedIri}::try_encode_into_uri` method.
+* Change API of IRI-to-URI conversion.
+    + Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+    + Add `{OwnedIri}::try_encode_to_uri_inline` method.
+    + Add `{OwnedIri}::try_encode_into_uri` method.
 * Make the methods impl of `convert::MappedToUri<'_, T>` generic over the spec.
 * Revome functions under `resolve` module.
 * Add `normalize::Normalized` type.
