@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0]
+
 * Bump MSRV to 1.60.0.
 * Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
     + Now `alloc` and/or `std` features for additional dependencies are
@@ -28,9 +30,10 @@
     + Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
     + Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
     + Remove `BufferError` type.
-* Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
-* Add `{OwnedIri}::try_encode_to_uri_inline` method.
-* Add `{OwnedIri}::try_encode_into_uri` method.
+* Change API of IRI-to-URI conversion.
+    + Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+    + Add `{OwnedIri}::try_encode_to_uri_inline` method.
+    + Add `{OwnedIri}::try_encode_into_uri` method.
 * Make the methods impl of `convert::MappedToUri<'_, T>` generic over the spec.
 * Revome functions under `resolve` module.
 * Add `normalize::Normalized` type.
@@ -832,7 +835,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.6...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.6.0...develop>
+[0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
