@@ -150,9 +150,7 @@ fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
 }
 
 pub fn print_normalized(iri: &IriStr) {
-    println!("is_normalized: {}", iri.is_normalized());
-    match iri.try_normalize() {
-        Ok(normalized) => println!("normalized: {:?}", normalized),
-        Err(_) => println!("The IRI is not normalizable."),
-    }
+    println!("is_normalized_rfc3986: {}", iri.is_normalized_rfc3986());
+    println!("is_normalized_whatwg: {}", iri.is_normalized_whatwg());
+    println!("normalized: {}", iri.normalize());
 }

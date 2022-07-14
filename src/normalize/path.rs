@@ -3,10 +3,10 @@
 use core::fmt;
 use core::ops::Range;
 
-use crate::parser::str::rfind;
+use crate::parser::str::{find_split_hole, rfind};
 use crate::spec::{Spec, UriSpec};
 
-use super::pct_case::DisplayPctCaseNormalize;
+use super::pct_case::PctCaseNormalized;
 use super::{Error, NormalizationOp};
 
 /// Path that is (possibly) not yet processed or being processed.
@@ -263,7 +263,7 @@ impl PathToNormalize<'_> {
 
                 // Write the segment name.
                 if op.case_pct_normalization {
-                    write!(f, "{}", DisplayPctCaseNormalize::<S>::new(segname))?;
+                    write!(f, "{}", PctCaseNormalized::<S>::new(segname))?;
                 } else {
                     f.write_str(segname)?;
                 }
@@ -326,6 +326,107 @@ impl PathToNormalize<'_> {
             Err(Error::new())
         } else {
             Ok(())
+        }
+    }
+}
+
+/// Characteristic of a path.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum PathCharacteristic {
+    /// Absolute path, not special.
+    CommonAbsolute,
+    /// Absolute path, not special.
+    CommonRelative,
+    /// The first path segment of the relative path has one or more colon characters.
+    RelativeFirstSegmentHasColon,
+    /// The path starts with the double slash.
+    StartsWithDoubleSlash,
+}
+
+impl PathCharacteristic {
+    /// Returns true if the path is absolute.
+    #[inline]
+    #[must_use]
+    pub(crate) fn is_absolute(self) -> bool {
+        matches!(self, Self::CommonAbsolute | Self::StartsWithDoubleSlash)
+    }
+
+    /// Returns the characteristic of the path.
+    pub(crate) fn from_path_to_display<S: Spec>(
+        path: &PathToNormalize<'_>,
+        op: NormalizationOp,
+        authority_is_present: bool,
+    ) -> Self {
+        /// Dummy writer to get necessary values.
+        #[derive(Default, Clone, Copy)]
+        struct Writer {
+            /// Result.
+            result: Option<PathCharacteristic>,
+            /// Whether the normalized path is absolute.
+            is_absolute: Option<bool>,
+        }
+        impl fmt::Write for Writer {
+            fn write_str(&mut self, mut s: &str) -> fmt::Result {
+                if self.result.is_some() {
+                    // Nothing more to do.
+                    return Err(fmt::Error);
+                }
+                while !s.is_empty() {
+                    if self.is_absolute.is_none() {
+                        // The first input.
+                        match s.strip_prefix('/') {
+                            Some(rest) => {
+                                self.is_absolute = Some(true);
+                                s = rest;
+                            }
+                            None => {
+                                self.is_absolute = Some(false);
+                            }
+                        }
+                        continue;
+                    }
+                    if self.is_absolute == Some(true) {
+                        let result = if s.starts_with('/') {
+                            PathCharacteristic::StartsWithDoubleSlash
+                        } else {
+                            PathCharacteristic::CommonAbsolute
+                        };
+                        self.result = Some(result);
+                        return Err(fmt::Error);
+                    }
+                    // Processing the first segment of the relative path.
+                    match find_split_hole(s, b'/') {
+                        Some((first_seg, _rest)) => {
+                            let result = if first_seg.contains(':') {
+                                PathCharacteristic::RelativeFirstSegmentHasColon
+                            } else {
+                                PathCharacteristic::CommonRelative
+                            };
+                            self.result = Some(result);
+                            return Err(fmt::Error);
+                        }
+                        None => {
+                            // `s` might not be the complete first segment.
+                            if s.contains(':') {
+                                self.result =
+                                    Some(PathCharacteristic::RelativeFirstSegmentHasColon);
+                                return Err(fmt::Error);
+                            }
+                            break;
+                        }
+                    }
+                }
+                Ok(())
+            }
+        }
+
+        let mut writer = Writer::default();
+        match path.fmt_write_normalize::<S, _>(&mut writer, op, authority_is_present) {
+            // Empty path.
+            Ok(_) => PathCharacteristic::CommonRelative,
+            Err(_) => writer
+                .result
+                .expect("[consistency] the formatting quits early by `Err` when the check is done"),
         }
     }
 }
@@ -419,7 +520,7 @@ impl<'a> Iterator for PathSegmentsIter<'a> {
         let prefix_len = self.path.len_prefix();
         if (prefix_len != 0) && (self.cursor == prefix_len - 1) {
             debug_assert!(has_leading_slash);
-            let end = self.path.1.find('/').unwrap_or_else(|| self.path.1.len()) + prefix_len;
+            let end = self.path.1.find('/').unwrap_or(self.path.1.len()) + prefix_len;
             self.cursor = end;
             return Some(PathSegment {
                 has_leading_slash,

@@ -1,23 +1,35 @@
-/// Reference implementation based on RFC 3986 section 5.
+//! Reference implementation based on RFC 3986 section 5.
+#![cfg(feature = "alloc")]
+
+extern crate alloc;
+
 use alloc::format;
 use alloc::string::String;
 
-use crate::components::RiReferenceComponents;
-use crate::spec::Spec;
-use crate::types::{RiAbsoluteStr, RiReferenceStr, RiString};
+use iri_string::spec::Spec;
+use iri_string::types::{RiAbsoluteStr, RiReferenceStr, RiString};
+
+fn to_major_components<S: Spec>(
+    s: &RiReferenceStr<S>,
+) -> (Option<&str>, Option<&str>, &str, Option<&str>, Option<&str>) {
+    (
+        s.scheme_str(),
+        s.authority_str(),
+        s.path_str(),
+        s.query().map(|s| s.as_str()),
+        s.fragment().map(|s| s.as_str()),
+    )
+}
 
 /// Resolves the relative IRI.
 ///
-/// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.2>.
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.2.2>.
 pub(super) fn resolve<S: Spec>(
     reference: &RiReferenceStr<S>,
     base: &RiAbsoluteStr<S>,
 ) -> RiString<S> {
-    let r = RiReferenceComponents::from(reference);
-    let b = RiReferenceComponents::from(base.as_ref());
-
-    let (r_scheme, r_authority, r_path, r_query, r_fragment) = r.to_major();
-    let (b_scheme, b_authority, b_path, b_query, _) = b.to_major();
+    let (r_scheme, r_authority, r_path, r_query, r_fragment) = to_major_components(reference);
+    let (b_scheme, b_authority, b_path, b_query, _) = to_major_components(base.as_ref());
 
     let t_scheme: &str;
     let t_authority: Option<&str>;
@@ -62,7 +74,7 @@ pub(super) fn resolve<S: Spec>(
 
 /// Merges the two paths.
 ///
-/// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.3>.
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.2.3>.
 fn merge(base_path: &str, ref_path: &str, base_authority_defined: bool) -> String {
     if base_authority_defined && base_path.is_empty() {
         format!("/{}", ref_path)
@@ -74,7 +86,7 @@ fn merge(base_path: &str, ref_path: &str, base_authority_defined: bool) -> Strin
 
 /// Removes dot segments from the path.
 ///
-/// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4>.
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.2.4>.
 fn remove_dot_segments(mut input: String) -> String {
     let mut output = String::new();
     while !input.is_empty() {
@@ -112,7 +124,7 @@ fn remove_dot_segments(mut input: String) -> String {
                     .find('/')
                     .map_or_else(|| input.len(), |pos| pos + 1)
             } else {
-                input.find('/').unwrap_or_else(|| input.len())
+                input.find('/').unwrap_or(input.len())
             };
             output.extend(input.drain(..first_seg_end));
         }
@@ -123,7 +135,7 @@ fn remove_dot_segments(mut input: String) -> String {
 
 /// Removes the last path segment and the preceding slash if any.
 ///
-/// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4>,
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.2.4>,
 /// step 2C.
 fn remove_last_segment_and_preceding_slash(output: &mut String) {
     match output.rfind('/') {
@@ -136,7 +148,7 @@ fn remove_last_segment_and_preceding_slash(output: &mut String) {
 
 /// Recomposes the components.
 ///
-/// See <https://datatracker.ietf.org/doc/html/rfc3986#section-5.3>.
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.3>.
 fn recompose(
     scheme: &str,
     authority: Option<&str>,

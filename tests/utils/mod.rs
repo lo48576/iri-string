@@ -1,6 +1,8 @@
 //! Utilities.
 #![allow(dead_code)]
 
+use core::fmt;
+
 use RawKind::*;
 
 /// Raw kind (exclusive).
@@ -135,4 +137,76 @@ pub fn negative(spec: Spec, kind: Kind) -> impl Iterator<Item = &'static str> {
         .iter()
         .filter(move |(raw_kind, _)| !raw_kind.is(spec, kind))
         .map(|(_, s)| *s)
+}
+
+/// Returns true if the two equals after they are converted to strings.
+pub(crate) fn eq_display_str<T>(d: &T, s: &str) -> bool
+where
+    T: ?Sized + fmt::Display,
+{
+    use core::fmt::Write as _;
+
+    /// Dummy writer to compare the formatted object to the given string.
+    struct CmpWriter<'a>(&'a str);
+    impl fmt::Write for CmpWriter<'_> {
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            if self.0.len() < s.len() {
+                return Err(fmt::Error);
+            }
+            let (prefix, rest) = self.0.split_at(s.len());
+            self.0 = rest;
+            if prefix == s {
+                Ok(())
+            } else {
+                Err(fmt::Error)
+            }
+        }
+    }
+
+    let mut writer = CmpWriter(s);
+    let succeeded = write!(writer, "{}", d).is_ok();
+    succeeded && writer.0.is_empty()
+}
+
+#[allow(unused_macros)]
+macro_rules! assert_eq_display {
+    ($left:expr, $right:expr $(,)?) => {{
+        match (&$left, &$right) {
+            (left, right) => {
+                assert!(
+                    utils::eq_display_str(left, right.as_ref()),
+                    "`eq_str_display(left, right)`\n  left: `{left}`,\n right: `{right}`",
+                );
+                #[cfg(feature = "alloc")]
+                {
+                    let left = left.to_string();
+                    let right = right.to_string();
+                    assert_eq!(left, right);
+                }
+            }
+        }
+    }};
+    ($left:expr, $right:expr, $($args:tt)*) => {{
+        match (&$left, &$right) {
+            (left, right) => {
+                assert!(
+                    utils::eq_display_str(left, right.as_ref()),
+                    "{}",
+                    format_args!(
+                        "{}: {}",
+                        format_args!(
+                            "`eq_str_display(left, right)`\n  left: `{left}`,\n right: `{right}`",
+                        ),
+                        format_args!($($args)*)
+                    )
+                );
+                #[cfg(feature = "alloc")]
+                {
+                    let left = left.to_string();
+                    let right = right.to_string();
+                    assert_eq!(left, right, $($args)*);
+                }
+            }
+        }
+    }};
 }

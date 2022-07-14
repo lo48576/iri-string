@@ -5,26 +5,22 @@
 use core::fmt::{self, Display as _, Write as _};
 use core::marker::PhantomData;
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+#[cfg(feature = "alloc")]
+use alloc::string::ToString;
+
 use crate::format::Censored;
-use crate::normalize::{self, DisplayPctCaseNormalize};
+#[cfg(feature = "alloc")]
+use crate::format::{ToDedicatedString, ToStringFallible};
+use crate::normalize::{self, PathCharacteristic, PctCaseNormalized};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
 use crate::spec::Spec;
 use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
-use crate::validate;
-
-/// Normalization mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Normalization {
-    /// No normalization.
-    None,
-    /// RFC 3986 algorithm.
-    Rfc3986,
-    /// WHATWG URL Standard algorithm.
-    Whatwg,
-}
+use crate::validate::Error;
 
 /// Port builder.
 ///
@@ -120,12 +116,12 @@ impl fmt::Debug for UserinfoBuilder<'_> {
 impl<'a> UserinfoBuilder<'a> {
     /// Decomposes the userinfo into `user` and `password`.
     #[must_use]
-    fn to_user_password(&self) -> Option<(Option<&'a str>, Option<&'a str>)> {
+    fn to_user_password(&self) -> Option<(&'a str, Option<&'a str>)> {
         match &self.0 {
             UserinfoRepr::None => None,
             UserinfoRepr::Direct(s) => match find_split(s, b':') {
-                None => Some((Some(s), None)),
-                Some((user, password)) => Some((Some(user), Some(password))),
+                None => Some((s, None)),
+                Some((user, password)) => Some((user, Some(password))),
             },
             UserinfoRepr::UserPass(user, password) => Some((*user, *password)),
         }
@@ -142,27 +138,13 @@ impl<'a> From<&'a str> for UserinfoBuilder<'a> {
 impl<'a> From<(&'a str, &'a str)> for UserinfoBuilder<'a> {
     #[inline]
     fn from((user, password): (&'a str, &'a str)) -> Self {
-        Self(UserinfoRepr::UserPass(Some(user), Some(password)))
+        Self(UserinfoRepr::UserPass(user, Some(password)))
     }
 }
 
 impl<'a> From<(&'a str, Option<&'a str>)> for UserinfoBuilder<'a> {
     #[inline]
     fn from((user, password): (&'a str, Option<&'a str>)) -> Self {
-        Self(UserinfoRepr::UserPass(Some(user), password))
-    }
-}
-
-impl<'a> From<(Option<&'a str>, &'a str)> for UserinfoBuilder<'a> {
-    #[inline]
-    fn from((user, password): (Option<&'a str>, &'a str)) -> Self {
-        Self(UserinfoRepr::UserPass(user, Some(password)))
-    }
-}
-
-impl<'a> From<(Option<&'a str>, Option<&'a str>)> for UserinfoBuilder<'a> {
-    #[inline]
-    fn from((user, password): (Option<&'a str>, Option<&'a str>)) -> Self {
         Self(UserinfoRepr::UserPass(user, password))
     }
 }
@@ -183,7 +165,7 @@ enum UserinfoRepr<'a> {
     /// Direct `userinfo` content.
     Direct(&'a str),
     /// User name and password.
-    UserPass(Option<&'a str>, Option<&'a str>),
+    UserPass(&'a str, Option<&'a str>),
 }
 
 /// URI/IRI authority builder.
@@ -199,35 +181,29 @@ struct AuthorityBuilder<'a> {
 
 impl AuthorityBuilder<'_> {
     /// Writes the authority to the given formatter.
-    fn fmt_write_to<S: Spec>(
-        &self,
-        f: &mut fmt::Formatter<'_>,
-        normalize: Normalization,
-    ) -> fmt::Result {
+    fn fmt_write_to<S: Spec>(&self, f: &mut fmt::Formatter<'_>, normalize: bool) -> fmt::Result {
         match &self.userinfo.0 {
             UserinfoRepr::None => {}
             UserinfoRepr::Direct(userinfo) => {
-                if normalize == Normalization::None {
-                    userinfo.fmt(f)?;
+                if normalize {
+                    PctCaseNormalized::<S>::new(userinfo).fmt(f)?;
                 } else {
-                    DisplayPctCaseNormalize::<S>::new(userinfo).fmt(f)?;
+                    userinfo.fmt(f)?;
                 }
                 f.write_char('@')?;
             }
             UserinfoRepr::UserPass(user, password) => {
-                if let Some(user) = user {
-                    if normalize == Normalization::None {
-                        f.write_str(user)?;
-                    } else {
-                        DisplayPctCaseNormalize::<S>::new(user).fmt(f)?;
-                    }
+                if normalize {
+                    PctCaseNormalized::<S>::new(user).fmt(f)?;
+                } else {
+                    f.write_str(user)?;
                 }
                 if let Some(password) = password {
                     f.write_char(':')?;
-                    if normalize == Normalization::None {
-                        password.fmt(f)?;
+                    if normalize {
+                        PctCaseNormalized::<S>::new(password).fmt(f)?;
                     } else {
-                        DisplayPctCaseNormalize::<S>::new(password).fmt(f)?;
+                        password.fmt(f)?;
                     }
                 }
                 f.write_char('@')?;
@@ -236,10 +212,10 @@ impl AuthorityBuilder<'_> {
 
         match self.host {
             HostRepr::String(host) => {
-                if normalize == Normalization::None {
-                    f.write_str(host)?;
-                } else {
+                if normalize {
                     normalize::normalize_host_port::<S>(f, host)?;
+                } else {
+                    f.write_str(host)?;
                 }
             }
             #[cfg(feature = "std")]
@@ -254,7 +230,7 @@ impl AuthorityBuilder<'_> {
             PortBuilderRepr::Integer(v) => write!(f, ":{v}")?,
             PortBuilderRepr::String(v) => {
                 // Omit empty port if the normalization is enabled.
-                if !(v.is_empty() && (normalize != Normalization::None)) {
+                if !(v.is_empty() && normalize) {
                     write!(f, ":{v}")?;
                 }
             }
@@ -287,12 +263,12 @@ impl Default for HostRepr<'_> {
 ///
 /// 1. Create builder by [`Builder::new()`][`Self::new`].
 /// 2. Set (or unset) components and set normalization mode as you wish.
-/// 3. Validate by [`Builder::build()`][`Self::build`] and get [`DisplayBuild`] value.
-/// 4. Use [`core::fmt::Display`] trait to serialize the resulting [`DisplayBuild`],
+/// 3. Validate by [`Builder::build()`][`Self::build`] and get [`Built`] value.
+/// 4. Use [`core::fmt::Display`] trait to serialize the resulting [`Built`],
 ///    or use [`From`]/[`Into`] traits to convert into an allocated string types.
 ///
 /// ```
-/// # use iri_string::build::Error;
+/// # use iri_string::validate::Error;
 /// use iri_string::build::Builder;
 /// # #[cfg(not(feature = "alloc"))]
 /// # use iri_string::types::IriStr;
@@ -306,7 +282,7 @@ impl Default for HostRepr<'_> {
 /// builder.scheme("http");
 /// builder.host("example.com");
 /// builder.path("/foo/../");
-/// builder.normalize_whatwg();
+/// builder.normalize();
 ///
 /// // 3. Validate and create the result.
 /// let built = builder.build::<IriStr>()?;
@@ -326,7 +302,7 @@ impl Default for HostRepr<'_> {
 ///
 /// # Ok::<_, Error>(())
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Builder<'a> {
     /// Scheme.
     scheme: Option<&'a str>,
@@ -339,21 +315,7 @@ pub struct Builder<'a> {
     /// Fragment (without the leading `#`).
     fragment: Option<&'a str>,
     /// Normalization mode.
-    normalize: Normalization,
-}
-
-impl Default for Builder<'_> {
-    #[inline]
-    fn default() -> Self {
-        Self {
-            scheme: None,
-            authority: None,
-            path: "",
-            query: None,
-            fragment: None,
-            normalize: Normalization::None,
-        }
-    }
+    normalize: bool,
 }
 
 impl<'a> Builder<'a> {
@@ -362,7 +324,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -389,13 +351,17 @@ impl<'a> Builder<'a> {
     /// The IRI string to be built should be a valid IRI reference.
     /// Callers are responsible to validate the component values before calling
     /// this method.
-    fn fmt_write_to<S: Spec>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt_write_to<S: Spec>(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        path_is_absolute: bool,
+    ) -> fmt::Result {
         if let Some(scheme) = self.scheme {
             // Write the scheme.
-            if self.normalize == Normalization::None {
-                f.write_str(scheme)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_scheme(f, scheme)?;
+            } else {
+                f.write_str(scheme)?;
             }
             f.write_char(':')?;
         }
@@ -405,9 +371,11 @@ impl<'a> Builder<'a> {
             authority.fmt_write_to::<S>(f, self.normalize)?;
         }
 
-        if self.normalize == Normalization::None {
+        if !self.normalize {
+            // No normalization.
             f.write_str(self.path)?;
-        } else {
+        } else if self.scheme.is_some() || self.authority.is_some() || path_is_absolute {
+            // Apply full syntax-based normalization.
             let op = normalize::NormalizationOp {
                 case_pct_normalization: true,
             };
@@ -416,23 +384,27 @@ impl<'a> Builder<'a> {
                 op,
                 self.authority.is_some(),
             )?;
+        } else {
+            // The IRI reference starts with `path` component, and the path is relative.
+            // Skip path segment normalization.
+            PctCaseNormalized::<S>::new(self.path).fmt(f)?;
         }
 
         if let Some(query) = self.query {
             f.write_char('?')?;
-            if self.normalize == Normalization::None {
-                f.write_str(query)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_query::<S>(f, query)?;
+            } else {
+                f.write_str(query)?;
             }
         }
 
         if let Some(fragment) = self.fragment {
             f.write_char('#')?;
-            if self.normalize == Normalization::None {
-                f.write_str(fragment)?;
-            } else {
+            if self.normalize {
                 normalize::normalize_fragment::<S>(f, fragment)?;
+            } else {
+                f.write_str(fragment)?;
             }
         }
 
@@ -444,7 +416,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriStr;
     /// # #[cfg(feature = "alloc")]
@@ -470,7 +442,7 @@ impl<'a> Builder<'a> {
     /// # Ok::<_, Error>(())
     /// ```
     #[inline]
-    pub fn build<T>(self) -> Result<DisplayBuild<'a, T>, Error>
+    pub fn build<T>(self) -> Result<Built<'a, T>, Error>
     where
         T: ?Sized + Buildable<'a>,
     {
@@ -495,7 +467,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -518,7 +490,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -546,7 +518,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -575,7 +547,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -596,13 +568,16 @@ impl<'a> Builder<'a> {
 
     /// Sets the userinfo.
     ///
-    /// Note that `(None, None)` is considered as an empty userinfo, rather than
+    /// `userinfo` component always have `user` part (but it can be empty).
+    ///
+    /// Note that `("", None)` is considered as an empty userinfo, rather than
     /// unset userinfo.
+    /// Also note that the user part cannot have colon characters.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -619,7 +594,7 @@ impl<'a> Builder<'a> {
     /// You can specify `(user, password)` pair.
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -632,34 +607,18 @@ impl<'a> Builder<'a> {
     ///     "//user:pass@"
     /// );
     /// # }
-    ///
-    /// builder.userinfo((None, "pass"));
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(
-    ///     builder.clone().build::<IriReferenceStr>()?.to_string(),
-    ///     "//:pass@"
-    /// );
-    /// # }
-    ///
-    /// builder.userinfo((Some("user"), Some("pass")));
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(
-    ///     builder.build::<IriReferenceStr>()?.to_string(),
-    ///     "//user:pass@"
-    /// );
-    /// # }
     /// # Ok::<_, Error>(())
     /// ```
     ///
-    /// `(None, None)` is considered as an empty userinfo.
+    /// `("", None)` is considered as an empty userinfo.
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
     /// let mut builder = Builder::new();
-    /// builder.userinfo((None, None));
+    /// builder.userinfo(("", None));
     ///
     /// let iri = builder.build::<IriReferenceStr>()?;
     /// # #[cfg(feature = "alloc")] {
@@ -677,7 +636,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -708,7 +667,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -736,7 +695,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "std")] {
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
@@ -762,12 +721,15 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
     /// let mut builder = Builder::new();
     /// builder.port(80_u16);
+    /// // Accepts other types that implements `Into<PortBuilder<'a>>`.
+    /// //builder.port(80_u8);
+    /// //builder.port("80");
     ///
     /// let iri = builder.build::<IriReferenceStr>()?;
     /// # #[cfg(feature = "alloc")] {
@@ -785,7 +747,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -813,7 +775,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -836,7 +798,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -862,7 +824,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -885,7 +847,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -909,7 +871,7 @@ impl<'a> Builder<'a> {
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -934,15 +896,41 @@ impl<'a> Builder<'a> {
     /// ```
     #[inline]
     pub fn unset_normalize(&mut self) {
-        self.normalize = Normalization::None;
+        self.normalize = false;
     }
 
-    /// Normalizes the result using RFC 3986 normalization algorithm.
+    /// Normalizes the result using RFC 3986 syntax-based normalization and
+    /// WHATWG URL Standard algorithm.
+    ///
+    /// # Normalization
+    ///
+    /// If `scheme` or `authority` component is present or the path is absolute,
+    /// the build result will fully normalized using full syntax-based normalization:
+    ///
+    /// * case normalization ([RFC 3986 6.2.2.1]),
+    /// * percent-encoding normalization ([RFC 3986 6.2.2.2]), and
+    /// * path segment normalization ([RFC 3986 6.2.2.2]).
+    ///
+    /// However, if both `scheme` and `authority` is absent and the path is relative
+    /// (including empty), i.e. the IRI reference to be built starts with the
+    /// relative `path` component, path segment normalization will be omitted.
+    /// This is because the path segment normalization depends on presence or
+    /// absense of the `authority` components, and will remove extra `..`
+    /// segments which should not be ignored.
+    ///
+    /// Note that `path` must already be empty or start with a slash **before
+    /// the normalizaiton** if `authority` is present.
+    ///
+    /// # WHATWG URL Standard
+    ///
+    /// If you need to avoid WHATWG URL Standard serialization, use
+    /// [`Built::ensure_rfc3986_normalizable`] method to test if the result is
+    /// normalizable without WHATWG spec.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use iri_string::build::Error;
+    /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
     /// use iri_string::types::IriReferenceStr;
     ///
@@ -954,7 +942,7 @@ impl<'a> Builder<'a> {
     /// builder.port("");
     /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
     ///
-    /// builder.normalize_rfc3986();
+    /// builder.normalize();
     ///
     /// let iri = builder.build::<IriReferenceStr>()?;
     /// # #[cfg(feature = "alloc")] {
@@ -963,38 +951,8 @@ impl<'a> Builder<'a> {
     /// # Ok::<_, Error>(())
     /// ```
     #[inline]
-    pub fn normalize_rfc3986(&mut self) {
-        self.normalize = Normalization::Rfc3986;
-    }
-
-    /// Normalizes the result using WHATWG URL Standard algorithm.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use iri_string::build::Error;
-    /// use iri_string::build::Builder;
-    /// use iri_string::types::IriReferenceStr;
-    ///
-    /// let mut builder = Builder::new();
-    /// builder.scheme("http");
-    /// // `%75%73%65%72` is "user".
-    /// builder.userinfo("%75%73%65%72");
-    /// builder.host("EXAMPLE.COM");
-    /// builder.port("");
-    /// builder.path("/foo/../%2e%2e/bar/%2e/baz/.");
-    ///
-    /// builder.normalize_whatwg();
-    ///
-    /// let iri = builder.build::<IriReferenceStr>()?;
-    /// # #[cfg(feature = "alloc")] {
-    /// assert_eq!(iri.to_string(), "http://user@example.com/bar/baz/");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[inline]
-    pub fn normalize_whatwg(&mut self) {
-        self.normalize = Normalization::Whatwg;
+    pub fn normalize(&mut self) {
+        self.normalize = true;
     }
 }
 
@@ -1007,177 +965,100 @@ impl<'a> Builder<'a> {
 ///
 /// This can be stringified or directly printed by `std::fmt::Display`, but note
 /// that this `Display` **does not hide the password part**. Be careful **not to
-/// print the value using `Display for DisplayBuild<_>` in public context**.
+/// print the value using `Display for Built<_>` in public context**.
 ///
 /// [`From`]: `core::convert::From`
 /// [`Into`]: `core::convert::Into`
 /// [`Display`]: `core::fmt::Display`
 #[derive(Debug)]
-pub struct DisplayBuild<'a, T: ?Sized> {
+pub struct Built<'a, T: ?Sized> {
     /// Builder with the validated content.
     builder: Builder<'a>,
+    /// Whether the path is absolute.
+    path_is_absolute: bool,
     /// String type.
     _ty_str: PhantomData<fn() -> T>,
 }
 
-impl<T: ?Sized> Clone for DisplayBuild<'_, T> {
+impl<T: ?Sized> Clone for Built<'_, T> {
     #[inline]
     fn clone(&self) -> Self {
         Self {
             builder: self.builder.clone(),
+            path_is_absolute: self.path_is_absolute,
             _ty_str: PhantomData,
         }
     }
 }
 
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiReferenceStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiAbsoluteStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-impl<S: Spec> fmt::Display for DisplayBuild<'_, RiRelativeStr<S>> {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.builder.fmt_write_to::<S>(f)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiReferenceStr<S>>> for RiReferenceString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiReferenceStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiReferenceStr<S>>> for RiReferenceString<S> {
-    fn from(builder: &DisplayBuild<'_, RiReferenceStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiStr<S>>> for RiString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiStr<S>>> for RiString<S> {
-    fn from(builder: &DisplayBuild<'_, RiStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiAbsoluteStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiAbsoluteStr<S>>> for RiAbsoluteString<S> {
-    fn from(builder: &DisplayBuild<'_, RiAbsoluteStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<DisplayBuild<'_, RiRelativeStr<S>>> for RiRelativeString<S> {
-    #[inline]
-    fn from(builder: DisplayBuild<'_, RiRelativeStr<S>>) -> Self {
-        (&builder).into()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl<S: Spec> From<&DisplayBuild<'_, RiRelativeStr<S>>> for RiRelativeString<S> {
-    fn from(builder: &DisplayBuild<'_, RiRelativeStr<S>>) -> Self {
-        let s = builder.to_string();
-        Self::try_from(s)
-            .expect("[validity] the string to be built should already have been validated")
-    }
-}
-
-/// IRI build error.
-#[derive(Debug, Clone)]
-pub enum Error {
-    /// Build result won't be a valid IRI.
-    Validate(validate::Error),
-    /// Build result won't be normalizable with the specified algorithm.
-    Normalize(normalize::Error),
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self {
-            Self::Validate(_) => "build result won't be a valid IRI",
-            Self::Normalize(_) => "build result won't be normalizable with the specified algorithm",
-        };
-        f.write_str(msg)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Validate(e) => Some(e),
-            Self::Normalize(e) => Some(e),
+/// Implements conversions to a string.
+macro_rules! impl_stringifiers {
+    ($borrowed:ident, $owned:ident) => {
+        impl<S: Spec> Built<'_, $borrowed<S>> {
+            /// Returns Ok`(())` if the IRI is normalizable by the RFC 3986 algorithm.
+            #[inline]
+            pub fn ensure_rfc3986_normalizable(&self) -> Result<(), normalize::Error> {
+                if self.builder.authority.is_none() {
+                    let path = normalize::PathToNormalize::from_single_path(self.builder.path);
+                    path.ensure_rfc3986_normalizable_with_authority_absent()?;
+                }
+                Ok(())
+            }
         }
-    }
+
+        impl<S: Spec> fmt::Display for Built<'_, $borrowed<S>> {
+            #[inline]
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.builder.fmt_write_to::<S>(f, self.path_is_absolute)
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> ToDedicatedString for Built<'_, $borrowed<S>> {
+            type Target = $owned<S>;
+
+            #[inline]
+            fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
+                let s = self.try_to_string()?;
+                Ok(TryFrom::try_from(s)
+                    .expect("[validity] the IRI to be built is already validated"))
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> From<Built<'_, $borrowed<S>>> for $owned<S> {
+            #[inline]
+            fn from(builder: Built<'_, $borrowed<S>>) -> Self {
+                (&builder).into()
+            }
+        }
+
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> From<&Built<'_, $borrowed<S>>> for $owned<S> {
+            #[inline]
+            fn from(builder: &Built<'_, $borrowed<S>>) -> Self {
+                let s = builder.to_string();
+                Self::try_from(s).expect("[validity] the IRI to be built is already validated")
+            }
+        }
+    };
 }
 
-impl From<validate::Error> for Error {
-    #[inline]
-    fn from(e: validate::Error) -> Self {
-        Self::Validate(e)
-    }
-}
-
-impl From<normalize::Error> for Error {
-    #[inline]
-    fn from(e: normalize::Error) -> Self {
-        Self::Normalize(e)
-    }
-}
+impl_stringifiers!(RiReferenceStr, RiReferenceString);
+impl_stringifiers!(RiStr, RiString);
+impl_stringifiers!(RiAbsoluteStr, RiAbsoluteString);
+impl_stringifiers!(RiRelativeStr, RiRelativeString);
 
 /// A trait for borrowed IRI string types buildable by the [`Builder`].
 pub trait Buildable<'a>: private::Sealed<'a> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
-        validate_builder_for_iri_reference::<S>(&builder)?;
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1185,14 +1066,15 @@ impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiReferenceStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1200,17 +1082,18 @@ impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
         if builder.fragment.is_some() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1218,14 +1101,15 @@ impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiAbsoluteStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
-    fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error> {
+    fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_some() {
-            return Err(validate::Error::new().into());
+            return Err(Error::new());
         }
-        validate_builder_for_iri_reference::<S>(&builder)?;
+        let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
-        Ok(DisplayBuild {
+        Ok(Built {
             builder,
+            path_is_absolute,
             _ty_str: PhantomData,
         })
     }
@@ -1233,7 +1117,9 @@ impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
 impl<'a, S: Spec> Buildable<'a> for RiRelativeStr<S> {}
 
 /// Checks whether the builder output is valid IRI reference.
-fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<(), Error> {
+///
+/// Returns whether the path is absolute.
+fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<bool, Error> {
     if let Some(scheme) = builder.scheme {
         parser::validate_scheme(scheme)?;
     }
@@ -1245,11 +1131,15 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
                 parser::validate_userinfo::<S>(userinfo)?;
             }
             UserinfoRepr::UserPass(user, password) => {
+                // `user` is not allowed to have a colon, since the characters
+                // after the colon is parsed as the password.
+                if user.contains(':') {
+                    return Err(Error::new());
+                }
+
                 // Note that the syntax of components inside `authority`
                 // (`user` and `password`) is not specified by RFC 3986.
-                if let Some(user) = user {
-                    parser::validate_userinfo::<S>(user)?;
-                }
+                parser::validate_userinfo::<S>(user)?;
                 if let Some(password) = password {
                     parser::validate_userinfo::<S>(password)?;
                 }
@@ -1264,31 +1154,61 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
 
         if let PortBuilderRepr::String(s) = authority.port.0 {
             if !s.bytes().all(|b| b.is_ascii_digit()) {
-                return Err(validate::Error::new().into());
+                return Err(Error::new());
             }
         }
     }
 
-    let is_path_acceptable = if builder.authority.is_some() {
-        // The path should be absolute or empty.
-        builder.path.is_empty() || builder.path.starts_with('/')
-    } else if builder.scheme.is_some() {
-        // The path should not start with '//'.
-        !builder.path.starts_with("//")
+    let path_is_absolute: bool;
+    let mut is_path_acceptable;
+    if builder.normalize {
+        if builder.scheme.is_some() || builder.authority.is_some() || builder.path.starts_with('/')
+        {
+            if builder.authority.is_some() {
+                // Note that the path should already be in an absolute form before normalization.
+                is_path_acceptable = builder.path.is_empty() || builder.path.starts_with('/');
+            } else {
+                is_path_acceptable = true;
+            }
+            let op = normalize::NormalizationOp {
+                case_pct_normalization: true,
+            };
+            let path_characteristic = PathCharacteristic::from_path_to_display::<S>(
+                &normalize::PathToNormalize::from_single_path(builder.path),
+                op,
+                builder.authority.is_some(),
+            );
+            path_is_absolute = path_characteristic.is_absolute();
+            is_path_acceptable = is_path_acceptable
+                && match path_characteristic {
+                    PathCharacteristic::CommonAbsolute | PathCharacteristic::CommonRelative => true,
+                    PathCharacteristic::StartsWithDoubleSlash
+                    | PathCharacteristic::RelativeFirstSegmentHasColon => {
+                        builder.scheme.is_some() || builder.authority.is_some()
+                    }
+                };
+        } else {
+            path_is_absolute = false;
+            // If the path is relative (where neither scheme nor authority is
+            // available), the first segment should not contain a colon.
+            is_path_acceptable = prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':');
+        }
     } else {
-        // If the path is relative (where neither scheme nor authority available),
-        //
-        // * the path should not start with `//`, and
-        // * the first segment should not contain a colon.
-        !builder.path.starts_with("//")
-            && (prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':'))
-    };
-    if !is_path_acceptable {
-        return Err(validate::Error::new().into());
+        path_is_absolute = builder.path.starts_with('/');
+        is_path_acceptable = if builder.authority.is_some() {
+            // The path should be absolute or empty.
+            path_is_absolute || builder.path.is_empty()
+        } else if builder.scheme.is_some() || path_is_absolute {
+            // The path should not start with '//'.
+            !builder.path.starts_with("//")
+        } else {
+            // If the path is relative (where neither scheme nor authority is
+            // available), the first segment should not contain a colon.
+            prior_byte2(builder.path.as_bytes(), b'/', b':') != Some(b':')
+        };
     }
-    if (builder.normalize == Normalization::Rfc3986) && builder.authority.is_none() {
-        let path = normalize::PathToNormalize::from_single_path(builder.path);
-        path.ensure_rfc3986_normalizable_with_authority_absent()?;
+    if !is_path_acceptable {
+        return Err(Error::new());
     }
 
     if let Some(query) = builder.query {
@@ -1299,138 +1219,16 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
         parser::validate_fragment::<S>(fragment)?;
     }
 
-    Ok(())
+    Ok(path_is_absolute)
 }
 
 /// Private module to put the trait to seal.
 mod private {
-    use super::{Builder, DisplayBuild, Error};
+    use super::{Builder, Built, Error};
 
     /// A trait for types buildable by the [`Builder`].
     pub trait Sealed<'a> {
         /// Validates the content of the builder and returns the validated type if possible.
-        fn validate_builder(builder: Builder<'a>) -> Result<DisplayBuild<'a, Self>, Error>;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(feature = "alloc")]
-    use alloc::string::ToString;
-
-    use crate::types::{IriReferenceStr, IriStr};
-
-    #[test]
-    fn set_port() {
-        let mut builder = Builder::new();
-        builder.port(80_u8);
-        builder.port(80_u16);
-        builder.port("80");
-    }
-
-    #[cfg(feature = "std")]
-    #[test]
-    fn set_ipaddr() {
-        let mut builder = Builder::new();
-        builder.ip_address(std::net::Ipv4Addr::new(192, 0, 2, 0));
-        builder.ip_address(std::net::Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 0));
-    }
-
-    #[test]
-    fn set_userinfo() {
-        let mut builder = Builder::new();
-        builder.userinfo("arbitrary-valid-string");
-        builder.userinfo("user:password");
-        builder.userinfo((None, None));
-        builder.userinfo(("user", None));
-        builder.userinfo((None, "password"));
-        builder.userinfo(("user", "password"));
-    }
-
-    #[test]
-    fn all() {
-        let mut builder = Builder::new();
-        builder.scheme("http");
-        builder.userinfo(("user", "password"));
-        builder.host("example.com");
-        builder.port(80_u16);
-        builder.path("/path/to/somewhere");
-        builder.query("query");
-        builder.fragment("fragment");
-        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
-        let built = builder.build::<IriStr>().expect("valid");
-        #[cfg(feature = "alloc")]
-        assert_eq!(
-            built.to_string(),
-            "http://user:password@example.com:80/path/to/somewhere?query#fragment"
-        );
-    }
-
-    #[test]
-    fn large_port() {
-        let mut builder = Builder::new();
-        builder.port("99999999999999999999999999999999");
-        builder.port("99999999999999999999999999999999");
-        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
-        let built = builder.build::<IriReferenceStr>().expect("valid");
-        #[cfg(feature = "alloc")]
-        assert_eq!(built.to_string(), "//:99999999999999999999999999999999");
-    }
-
-    #[test]
-    fn authority_and_relative_path() {
-        let mut builder = Builder::new();
-        builder.host("example.com");
-        builder.path("relative/path");
-        assert!(builder.build::<IriReferenceStr>().is_err());
-    }
-
-    #[test]
-    fn no_authority_and_double_slash_prefix() {
-        let mut builder = Builder::new();
-        // This would be interpreted as "network-path reference" (see RFC 3986
-        // section 4.2), so this should be rejected.
-        builder.path("//double-slash");
-        assert!(builder.build::<IriReferenceStr>().is_err());
-    }
-
-    #[test]
-    fn no_authority_and_relative_first_segment_colon() {
-        let mut builder = Builder::new();
-        // This would be interpreted as scheme `foo` and host `bar`,
-        // so this should be rejected.
-        builder.path("foo:bar");
-        assert!(builder.build::<IriReferenceStr>().is_err());
-    }
-
-    #[test]
-    fn normalize_rfc3986_double_slash_prefix() {
-        let mut builder = Builder::new();
-        builder.scheme("scheme");
-        builder.path("/..//bar");
-        // Naive application of RFC 3986 normalization/resolution algorithm
-        // results in `scheme://bar`, but this is unintentional. `bar` should be
-        // the second path segment, not a host. So this should be rejected.
-        builder.normalize_rfc3986();
-        assert!(builder.build::<IriStr>().is_err());
-    }
-
-    #[test]
-    fn normalize_whawtg_double_slash_prefix() {
-        let mut builder = Builder::new();
-        builder.scheme("scheme");
-        builder.path("/..//bar");
-        // In contrast to RFC 3986, WHATWG URL Standard defines serialization
-        // algorithm and handles this case specially. In this case, the result
-        // is `scheme:/.//bar`, this won't be considered fully normalized from
-        // the RFC 3986 point of view, but more normalization would be
-        // impossible and this would practically work in most situations.
-        builder.normalize_whatwg();
-        #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
-        let built = builder.build::<IriStr>().expect("normalizable");
-        #[cfg(feature = "alloc")]
-        assert_eq!(built.to_string(), "scheme:/.//bar");
+        fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error>;
     }
 }

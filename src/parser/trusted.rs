@@ -5,12 +5,11 @@
 pub(crate) mod authority;
 
 use core::cmp::Ordering;
-use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
 use crate::format::eq_str_display;
-use crate::normalize::{is_pct_case_normalized, DisplayNormalizedAsciiOnlyHost};
+use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
@@ -71,7 +70,7 @@ fn until_query(i: &str) -> (&str, &str) {
 /// The string must starts with `?`, or `#`, or be empty.
 #[must_use]
 fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
-    match i.as_bytes().get(0).copied() {
+    match i.as_bytes().first().copied() {
         None => (None, None),
         Some(b'?') => {
             let rest = &i[1..];
@@ -138,7 +137,6 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
         authority_end,
         query_start,
         fragment_start,
-        _spec: PhantomData,
     }
 }
 
@@ -261,7 +259,7 @@ pub(crate) fn extract_query_absolute_iri(i: &str) -> Option<&str> {
         None
     } else {
         debug_assert_eq!(
-            i.as_bytes().get(0),
+            i.as_bytes().first(),
             Some(&b'?'),
             "`absolute-IRI` string must not have `fragment part"
         );
@@ -359,7 +357,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
         // Check `host`.
         let host = authority_components.host();
         let host_is_normalized = if is_ascii_only_host(host) {
-            eq_str_display(host, &DisplayNormalizedAsciiOnlyHost::new(host))
+            eq_str_display(host, &NormalizedAsciiOnlyHost::new(host))
         } else {
             // If the host is not ASCII-only, conversion to lowercase is not performed.
             is_pct_case_normalized::<S>(host)

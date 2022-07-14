@@ -494,13 +494,13 @@ macro_rules! define_custom_string_owned {
         $(#[$meta])*
         // `#[derive(..)]` cannot be used here, because it adds `S: DerivedTrait` bounds automatically.
         #[cfg(feature = "alloc")]
-        #[cfg_attr(feature = "serde-alloc", derive(serde::Serialize))]
-        #[cfg_attr(feature = "serde-alloc", serde(bound = "S: crate::spec::Spec"))]
-        #[cfg_attr(feature = "serde-alloc", serde(transparent))]
+        #[cfg_attr(all(feature = "serde", feature = "alloc"), derive(serde::Serialize))]
+        #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(bound = "S: crate::spec::Spec"))]
+        #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(transparent))]
         #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
         pub struct $ty<S> {
             /// Spec.
-            #[cfg_attr(feature = "serde-alloc", serde(skip))]
+            #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(skip))]
             _spec: core::marker::PhantomData<fn() -> S>,
             /// Inner data.
             inner: alloc::string::String,
@@ -550,7 +550,7 @@ macro_rules! define_custom_string_owned {
             #[inline]
             #[must_use]
             // TODO: Use wrapper type to enforce validation on finish?
-            pub(crate) fn as_inner_mut(&mut self) -> &mut alloc::string::String {
+            pub(crate) unsafe fn as_inner_mut(&mut self) -> &mut alloc::string::String {
                 &mut self.inner
             }
 
@@ -783,7 +783,7 @@ macro_rules! define_custom_string_owned {
 
             use core::{convert::TryFrom, fmt, marker::PhantomData};
 
-            #[cfg(feature = "serde-alloc")]
+            #[cfg(all(feature = "serde", feature = "alloc"))]
             use alloc::string::String;
 
             use serde::{
@@ -811,7 +811,7 @@ macro_rules! define_custom_string_owned {
                     <$ty<S> as TryFrom<&str>>::try_from(v).map_err(E::custom)
                 }
 
-                #[cfg(feature = "serde-alloc")]
+                #[cfg(all(feature = "serde", feature = "alloc"))]
                 #[inline]
                 fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
                 where
@@ -979,22 +979,4 @@ macro_rules! impl_trivial_conv_between_iri {
         #[cfg(feature = "alloc")]
         impl_cmp2_as_str!($from_owned<S>, $to_owned<T>);
     };
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{
-        spec::{IriSpec, UriSpec},
-        types::{RiAbsoluteStr, RiReferenceStr},
-    };
-
-    #[test]
-    fn compare_different_types()
-    where
-        RiAbsoluteStr<UriSpec>: PartialEq<RiReferenceStr<IriSpec>>,
-        RiReferenceStr<IriSpec>: PartialEq<RiAbsoluteStr<UriSpec>>,
-        RiAbsoluteStr<IriSpec>: PartialEq<RiReferenceStr<UriSpec>>,
-        RiReferenceStr<UriSpec>: PartialEq<RiAbsoluteStr<IriSpec>>,
-    {
-    }
 }

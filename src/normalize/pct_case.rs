@@ -16,7 +16,7 @@ use crate::spec::Spec;
 /// Note that normalization of ASCII-only host requires additional case
 /// normalization, so checking by this function is not sufficient for that case.
 pub(crate) fn is_pct_case_normalized<S: Spec>(s: &str) -> bool {
-    eq_str_display(s, &DisplayPctCaseNormalize::<S>::new(s))
+    eq_str_display(s, &PctCaseNormalized::<S>::new(s))
 }
 
 /// Writable as a normalized path segment percent-encoding IRI.
@@ -32,15 +32,15 @@ pub(crate) fn is_pct_case_normalized<S: Spec>(s: &str) -> bool {
 ///
 /// The given string should be the valid path segment.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct DisplayPctCaseNormalize<'a, S> {
+pub(crate) struct PctCaseNormalized<'a, S> {
     /// Valid segment name to normalize.
     segname: &'a str,
     /// Spec.
     _spec: PhantomData<fn() -> S>,
 }
 
-impl<'a, S: Spec> DisplayPctCaseNormalize<'a, S> {
-    /// Creates a new `DisplayPctCaseNormalizedPathSegment` value.
+impl<'a, S: Spec> PctCaseNormalized<'a, S> {
+    /// Creates a new `PctCaseNormalized` value.
     #[inline]
     #[must_use]
     pub(crate) fn new(source: &'a str) -> Self {
@@ -51,7 +51,7 @@ impl<'a, S: Spec> DisplayPctCaseNormalize<'a, S> {
     }
 }
 
-impl<S: Spec> fmt::Display for DisplayPctCaseNormalize<'_, S> {
+impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut rest = self.segname;
 
@@ -169,13 +169,13 @@ impl<S: Spec> fmt::Display for DisplayPctCaseNormalize<'_, S> {
 
 /// Writable as a normalized ASCII-only `host` (and optionally `port` followed).
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct DisplayNormalizedAsciiOnlyHost<'a> {
+pub(crate) struct NormalizedAsciiOnlyHost<'a> {
     /// Valid host (and additionaly port) to normalize.
     host_port: &'a str,
 }
 
-impl<'a> DisplayNormalizedAsciiOnlyHost<'a> {
-    /// Creates a new `DisplayNormalizedAsciiOnlyHost` value.
+impl<'a> NormalizedAsciiOnlyHost<'a> {
+    /// Creates a new `NormalizedAsciiOnlyHost` value.
     ///
     /// # Preconditions
     ///
@@ -192,7 +192,7 @@ impl<'a> DisplayNormalizedAsciiOnlyHost<'a> {
     }
 }
 
-impl fmt::Display for DisplayNormalizedAsciiOnlyHost<'_> {
+impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut rest = self.host_port;
 
@@ -247,16 +247,18 @@ fn take_first_char(s: &str) -> Option<(char, &str)> {
 mod tests {
     use super::*;
 
+    use alloc::string::ToString;
+
     use crate::spec::{IriSpec, UriSpec};
 
     #[test]
     fn invalid_utf8() {
         assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%80%cc%cc%cc").to_string(),
+            PctCaseNormalized::<UriSpec>::new("%80%cc%cc%cc").to_string(),
             "%80%CC%CC%CC"
         );
         assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%80%cc%cc%cc").to_string(),
+            PctCaseNormalized::<IriSpec>::new("%80%cc%cc%cc").to_string(),
             "%80%CC%CC%CC"
         );
     }
@@ -264,11 +266,11 @@ mod tests {
     #[test]
     fn iri_unreserved() {
         assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%ce%b1").to_string(),
+            PctCaseNormalized::<UriSpec>::new("%ce%b1").to_string(),
             "%CE%B1"
         );
         assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%ce%b1").to_string(),
+            PctCaseNormalized::<IriSpec>::new("%ce%b1").to_string(),
             "\u{03B1}"
         );
     }
@@ -276,48 +278,36 @@ mod tests {
     #[test]
     fn iri_middle_decode() {
         assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%ce%ce%b1%b1").to_string(),
+            PctCaseNormalized::<UriSpec>::new("%ce%ce%b1%b1").to_string(),
             "%CE%CE%B1%B1"
         );
         assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%ce%ce%b1%b1").to_string(),
+            PctCaseNormalized::<IriSpec>::new("%ce%ce%b1%b1").to_string(),
             "%CE\u{03B1}%B1"
         );
     }
 
     #[test]
     fn ascii_reserved() {
-        assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%3f").to_string(),
-            "%3F"
-        );
-        assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%3f").to_string(),
-            "%3F"
-        );
+        assert_eq!(PctCaseNormalized::<UriSpec>::new("%3f").to_string(), "%3F");
+        assert_eq!(PctCaseNormalized::<IriSpec>::new("%3f").to_string(), "%3F");
     }
 
     #[test]
     fn ascii_forbidden() {
         assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%3c%3e").to_string(),
+            PctCaseNormalized::<UriSpec>::new("%3c%3e").to_string(),
             "%3C%3E"
         );
         assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%3c%3e").to_string(),
+            PctCaseNormalized::<IriSpec>::new("%3c%3e").to_string(),
             "%3C%3E"
         );
     }
 
     #[test]
     fn ascii_unreserved() {
-        assert_eq!(
-            DisplayPctCaseNormalize::<UriSpec>::new("%7ea").to_string(),
-            "~a"
-        );
-        assert_eq!(
-            DisplayPctCaseNormalize::<IriSpec>::new("%7ea").to_string(),
-            "~a"
-        );
+        assert_eq!(PctCaseNormalized::<UriSpec>::new("%7ea").to_string(), "~a");
+        assert_eq!(PctCaseNormalized::<IriSpec>::new("%7ea").to_string(), "~a");
     }
 }

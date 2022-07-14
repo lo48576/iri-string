@@ -2,6 +2,225 @@
 
 ## [Unreleased]
 
+## [0.6.0]
+
+* Bump MSRV to 1.60.0.
+* Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
+    + Now `alloc` and/or `std` features for additional dependencies are
+      automatically enabled when all of dependent featuers are enabled.
+        - See [Announcing Rust 1.60.0 | Rust Blog](https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html#new-syntax-for-cargo-features).
+* Support escaping username and password by `percent_encode::PercentEncode`.
+* Add `format` module that contains utilities for types with `Display` trait impl.
+    + Add `format::ToStringFallible` trait.
+    + Add `format::ToDedicatedString` trait.
+    + Add `format::write_to_slice` function and `format::CapacityOverflow` type.
+    + Add `format::try_append_to_string` function.
+* Remove `task` module and `task::ProcessAndWrite` trait.
+    + Remove `task` module.
+    + Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
+    + Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
+* Remove "task" types.
+    + Remove `normalize::NormalizationTask` type.
+    + Remove `normalize::NormalizationTask` type.
+        - Use `normalize::Normalized` instead.
+* Change return types of some functions from task types or string types to `Display`-able types.
+    + Change return types of `{BorrowedIri}::encode_to_uri` to
+      `convert::MappedToUri<'_, Self>`.
+    + Change return type of `resolve::FixedBaseResolver::resolve()` method to `noramlize::Normalized`.
+    + Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
+    + Change return type of `{BorrowedIri}::resolve_against()` method to `normalize::Normalized`.
+    + Remove `BufferError` type.
+* Change API of IRI-to-URI conversion.
+    + Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+    + Add `{OwnedIri}::try_encode_to_uri_inline` method.
+    + Add `{OwnedIri}::try_encode_into_uri` method.
+* Make the methods impl of `convert::MappedToUri<'_, T>` generic over the spec.
+* Revome functions under `resolve` module.
+* Add `normalize::Normalized` type.
+* Remove some methods of `resolve::FixedBaseResolver`.
+* Rename `{BorrowedIri}::is_normalized()` methods to `{BorrowedIri}::is_normalized_rfc3986()`.
+* Remove some methods of borrowed IRI string types.
+* Support password masking.
+    + Add `mask_password` module.
+    + Add `{BorrowedIri}::mask_password` method.
+    + Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
+      methods.
+* Remove deprecated `percent_encoding` module and aliases defined in it.
+* Unify normalization of `build::Builder`.
+    + Add `build::Builder::normalize()` method.
+    + Add `build::Built::ensure_rfc3986_normalizable()` method.
+    + Change return type of `build::Builder::build()`.
+    + Remove `build::Builder::normalize_rfc3986()` and
+      `build::Builder::normalize_whatwg()` methods.
+    + Remove `build::Error` type.
+* Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
+* Reject user with colon characters on IRI build.
+* Allow builders to normalize `path` component of relative IRIs if safely possible.
+* Make the resolution result of an empty IRI reference normalizable.
+
+### Added
+* Support escaping username and password by `percent_encode::PercentEncode`.
+    + List of added functions:
+        `percen_encode::PercentEncode::from_user()`
+        `percen_encode::PercentEncode::from_password()`
+* Add `format::ToStringFallible` trait.
+    + This trait allows users to convert `Display`-able values into `String`,
+      but without panicking on OOM.
+    + List of types that implements this trait:
+        - `build::Built<'_, RiReferenceStr<S>>`
+        - `build::Built<'_, RiStr<S>>`
+        - `build::Built<'_, RiAbsoluteStr<S>>`
+        - `build::Built<'_, RiRelativeStr<S>>`
+* Add `format::ToDedicatedString` trait.
+    + This trait allows users to convert `Display`-able values into owned
+      dedicated IRI string types, with or without panicking on OOM.
+    + List of added implementations:
+        - `build::Built<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
+        - `build::Built<'_, RiStr<S>>` (Target = `RiString<S>`)
+        - `build::Built<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
+        - `build::Built<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+        - `convert::MappedToUri<'_, RiReferenceStr<S>>` (Target = `RiReferenceString<S>`)
+        - `convert::MappedToUri<'_, RiStr<S>>` (Target = `RiString<S>`)
+        - `convert::MappedToUri<'_, RiAbsoluteStr<S>>` (Target = `RiAbsoluteString<S>`)
+        - `convert::MappedToUri<'_, RiRelativeStr<S>>` (Target = `RiRelativeString<S>`)
+        - `convert::MappedToUri<'_, RiQueryStr<S>>` (Target = `RiQueryString<S>`)
+        - `convert::MappedToUri<'_, RiFragmentStr<S>>` (Target = `RiFragmentString<S>`)
+* Add `format::write_to_slice` function and `format::CapacityOverflow` type.
+* Add `format::try_append_to_string` function.
+* Add `{OwnedIri}::try_encode_to_uri_inline` method.
+* Add `{OwnedIri}::try_encode_into_uri` method.
+* Add `normalize::Normalized` type.
+    + This replaces `normalize::NormalizationTask` type in previous versions.
+* Add `mask_password` module.
+    + Items in this module let users hide or replace password to keep sensitive
+      information secret.
+    + List of added items:
+        - `mask_password::PasswordMasked` type
+        - `mask_password::PasswordReplaced` type
+* Add `{BorrowedIri}::mask_password` method.
+    + List of added methods:
+        - `types::RiReferenceStr::mask_password()`
+        - `types::RiStr::mask_password()`
+        - `types::RiAbsoluteStr::mask_password()`
+        - `types::RiRelativeStr::mask_password()`
+* Add `{OwnedIri}::remove_password_inline` and `{OwnedIri}::remove_nonempty_password_inline()`
+  methods.
+    + List of added methods:
+        - `types::RiReferenceString::remove_password_inline()`
+        - `types::RiReferenceString::remove_nonempty_password_inline()`
+        - `types::RiString::remove_password_inline()`
+        - `types::RiString::remove_nonempty_password_inline()`
+        - `types::RiAbsoluteString::remove_password_inline()`
+        - `types::RiAbsoluteString::remove_nonempty_password_inline()`
+        - `types::RiRelativeString::remove_password_inline()`
+        - `types::RiRelativeString::remove_nonempty_password_inline()`
+* Add `build::Builder::normalize()` method.
+* Add `build::Built::ensure_rfc3986_normalizable()` method.
+
+### Changed (breaking)
+* Bump MSRV to 1.60.0.
+* Remove `memchr-std`, `serde-alloc`, and `serde-std` features.
+    + Now `alloc` and/or `std` features for additional dependencies are
+      automatically enabled when all of dependent featuers are enabled.
+        - See [Announcing Rust 1.60.0 | Rust Blog](https://blog.rust-lang.org/2022/04/07/Rust-1.60.0.html#new-syntax-for-cargo-features).
+* Remove `ProcessAndWrite` trait implementation from `percent_encode::PercentEncoded` type.
+* Remove `ProcessAndWrite` trait implementation from `convert::MappedToUri` type.
+* Change return types of `{BorrowedIri}::encode_to_uri` to
+  `convert::MappedToUri<'_, Self>`.
+    + The code `borrowed.encode_to_uri()` in older versions should be rewritten
+      to `borrowed.encode_to_uri().to_dedicated_string()`.
+* Rename `{OwnedIri}::encode_to_uri` to `{OwnedIri}::encode_to_uri_inline`.
+* Remove `normalize::NormalizationTask` type.
+    + Use `normalized::Normalized` type instead.
+* Revome functions under `resolve` module.
+    + List of removed functions:
+        - `resolve::resolve()`
+        - `resolve::resolve_normalize()`
+        - `resolve::resolve_whatwg()`
+        - `resolve::resolve_normalize_whatwg()`
+        - `resolve::try_resolve()`
+        - `resolve::try_resolve_normalize()`
+        - `resolve::try_resolve_whatwg()`
+        - `resolve::try_resolve_normalize_whatwg()`
+* Remove `normalize::NormalizationTask` type.
+    + Use `normalize::Normalized` instead.
+* Remove some methods of `resolve::FixedBaseResolver`.
+    + List fo removed methods:
+        - `resolve::FixedBaseResolver::try_resolve()`
+        - `resolve::FixedBaseResolver::try_resolve_normalize()`
+        - `resolve::FixedBaseResolver::resolve_normalize()`
+        - `resolve::FixedBaseResolver::create_task()`
+        - `resolve::FixedBaseResolver::create_normalizing_task()`
+* Change return type of `resolve::FixedBaseResolver::resolve()` to `noramlize::Normalized`.
+* Rename `{BorrowedIri}::is_normalized` methods to `{BorrowedIri}::is_normalized_rfc3986`.
+    + List of renamed methods:
+        - `types::RiStr::is_normalized` to `types::RiStr::is_normalized_rfc3986`
+        - `types::RiAbsoluteStr::is_normalized` to `types::RiAbsoluteStr::is_normalized_rfc3986`
+* Change return type of `{BorrowedIri}::normalize()` method to `normalize::Normalized`.
+    + List of affected methods:
+        - `types::RiStr::normalize()`
+        - `types::RiAbsoluteStr::normalize()`
+* Remove some methods of borrowed IRI string types.
+    + List of removed methods:
+        - `types::RiReferenceStr::try_resolve_against()`
+        - `types::RiReferenceStr::try_resolve_whatwg_against()`
+        - `types::RiReferenceStr::resolve_whatwg_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_against()`
+        - `types::RiReferenceStr::resolve_normalize_against()`
+        - `types::RiReferenceStr::try_resolve_normalize_whatwg_against()`
+        - `types::RiReferenceStr::resolve_normalize_whatwg_against()`
+        - `types::RiStr::try_normalize()`
+        - `types::RiStr::try_normalize_whatwg()`
+        - `types::RiStr::normalize_whatwg()`
+        - `types::RiAbsoluteStr::try_normalize()`
+        - `types::RiAbsoluteStr::try_normalize_whatwg()`
+        - `types::RiAbsoluteStr::normalize_whatwg()`
+        - `types::RiRelativeStr::try_resolve_against()`
+        - `types::RiRelativeStr::try_resolve_whatwg_against()`
+        - `types::RiRelativeStr::resolve_whatwg_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_against()`
+        - `types::RiRelativeStr::resolve_normalize_against()`
+        - `types::RiRelativeStr::try_resolve_normalize_whatwg_against()`
+        - `types::RiRelativeStr::resolve_normalize_whatwg_against()`
+* Change return type of `{BorrowedIri}::resolve()` method to `normalize::Normalized`.
+    + List of affected methods:
+        - `types::RiReferenceStr::resolve_against()`
+        - `types::RiRelativeStr::resolve_against()`
+* Remove `BufferError` type.
+* Remove `task` module.
+    + List of removed items:
+        - `task::Error` type
+        - `task::ProcessAndWrite` trait
+* Remove deprecated `percent_encoding` module and aliases defined in it.
+    + List of removed items:
+        - `percent_encoding` module.
+        - `percent_encoding::PercentEncoded` type alias.
+        - `percent_encoding::PercentEncodedForIri` type alias.
+        - `percent_encoding::PercentEncodedForUri` type alias.
+* Change return type of `build::Builder::build()`.
+    + Now it returns `Result<(), validate::Error>` instead of
+      `Result<(), build::Error>`.
+* Remove `build::Builder::normalize_rfc3986()` and
+  `build::Builder::normalize_whatwg()` methods.
+    + Use `build::Builder::normalize()` and
+      `build::Builder::ensure_rfc3986_normalizable()` instead.
+* Remove `build::Error` type.
+* Stop accepting user part as `Option<&str>` type for `build::Builder::userinfo`
+    + Now user part should be non-optional (but possibly empty) `&str`.
+
+### Changed (non-breaking)
+* Make methods of `convert::MappedToUri<'_, T>` generic over the spec.
+    + Now methods of `convert::MappedToUri<'_, T>` can be called for
+      `{BorrowedIri}<S> where S: Spec`.
+* Reject user with colon characters on IRI build.
+    + Now `build::Builder::build()` fails when `user` part contains a colon (`:`).
+* Allow builders to normalize `path` component of relative IRIs if safely possible.
+
+### Fixed
+* Make the resolution result of an empty IRI reference normalizable.
+    + There was a bug that the resolution result of an empty IRI is not normalized
+      even when `.and_normalize()` is called.
+
 ## [0.5.6]
 
 * Fix normalization bug.
@@ -616,7 +835,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.5.6...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.6.0...develop>
+[0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>

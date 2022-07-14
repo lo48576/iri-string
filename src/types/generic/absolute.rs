@@ -2,12 +2,11 @@
 
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::NormalizationTask;
-use crate::normalize::{Error, NormalizationInput};
+use crate::mask_password::password_range_to_hide;
+use crate::mask_password::PasswordMasked;
+use crate::normalize::{Error, NormalizationInput, Normalized};
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
-#[cfg(feature = "alloc")]
-use crate::task::{Error as TaskError, ProcessAndWrite};
 use crate::types::{RiQueryStr, RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiReferenceString, RiString};
@@ -147,91 +146,40 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriAbsoluteStr;
     ///
     /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
-    /// assert!(!iri.is_normalized());
+    /// assert!(!iri.is_normalized_rfc3986());
     ///
-    /// let normalized = iri.try_normalize()?;
+    /// let normalized = iri.normalize().to_dedicated_string();
     /// assert_eq!(normalized, "http://example.com/baz?query");
-    /// assert!(normalized.is_normalized());
+    /// assert!(normalized.is_normalized_rfc3986());
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let iri = IriAbsoluteStr::new("http://example.com/.///foo")?;
+    /// assert!(!iri.is_normalized_rfc3986());
+    ///
+    /// // Already normalized, but WHATWG URL Standard serialization is applied.
+    /// assert!(iri.is_normalized_whatwg());
+    /// assert!(!iri.is_normalized_rfc3986());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
     #[must_use]
-    #[inline]
-    pub fn is_normalized(&self) -> bool {
+    pub fn is_normalized_rfc3986(&self) -> bool {
         trusted_parser::is_normalized::<S>(self.as_str(), false)
-    }
-
-    /// Returns the normalized IRI.
-    ///
-    /// If you want to avoid serialization errors (except for memory allocation
-    /// failure), use [`normalize_whatwg`][`Self::normalize_whatwg`] method.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriAbsoluteStr;
-    ///
-    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
-    ///
-    /// let normalized = iri.try_normalize()?;
-    /// assert_eq!(normalized, "http://example.com/baz?query");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
-        NormalizationTask::from(self).allocate_and_write()
-    }
-
-    /// Returns the normalized IRI.
-    ///
-    /// If you want to avoid serialization errors (except for memory allocation
-    /// failure), use [`normalize_whatwg`][`Self::normalize_whatwg`] method.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
-    /// # #[cfg(feature = "alloc")] {
-    /// use iri_string::types::IriAbsoluteStr;
-    ///
-    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
-    ///
-    /// let normalized = iri.try_normalize()?;
-    /// assert_eq!(normalized, "http://example.com/baz?query");
-    /// # }
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_normalize()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn normalize(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
-        self.try_normalize()
     }
 
     /// Returns `true` if the IRI is already normalized in the sense of WHATWG spec.
@@ -243,94 +191,75 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriAbsoluteStr;
     ///
     /// let iri = IriAbsoluteStr::new("scheme:a/..//not-a-host")?;
     /// assert!(!iri.is_normalized_whatwg());
     ///
-    /// let normalized = iri.try_normalize_whatwg()?;
+    /// let normalized = iri.normalize().to_dedicated_string();
     /// assert_eq!(normalized, "scheme:/.//not-a-host");
     /// assert!(normalized.is_normalized_whatwg());
-    /// assert!(!normalized.is_normalized(), "not normalized in the sense of RFC 3987");
+    /// assert!(!normalized.is_normalized_rfc3986(), "not normalized in the sense of RFC 3986");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
-    #[must_use]
     #[inline]
+    #[must_use]
     pub fn is_normalized_whatwg(&self) -> bool {
         trusted_parser::is_normalized::<S>(self.as_str(), true)
     }
 
-    /// Returns the normalized IRI serialized using WHATWG URL Standard.
+    /// Returns the normalized IRI.
     ///
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriAbsoluteStr;
     ///
-    /// let iri1 = IriAbsoluteStr::new("scheme:/..//bar")?;
-    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
     ///
-    /// let iri2 = IriAbsoluteStr::new("scheme:..///bar")?;
-    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// let normalized = iri.normalize().to_dedicated_string();
+    /// assert_eq!(normalized, "http://example.com/baz?query");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     #[inline]
-    pub fn try_normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
-        let mut task = NormalizationTask::from(self);
-        task.enable_whatwg_serialization();
-        task.allocate_and_write()
+    #[must_use]
+    pub fn normalize(&self) -> Normalized<'_, Self> {
+        Normalized::from_input(NormalizationInput::from(self)).and_normalize()
     }
 
-    /// Returns the normalized IRI serialized using WHATWG URL Standard.
+    /// Returns the proxy to the IRI with password masking feature.
     ///
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)] struct Error;
-    /// # impl From<iri_string::validate::Error> for Error {
-    /// #     fn from(e: iri_string::validate::Error) -> Self { Self } }
-    /// # impl<T> From<iri_string::task::Error<T>> for Error {
-    /// #     fn from(e: iri_string::task::Error<T>) -> Self { Self } }
+    /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriAbsoluteStr;
     ///
-    /// let iri1 = IriAbsoluteStr::new("scheme:/..//bar")?;
-    /// assert!(iri1.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri1.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// let iri = IriAbsoluteStr::new("http://user:password@example.com/path?query")?;
+    /// let masked = iri.mask_password();
+    /// assert_eq!(masked.to_dedicated_string(), "http://user:@example.com/path?query");
     ///
-    /// let iri2 = IriAbsoluteStr::new("scheme:..///bar")?;
-    /// assert!(iri2.try_normalize().is_err(), "`scheme://bar` is not intended result");
-    /// assert_eq!(iri2.try_normalize_whatwg()?, "scheme:/.//bar");
+    /// assert_eq!(
+    ///     masked.replace_password("${password}").to_string(),
+    ///     "http://user:${password}@example.com/path?query"
+    /// );
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_normalize_whatwg()` for non-panicking normalization"
-    )]
     #[inline]
-    pub fn normalize_whatwg(&self) -> Result<RiAbsoluteString<S>, TaskError<Error>> {
-        self.try_normalize_whatwg()
+    #[must_use]
+    pub fn mask_password(&self) -> PasswordMasked<'_, Self> {
+        PasswordMasked::new(self)
     }
 }
 
@@ -504,6 +433,108 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[must_use]
     pub fn authority_components(&self) -> Option<AuthorityComponents<'_>> {
         AuthorityComponents::from_iri(self.as_ref())
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<S: Spec> RiAbsoluteString<S> {
+    /// Removes the password completely (including separator colon) from `self` even if it is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:password@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "http://user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Even if the password is empty, the password and separator will be removed.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "http://user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) => v,
+            None => return,
+        };
+        let separator_colon = pw_range.start - 1;
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component and
+            // the leading separator colon is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(separator_colon..pw_range.end);
+            debug_assert!(
+                RiAbsoluteStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
+    }
+
+    /// Replaces the non-empty password in `self` to the empty password.
+    ///
+    /// This leaves the separator colon if the password part was available.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:password@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "http://user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the password is empty, it is left as is.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriAbsoluteString;
+    ///
+    /// let mut iri = IriAbsoluteString::try_from("http://user:@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "http://user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_nonempty_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) if !v.is_empty() => v,
+            _ => return,
+        };
+        debug_assert_eq!(
+            self.as_str().as_bytes().get(pw_range.start - 1).copied(),
+            Some(b':'),
+            "[validity] the password component must be prefixed with a separator colon"
+        );
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(pw_range);
+            debug_assert!(
+                RiAbsoluteStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
     }
 }
 

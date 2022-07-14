@@ -1,24 +1,18 @@
 //! Relative IRI reference.
 
-#[cfg(feature = "alloc")]
-use core::convert::Infallible;
-
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
-use crate::normalize::Error;
+use crate::mask_password::password_range_to_hide;
+use crate::mask_password::PasswordMasked;
+use crate::normalize::Normalized;
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
-#[cfg(feature = "alloc")]
-use crate::resolve::{
-    try_resolve, try_resolve_normalize, try_resolve_normalize_whatwg, try_resolve_whatwg,
-};
+use crate::resolve::FixedBaseResolver;
 use crate::spec::Spec;
 #[cfg(feature = "alloc")]
-use crate::task::Error as TaskError;
-#[cfg(feature = "alloc")]
-use crate::types::{RiAbsoluteStr, RiReferenceString, RiString};
-use crate::types::{RiFragmentStr, RiQueryStr, RiReferenceStr};
+use crate::types::RiReferenceString;
+use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::validate::iri;
 use crate::validate::relative_ref;
@@ -111,53 +105,12 @@ define_custom_string_owned! {
 }
 
 impl<S: Spec> RiRelativeStr<S> {
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
+    /// Returns resolved IRI against the given base IRI.
     ///
-    /// For reference resolution output examples, see [RFC 3986 section 5.4].
+    /// For IRI reference resolution output examples, see [RFC 3986 section 5.4].
     ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Strictness
-    ///
-    /// The IRI parsers provided by this crate is strict (e.g. `http:g` is
-    /// always interpreted as a composition of the scheme `http` and the path
-    /// `g`), so backward compatible parsing and resolution are not provided.
-    /// About parser and resolver strictness, see [RFC 3986 section 5.4.2]:
-    ///
-    /// > Some parsers allow the scheme name to be present in a relative
-    /// > reference if it is the same as the base URI scheme. This is considered
-    /// > to be a loophole in prior specifications of partial URI
-    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
-    /// > avoided but is allowed for backward compatibility.
-    /// >
-    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`normalize`][`crate::normalize`] module.
-    ///
-    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
-    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    pub fn try_resolve_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Error>> {
-        try_resolve(self, base)
-    }
-
-    /// Returns resolved IRI against the given base IRI, using strict resolver.
-    ///
-    /// For reference resolution output examples, see [RFC 3986 section 5.4].
-    ///
-    /// Enabled by `alloc` or `std` feature.
+    /// If you are going to resolve multiple references against the common base,
+    /// consider using [`FixedBaseResolver`].
     ///
     /// # Strictness
     ///
@@ -176,141 +129,43 @@ impl<S: Spec> RiRelativeStr<S> {
     ///
     /// # Failures
     ///
-    /// This fails if
+    /// This method itself does not fail, but IRI resolution without WHATWG URL
+    /// Standard serialization can fail in some minor cases.
     ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
+    /// To see examples of such unresolvable IRIs, visit the documentation
     /// for [`normalize`][`crate::normalize`] module.
     ///
     /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
     /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_resolve()` for non-panicking normalization"
-    )]
-    pub fn resolve_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Error>> {
-        try_resolve(self, base)
+    pub fn resolve_against<'a>(&'a self, base: &'a RiAbsoluteStr<S>) -> Normalized<'a, RiStr<S>> {
+        FixedBaseResolver::new(base).resolve(self.as_ref())
     }
 
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
+    /// Returns the proxy to the IRI with password masking feature.
     ///
-    /// This returns the normalized result of
-    /// [`resolve_whatwg_against`][`Self::resolve_whatwg_against`] method.
+    /// # Examples
     ///
-    /// Enabled by `alloc` or `std` feature.
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriRelativeStr;
     ///
-    /// # Failures
+    /// let iri = IriRelativeStr::new("//user:password@example.com/path?query")?;
+    /// let masked = iri.mask_password();
+    /// assert_eq!(masked.to_dedicated_string(), "//user:@example.com/path?query");
     ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    /// assert_eq!(
+    ///     masked.replace_password("${password}").to_string(),
+    ///     "//user:${password}@example.com/path?query"
+    /// );
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
     #[inline]
-    pub fn try_resolve_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_whatwg(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[deprecated(
-        since = "0.5.5",
-        note = "Use `try_resolve_whatwg_against()` for non-panicking normalization"
-    )]
-    #[inline]
-    pub fn resolve_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_whatwg(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the given base IRI.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_against`][`Self::try_resolve_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if
-    ///
-    /// * memory allocation failed, or
-    /// * the IRI referernce is unresolvable against the base.
-    ///
-    /// To see examples of unresolvable IRIs, visit the documentation
-    /// for [`normalize`][`crate::normalize`] module.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_resolve_normalize_against(
-        &self,
-        base: &'_ RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Error>> {
-        try_resolve_normalize(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn resolve_normalize_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_normalize_whatwg(self, base)
-    }
-
-    /// Returns normalized and resolved IRI against the base IRI, using
-    /// algorithm in WHATWG URL Standard.
-    ///
-    /// This returns the normalized result of
-    /// [`try_resolve_whatwg_against`][`Self::try_resolve_whatwg_against`] method.
-    ///
-    /// Enabled by `alloc` or `std` feature.
-    ///
-    /// # Failures
-    ///
-    /// This fails if memory allocation failed.
-    #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-    #[inline]
-    pub fn try_resolve_normalize_whatwg_against(
-        &self,
-        base: &RiAbsoluteStr<S>,
-    ) -> Result<RiString<S>, TaskError<Infallible>> {
-        try_resolve_normalize_whatwg(self, base)
+    #[must_use]
+    pub fn mask_password(&self) -> PasswordMasked<'_, Self> {
+        PasswordMasked::new(self)
     }
 }
 
@@ -523,6 +378,105 @@ impl<S: Spec> RiRelativeString<S> {
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
         debug_assert!(iri::<S>(&self.inner).is_ok());
+    }
+
+    /// Removes the password completely (including separator colon) from `self` even if it is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:password@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "//user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Even if the password is empty, the password and separator will be removed.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:@example.com/path?query")?;
+    /// iri.remove_password_inline();
+    /// assert_eq!(iri, "//user@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) => v,
+            None => return,
+        };
+        let separator_colon = pw_range.start - 1;
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component and
+            // the leading separator colon is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(separator_colon..pw_range.end);
+            debug_assert!(
+                RiRelativeStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
+    }
+
+    /// Replaces the non-empty password in `self` to the empty password.
+    ///
+    /// This leaves the separator colon if the password part was available.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:password@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "//user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// If the password is empty, it is left as is.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:@example.com/path?query")?;
+    /// iri.remove_nonempty_password_inline();
+    /// assert_eq!(iri, "//user:@example.com/path?query");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    pub fn remove_nonempty_password_inline(&mut self) {
+        let pw_range = match password_range_to_hide(self.as_slice().as_ref()) {
+            Some(v) if !v.is_empty() => v,
+            _ => return,
+        };
+        debug_assert_eq!(
+            self.as_str().as_bytes().get(pw_range.start - 1).copied(),
+            Some(b':'),
+            "[validity] the password component must be prefixed with a separator colon"
+        );
+        unsafe {
+            // SAFETY: the IRI must be valid after the password component is removed.
+            let buf = self.as_inner_mut();
+            buf.drain(pw_range);
+            debug_assert!(
+                RiRelativeStr::<S>::new(buf).is_ok(),
+                "[validity] the IRI must be valid after the password component is removed"
+            );
+        }
     }
 }
 

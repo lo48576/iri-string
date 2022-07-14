@@ -48,9 +48,8 @@
 //! * `serde`
 //!     + Enables serde support.
 //!     + Implement `Serailize` and `Deserialize` traits for IRI / URI types.
-//! * `nom-std`
-//!     + Enabled by default.
-//!     + Enables optimization for the internal parsers using std capability.
+//! * `memchr`
+//!     + Enables faster internal character search.
 //!
 //! # Rationale
 //!
@@ -126,47 +125,16 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-pub(crate) mod buffer;
 pub mod build;
 pub mod components;
 pub mod convert;
 pub mod format;
+pub mod mask_password;
 pub mod normalize;
 pub(crate) mod parser;
 pub mod percent_encode;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;
-pub mod task;
-#[cfg(test)]
-mod tests;
 pub mod types;
 pub mod validate;
-
-pub use crate::buffer::Error as BufferError;
-
-/// Renamed to [`percent_encode`] module.
-///
-/// This module is provided with the old name just to keep backward compatibility.
-#[deprecated(since = "0.5.6", note = "renamed to `percent_encode` module")]
-pub mod percent_encoding {
-    use crate::percent_encode;
-
-    /// Renamed to [`percent_encode::PercentEncoded`].
-    #[deprecated(since = "0.5.6", note = "renamed to `percent_encode::PercentEncoded`")]
-    pub type PercentEncoded<T, S> = percent_encode::PercentEncoded<T, S>;
-
-    /// Renamed to [`percent_encode::PercentEncodedForIri`].
-    #[deprecated(
-        since = "0.5.6",
-        note = "renamed to `percent_encode::PercentEncodedForIri`"
-    )]
-    pub type PercentEncodedForIri<T> = percent_encode::PercentEncodedForIri<T>;
-
-    /// Renamed to [`percent_encode::PercentEncodedForUri`].
-    #[deprecated(
-        since = "0.5.6",
-        note = "renamed to `percent_encode::PercentEncodedForUri`"
-    )]
-    pub type PercentEncodedForUri<T> = percent_encode::PercentEncodedForUri<T>;
-}

@@ -365,7 +365,7 @@ fn starts_with_double_hexdigits(s: &[u8]) -> bool {
 #[must_use]
 pub(crate) fn strip_ascii_char_prefix(s: &str, prefix: u8) -> Option<&str> {
     debug_assert!(prefix.is_ascii());
-    if s.as_bytes().get(0).copied() == Some(prefix) {
+    if s.as_bytes().first().copied() == Some(prefix) {
         Some(&s[1..])
     } else {
         None

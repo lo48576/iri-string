@@ -3,20 +3,20 @@
 use core::fmt;
 
 #[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 
-use crate::buffer::{Buffer, BufferTooSmallError, ByteSliceBuf};
-use crate::task::{Error, ProcessAndWrite};
+#[cfg(feature = "alloc")]
+use crate::format::{ToDedicatedString, ToStringFallible};
+use crate::spec::Spec;
 use crate::types::{
-    IriAbsoluteStr, IriFragmentStr, IriQueryStr, IriReferenceStr, IriRelativeStr, IriStr,
+    RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiRelativeStr, RiStr,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
-    IriAbsoluteString, IriFragmentString, IriQueryString, IriReferenceString, IriRelativeString,
-    IriString,
-};
-use crate::types::{
-    UriAbsoluteStr, UriFragmentStr, UriQueryStr, UriReferenceStr, UriRelativeStr, UriStr,
+    RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString, RiRelativeString,
+    RiString,
 };
 #[cfg(feature = "alloc")]
 use crate::types::{
@@ -30,9 +30,6 @@ const HEXDIGITS: [u8; 16] = [
 ];
 
 /// A resource identifier mapped to a URI of some kind.
-///
-/// Note that some methods are not directly implemented but provided from
-/// [`ProcessAndWrite`] trait.
 ///
 /// Supported `Src` type are:
 ///
@@ -73,236 +70,56 @@ pub struct MappedToUri<'a, Src: ?Sized>(&'a Src);
 
 /// Implement conversions for an IRI string type.
 macro_rules! impl_for_iri {
-    ($borrowed_uri:ident, $owned_uri:ident, $borrowed_iri:ident, $owned_iri:ident) => {
-        // For IRIs.
-        impl<'a> ProcessAndWrite for MappedToUri<'a, $borrowed_iri> {
-            type OutputBorrowed = $borrowed_uri;
-            #[cfg(feature = "alloc")]
-            type OutputOwned = $owned_uri;
-            type ProcessError = core::convert::Infallible;
-
-            #[cfg(feature = "alloc")]
-            fn allocate_and_write(self) -> Result<Self::OutputOwned, Error<Self::ProcessError>> {
-                let mut s = String::new();
-                self.try_append_to_std_string(&mut s)?;
-                // Convert the type.
-                // This should never fail (unless the crate has bugs), but do the
-                // validation here for extra safety.
-                Ok(Self::OutputOwned::try_from(s)
-                    .expect("[consistency] the resolved URI must be valid"))
-            }
-
-            fn write_to_byte_slice(
-                self,
-                buf: &mut [u8],
-            ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
-                let mut buf = ByteSliceBuf::new(buf);
-                let num_nonascii = count_nonascii(self.0.as_str());
-                if num_nonascii == 0 {
-                    // No need to escape.
-                    buf.push_str(self.0.as_str())?;
-                } else {
-                    let additional = num_nonascii * 3;
-                    // Fail fast if the buffer is too short.
-                    buf.try_reserve(additional)?;
-                    write_percent_encoded(self.0.as_str(), |s| buf.push_str(s))?;
-                }
-                // Convert the type.
-                // This should never fail (unless the crate has bugs), but do the
-                // validation here for extra safety.
-                let s = <&Self::OutputBorrowed>::try_from(buf.into_bytes())
-                    .expect("[consistency] an IRI must be convertible into a valid URI");
-                Ok(s)
-            }
-
-            #[cfg(feature = "alloc")]
-            fn try_append_to_std_string(
-                self,
-                buf: &mut String,
-            ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
-                let start = buf.len();
-                let num_nonascii = count_nonascii(self.0.as_str());
-                if num_nonascii == 0 {
-                    // No need to escape.
-                    buf.push_str(self.0.as_str());
-                } else {
-                    // Extend the buffer at once.
-                    let additional = self.0.len() + num_nonascii * 2;
-                    buf.try_reserve(additional)?;
-                    // `let Ok(_) = ...` is not yet stable as of Rust 1.58.1.
-                    let _always_success = write_percent_encoded(self.0.as_str(), |s| {
-                        debug_assert!(
-                            (buf.capacity() - buf.len()) >= s.len(),
-                            "[consistency] buffer should have been \
-                             extended to the necessary size"
-                        );
-                        buf.push_str(s);
-                        Ok::<_, core::convert::Infallible>(())
-                    });
-                    debug_assert!(
-                        _always_success.is_ok(),
-                        "[validity] the operation is infallible"
-                    );
-                }
-                let end = buf.len();
-                let written = &buf[start..end];
-                let iri = unsafe {
-                    // SAFETY: When non-ASCII characters in an IRI are percent-encoded,
-                    // it is still valid IRI, and is now also valid URI (since it
-                    // contains only ASCII characters).
-                    Self::OutputBorrowed::new_maybe_unchecked(written)
-                };
-                Ok(iri)
-            }
-        }
-
-        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_iri> {
+    ($borrowed:ident, $owned:ident, $owned_uri:ident) => {
+        impl<S: Spec> fmt::Display for MappedToUri<'_, $borrowed<S>> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
+                write_percent_encoded(f, self.0.as_str())
             }
         }
 
-        impl<'a> From<&'a $borrowed_iri> for MappedToUri<'a, $borrowed_iri> {
+        #[cfg(feature = "alloc")]
+        impl<S: Spec> ToDedicatedString for MappedToUri<'_, $borrowed<S>> {
+            type Target = $owned_uri;
+
+            fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
+                let s = self.try_to_string()?;
+                Ok(TryFrom::try_from(s)
+                    .expect("[validity] the IRI must be encoded into a valid URI"))
+            }
+        }
+
+        impl<'a, S: Spec> From<&'a $borrowed<S>> for MappedToUri<'a, $borrowed<S>> {
             #[inline]
-            fn from(iri: &'a $borrowed_iri) -> Self {
+            fn from(iri: &'a $borrowed<S>) -> Self {
                 Self(iri)
             }
         }
 
         #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $owned_iri> for MappedToUri<'a, $borrowed_iri> {
+        impl<'a, S: Spec> From<&'a $owned<S>> for MappedToUri<'a, $borrowed<S>> {
             #[inline]
-            fn from(iri: &'a $owned_iri) -> Self {
-                Self(iri.as_slice())
-            }
-        }
-
-        // For URIs.
-        impl<'a> ProcessAndWrite for MappedToUri<'a, $borrowed_uri> {
-            type OutputBorrowed = $borrowed_uri;
-            #[cfg(feature = "alloc")]
-            type OutputOwned = $owned_uri;
-            type ProcessError = core::convert::Infallible;
-
-            #[cfg(feature = "alloc")]
-            fn allocate_and_write(self) -> Result<Self::OutputOwned, Error<Self::ProcessError>> {
-                let mut s = String::new();
-                s.try_reserve(self.0.len())?;
-                s.push_str(self.0.as_str());
-                let iri = unsafe {
-                    // SAFETY: The content of `s` is equivalent to `self.0`, which is a valid IRI.
-                    Self::OutputOwned::new_maybe_unchecked(s)
-                };
-                Ok(iri)
-            }
-
-            fn write_to_byte_slice(
-                self,
-                buf: &mut [u8],
-            ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
-                if buf.len() < self.0.len() {
-                    return Err(BufferTooSmallError::new().into());
-                }
-                let dest = buf
-                    .get_mut(..self.0.len())
-                    .ok_or(Error::Buffer(BufferTooSmallError::new().into()))?;
-                dest.copy_from_slice(self.0.as_str().as_bytes());
-                let s = unsafe {
-                    // SAFETY: `dest` is completely same as `self.0`, which is valid UTF-8 string.
-                    core::str::from_utf8_unchecked(dest)
-                };
-                let iri = unsafe {
-                    // SAFETY: `dest` is completely same as `self.0`, which is
-                    // valid `Self::OutputBorrowed` IRI.
-                    Self::OutputBorrowed::new_maybe_unchecked(s)
-                };
-                Ok(iri)
-            }
-
-            #[cfg(feature = "alloc")]
-            fn try_append_to_std_string(
-                self,
-                buf: &mut String,
-            ) -> Result<&Self::OutputBorrowed, Error<Self::ProcessError>> {
-                buf.try_reserve(self.0.len())?;
-                let start = buf.len();
-                buf.push_str(self.0.as_str());
-                let end = buf.len();
-                let written = &buf[start..end];
-                let iri = unsafe {
-                    // SAFETY: When non-ASCII characters in an IRI are percent-encoded,
-                    // it is still valid IRI, and is now also valid URI (since it
-                    // contains only ASCII characters).
-                    Self::OutputBorrowed::new_maybe_unchecked(written)
-                };
-                Ok(iri)
-            }
-        }
-
-        impl<'a> fmt::Display for MappedToUri<'a, $borrowed_uri> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write_percent_encoded(self.0.as_str(), |s| f.write_str(s))
-            }
-        }
-
-        impl<'a> From<&'a $borrowed_uri> for MappedToUri<'a, $borrowed_uri> {
-            #[inline]
-            fn from(iri: &'a $borrowed_uri) -> Self {
-                Self(iri)
-            }
-        }
-
-        #[cfg(feature = "alloc")]
-        impl<'a> From<&'a $owned_uri> for MappedToUri<'a, $borrowed_uri> {
-            #[inline]
-            fn from(iri: &'a $owned_uri) -> Self {
+            fn from(iri: &'a $owned<S>) -> Self {
                 Self(iri.as_slice())
             }
         }
     };
 }
 
-impl_for_iri!(
-    UriAbsoluteStr,
-    UriAbsoluteString,
-    IriAbsoluteStr,
-    IriAbsoluteString
-);
-impl_for_iri!(
-    UriReferenceStr,
-    UriReferenceString,
-    IriReferenceStr,
-    IriReferenceString
-);
-impl_for_iri!(
-    UriRelativeStr,
-    UriRelativeString,
-    IriRelativeStr,
-    IriRelativeString
-);
-impl_for_iri!(UriStr, UriString, IriStr, IriString);
-impl_for_iri!(UriQueryStr, UriQueryString, IriQueryStr, IriQueryString);
-impl_for_iri!(
-    UriFragmentStr,
-    UriFragmentString,
-    IriFragmentStr,
-    IriFragmentString
-);
+impl_for_iri!(RiReferenceStr, RiReferenceString, UriReferenceString);
+impl_for_iri!(RiStr, RiString, UriString);
+impl_for_iri!(RiAbsoluteStr, RiAbsoluteString, UriAbsoluteString);
+impl_for_iri!(RiRelativeStr, RiRelativeString, UriRelativeString);
+impl_for_iri!(RiQueryStr, RiQueryString, UriQueryString);
+impl_for_iri!(RiFragmentStr, RiFragmentString, UriFragmentString);
 
 /// Percent-encodes and writes the IRI string using the given buffer.
-fn write_percent_encoded<F, E>(mut s: &str, mut f: F) -> Result<(), E>
-where
-    F: FnMut(&str) -> Result<(), E>,
-{
+fn write_percent_encoded(f: &mut fmt::Formatter<'_>, mut s: &str) -> fmt::Result {
     while !s.is_empty() {
         // Skip ASCII characters.
-        let non_ascii_pos = s
-            .bytes()
-            .position(|b| !b.is_ascii())
-            .unwrap_or_else(|| s.len());
+        let non_ascii_pos = s.bytes().position(|b| !b.is_ascii()).unwrap_or(s.len());
         let (ascii, rest) = s.split_at(non_ascii_pos);
         if !ascii.is_empty() {
-            f(ascii)?;
+            f.write_str(ascii)?;
             s = rest;
         }
 
@@ -311,10 +128,7 @@ where
         }
 
         // Search for the next ASCII character.
-        let nonascii_end = s
-            .bytes()
-            .position(|b| b.is_ascii())
-            .unwrap_or_else(|| s.len());
+        let nonascii_end = s.bytes().position(|b| b.is_ascii()).unwrap_or(s.len());
         let (nonasciis, rest) = s.split_at(nonascii_end);
         debug_assert!(
             !nonasciis.is_empty(),
@@ -330,7 +144,7 @@ where
         // appear in an IRI match `ucschar` or `iprivate`.
         /// Number of source bytes to encode at once.
         const NUM_BYTES_AT_ONCE: usize = 21;
-        percent_encode_bytes(nonasciis, &mut [0_u8; NUM_BYTES_AT_ONCE * 3], &mut f)?;
+        percent_encode_bytes(f, nonasciis, &mut [0_u8; NUM_BYTES_AT_ONCE * 3])?;
     }
 
     Ok(())
@@ -344,10 +158,7 @@ where
 /// # Precondition
 ///
 /// The length of `buf` must be 3 bytes or more.
-fn percent_encode_bytes<F, E>(s: &str, buf: &mut [u8], mut f: F) -> Result<(), E>
-where
-    for<'a> F: FnMut(&'a str) -> Result<(), E>,
-{
+fn percent_encode_bytes(f: &mut fmt::Formatter<'_>, s: &str, buf: &mut [u8]) -> fmt::Result {
     /// Fill the buffer by percent-encoded bytes.
     ///
     /// Note that this function applies percent-encoding to every characters,
@@ -407,7 +218,7 @@ where
     // `<core::str::Bytes as ExactSizeIterator>::is_empty` is unstable as of Rust 1.58.1.
     while bytes.len() != 0 {
         let encoded = fill_by_percent_encoded(buf, &mut bytes);
-        f(encoded)?;
+        f.write_str(encoded)?;
     }
 
     Ok(())
@@ -472,6 +283,7 @@ pub(crate) fn try_percent_encode_iri_inline(
 }
 
 /// Returns the number of non-ASCII characters.
+#[cfg(feature = "alloc")]
 #[inline]
 #[must_use]
 fn count_nonascii(s: &str) -> usize {

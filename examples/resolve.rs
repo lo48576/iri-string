@@ -1,6 +1,5 @@
 //! An example to parse IRI from the CLI argument.
 
-use iri_string::task::Error as TaskError;
 use iri_string::types::{RiAbsoluteStr, RiReferenceStr};
 
 const USAGE: &str = "\
@@ -142,23 +141,14 @@ fn parse<S: iri_string::spec::Spec>(opt: &CliOpt) {
         )),
     };
 
-    let resolved = if opt.whatwg_serialization {
-        reference
-            .try_resolve_whatwg_against(base)
-            .map_err(|e| match e {
-                TaskError::Buffer(e) => TaskError::Buffer(e),
-                TaskError::Process(_) => {
-                    unreachable!("WHATWG normaliation algorithm should not fail")
-                }
-            })
-    } else {
-        reference.try_resolve_against(base)
-    };
-    match resolved {
-        Ok(resolved) => println!("{}", resolved),
-        Err(e) => die(format_args!(
-            "Failed to resolve {:?} against {:?}: {}",
-            reference_raw, base_raw, e
-        )),
+    let resolved = reference.resolve_against(base);
+    if !opt.whatwg_serialization {
+        if let Err(e) = resolved.ensure_rfc3986_normalizable() {
+            die(format_args!(
+                "Failed to resolve {:?} against {:?}: {}",
+                reference_raw, base_raw, e
+            ));
+        }
     }
+    println!("{}", resolved);
 }
