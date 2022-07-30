@@ -32,6 +32,12 @@ enum Context {
     Query,
     /// Encode the string as a fragment string (without the `#` prefix).
     Fragment,
+    /// Encode all characters except for `unreserved` characters.
+    Unreserve,
+    /// Encode characters only if they cannot appear anywhere in an IRI reference.
+    ///
+    /// `%` character will be always encoded.
+    Character,
 }
 
 /// A proxy to percent-encode a string.
@@ -231,6 +237,82 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
             _spec: PhantomData,
         }
     }
+
+    /// Creates a string consists of only `unreserved` string and percent-encoded triplets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::percent_encode::PercentEncoded;
+    /// use iri_string::spec::UriSpec;
+    ///
+    /// let unreserved = "%a0-._~\u{03B1}";
+    /// let unreserved_encoded = "%25a0-._~%CE%B1";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::unreserve(unreserved).to_string(),
+    ///     unreserved_encoded
+    /// );
+    ///
+    /// let reserved = ":/?#[]@ !$&'()*+,;=";
+    /// let reserved_encoded =
+    ///     "%3A%2F%3F%23%5B%5D%40%20%21%24%26%27%28%29%2A%2B%2C%3B%3D";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::unreserve(reserved).to_string(),
+    ///     reserved_encoded
+    /// );
+    /// # }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn unreserve(raw: T) -> Self {
+        Self {
+            context: Context::Unreserve,
+            raw,
+            _spec: PhantomData,
+        }
+    }
+
+    /// Percent-encodes characters only if they cannot appear anywhere in an IRI reference.
+    ///
+    /// `%` character will be always encoded. In other words, this conversion
+    /// is not aware of percent-encoded triplets.
+    ///
+    /// Note that this encoding process does not guarantee that the resulting
+    /// string is a valid IRI reference.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::percent_encode::PercentEncoded;
+    /// use iri_string::spec::UriSpec;
+    ///
+    /// let unreserved = "%a0-._~\u{03B1}";
+    /// let unreserved_encoded = "%25a0-._~%CE%B1";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::characters(unreserved).to_string(),
+    ///     unreserved_encoded
+    /// );
+    ///
+    /// let reserved = ":/?#[]@ !$&'()*+,;=";
+    /// // Note that `%20` cannot appear directly in an IRI reference.
+    /// let expected = ":/?#[]@%20!$&'()*+,;=";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::characters(reserved).to_string(),
+    ///     expected
+    /// );
+    /// # }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn characters(raw: T) -> Self {
+        Self {
+            context: Context::Character,
+            raw,
+            _spec: PhantomData,
+        }
+    }
 }
 
 impl<T: fmt::Display, S: Spec> fmt::Display for PercentEncoded<T, S> {
@@ -264,6 +346,12 @@ impl<T: fmt::Display, S: Spec> fmt::Display for PercentEncoded<T, S> {
                     (Context::Query, false) => char::is_nonascii_query::<S>(c),
                     (Context::Fragment, true) => c == '/' || char::is_ascii_frag_query(c as u8),
                     (Context::Fragment, false) => char::is_nonascii_fragment::<S>(c),
+                    (Context::Unreserve, true) => char::is_ascii_unreserved(c as u8),
+                    (Context::Unreserve, false) => S::is_nonascii_char_unreserved(c),
+                    (Context::Character, true) => char::is_ascii_unreserved_or_reserved(c as u8),
+                    (Context::Character, false) => {
+                        S::is_nonascii_char_unreserved(c) || S::is_nonascii_char_private(c)
+                    }
                 };
                 if is_valid_char {
                     self.writer.write_char(c)
