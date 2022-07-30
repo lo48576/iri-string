@@ -125,7 +125,7 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                         // Reached the end of the string.
                         break 'outer_loop;
                     }
-                };
+                }
             }
 
             // Decode the bytes into a character.
