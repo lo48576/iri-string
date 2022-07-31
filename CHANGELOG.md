@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+* Add `PercentEncoded::{unreserve,characters}` methods.
+
+### Added
+* Add `PercentEncoded::{unreserve,characters}` methods.
+    + List of added methods:
+        - `percent_encode::PercentEncoded::characters()`
+        - `percent_encode::PercentEncoded::unreserve()`
+
 ## [0.6.0]
 
 * Bump MSRV to 1.60.0.

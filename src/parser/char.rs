@@ -10,9 +10,9 @@ const MASK_SCHEME_CONTINUE: u8 = 1 << 0;
 // `unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"`
 const MASK_UNRESERVED: u8 = 1 << 1;
 
-///// A mask to test whether the character matches `gen-delims`.
-//// `gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"`
-//const MASK_GEN_DELIMS: u8 = 1 << 2;
+/// A mask to test whether the character matches `gen-delims`.
+// `gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"`
+const MASK_GEN_DELIMS: u8 = 1 << 2;
 
 /// A mask to test whether the character matches `sub-delims`.
 // `sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="`
@@ -313,4 +313,11 @@ pub(crate) fn is_utf8_byte_continue(byte: u8) -> bool {
     // the continue bytes is `0b10xx_xxxx`.
     // `0b1011_1111 as i8` is -65, and `0b1000_0000 as i8` is -128.
     (byte as i8) < -64
+}
+
+/// Returns true if the given ASCII character is `unreserved` or `reserved`.
+#[inline]
+#[must_use]
+pub(crate) const fn is_ascii_unreserved_or_reserved(c: u8) -> bool {
+    (TABLE[c as usize] & (MASK_UNRESERVED | MASK_GEN_DELIMS | MASK_SUB_DELIMS)) != 0
 }
