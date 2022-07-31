@@ -371,3 +371,14 @@ pub(crate) fn strip_ascii_char_prefix(s: &str, prefix: u8) -> Option<&str> {
         None
     }
 }
+
+/// Splits the given string into the first character and the rest.
+///
+/// Returns `(first_char, rest_str)`.
+#[must_use]
+pub(crate) fn take_first_char(s: &str) -> Option<(char, &str)> {
+    let mut chars = s.chars();
+    let c = chars.next()?;
+    let rest = chars.as_str();
+    Some((c, rest))
+}
