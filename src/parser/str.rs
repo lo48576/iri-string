@@ -350,7 +350,7 @@ where
 
 /// Returns `true` if the given string starts with two hexadecimal digits.
 #[must_use]
-fn starts_with_double_hexdigits(s: &[u8]) -> bool {
+pub(crate) fn starts_with_double_hexdigits(s: &[u8]) -> bool {
     match s {
         [x, y] | [x, y, ..] => x.is_ascii_hexdigit() && y.is_ascii_hexdigit(),
         _ => false,
