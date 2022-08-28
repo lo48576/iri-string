@@ -350,7 +350,7 @@ where
 
 /// Returns `true` if the given string starts with two hexadecimal digits.
 #[must_use]
-fn starts_with_double_hexdigits(s: &[u8]) -> bool {
+pub(crate) fn starts_with_double_hexdigits(s: &[u8]) -> bool {
     match s {
         [x, y] | [x, y, ..] => x.is_ascii_hexdigit() && y.is_ascii_hexdigit(),
         _ => false,
@@ -370,4 +370,15 @@ pub(crate) fn strip_ascii_char_prefix(s: &str, prefix: u8) -> Option<&str> {
     } else {
         None
     }
+}
+
+/// Splits the given string into the first character and the rest.
+///
+/// Returns `(first_char, rest_str)`.
+#[must_use]
+pub(crate) fn take_first_char(s: &str) -> Option<(char, &str)> {
+    let mut chars = s.chars();
+    let c = chars.next()?;
+    let rest = chars.as_str();
+    Some((c, rest))
 }

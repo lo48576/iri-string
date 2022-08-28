@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 
 use crate::format::eq_str_display;
 use crate::parser::char::{is_ascii_unreserved, is_unreserved, is_utf8_byte_continue};
-use crate::parser::str::find_split_hole;
+use crate::parser::str::{find_split_hole, take_first_char};
 use crate::parser::trusted::take_xdigits2;
 use crate::spec::Spec;
 
@@ -229,17 +229,6 @@ impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
 
         Ok(())
     }
-}
-
-/// Splits the given string into the first character and the rest.
-///
-/// Returns `(first_char, rest_str)`.
-#[must_use]
-fn take_first_char(s: &str) -> Option<(char, &str)> {
-    let mut chars = s.chars();
-    let c = chars.next()?;
-    let rest = chars.as_str();
-    Some((c, rest))
 }
 
 #[cfg(test)]

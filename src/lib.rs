@@ -136,5 +136,8 @@ pub mod percent_encode;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub mod template;
 pub mod types;
 pub mod validate;
