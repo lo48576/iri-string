@@ -1,6 +1,9 @@
 //! Characters.
 
 /// Properties of ASCII characters.
+///
+/// About `'` (single quote) being considered as a literal: see
+/// [Errata ID 6937](https://www.rfc-editor.org/errata/eid6937).
 const CHARS_TABLE: [u8; 128] = [
     0b_0000_0000, // NUL
     0b_0000_0000, // SOH
@@ -41,7 +44,7 @@ const CHARS_TABLE: [u8; 128] = [
     0b_0000_0001, // $
     0b_0000_0000, // %
     0b_0000_0001, // &
-    0b_0000_0000, // '
+    0b_0000_0001, // '
     0b_0000_0001, // (
     0b_0000_0001, // )
     0b_0000_0001, // *

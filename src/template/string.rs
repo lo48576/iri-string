@@ -56,6 +56,19 @@ macro_rules! impl_cmp {
 /// # Valid values
 ///
 /// This type can have a URI template string.
+///
+/// # Applied errata
+///
+/// [Errata ID 6937](https://www.rfc-editor.org/errata/eid6937) is applied, so
+/// single quotes are allowed to appear in an URI template.
+///
+/// ```
+/// # use iri_string::template::Error;
+/// use iri_string::template::UriTemplateStr;
+///
+/// let template = UriTemplateStr::new("'quoted'")?;
+/// # Ok::<_, Error>(())
+/// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
