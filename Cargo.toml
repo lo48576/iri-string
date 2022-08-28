@@ -1,3 +1,9 @@
+[workspace]
+members = [
+    ".",
+    "iri-string-tests",
+]
+
 [package]
 name = "iri-string"
 version = "0.6.0"
