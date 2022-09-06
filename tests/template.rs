@@ -226,3 +226,36 @@ fn prefix_modifier_for_percent_encoded_content() {
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
     }
 }
+
+#[test]
+fn incomplete_percent_encode() {
+    let mut context = Context::new();
+    context.insert("incomplete1", "%ce%b1%");
+    context.insert("incomplete2", "%ce%b1%c");
+    context.insert("incomplete3", "%ce%b1%ce");
+
+    // `&[(template, expected)]`.
+    const CASES: &[(&str, &str)] = &[
+        ("{incomplete1:1}", "%25"),
+        ("{incomplete1:2}", "%25c"),
+        ("{incomplete1:3}", "%25ce"),
+        ("{incomplete1:4}", "%25ce%25"),
+        ("{+incomplete1:1}", "%ce%b1"),
+        ("{+incomplete1:2}", "%ce%b1%25"),
+        ("{+incomplete2:1}", "%ce%b1"),
+        ("{+incomplete2:2}", "%ce%b1%25"),
+        ("{+incomplete2:3}", "%ce%b1%25c"),
+        ("{+incomplete3:1}", "%ce%b1"),
+        ("{+incomplete3:2}", "%ce%b1%ce"),
+        ("{+incomplete3:3}", "%ce%b1%ce"),
+    ];
+
+    for (template, expected) in CASES {
+        let template = UriTemplateStr::new(template).expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec>(&context)
+            .expect("must not have variable type error");
+        assert_eq_display!(expanded, *expected, "template={template:?}");
+        assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+    }
+}
