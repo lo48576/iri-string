@@ -5,7 +5,8 @@ use std::fs::File;
 use std::path::Path;
 
 use iri_string::spec::UriSpec;
-use iri_string::template::{Context, UriTemplateStr, Value};
+use iri_string::template::simple_context::{SimpleContext, Value};
+use iri_string::template::UriTemplateStr;
 
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
@@ -29,7 +30,7 @@ fn test_with_file(filename: &str) {
     let tests: TestFile = serde_json::from_reader(&mut file).expect("failed to load test asset");
 
     for (test_set_name, test_set) in &tests.tests {
-        let mut context = Context::new();
+        let mut context = SimpleContext::new();
         for (name, value) in &test_set.variables {
             let value = match value {
                 JsonValue::Null => Value::Undefined,

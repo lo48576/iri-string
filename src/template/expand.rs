@@ -10,9 +10,11 @@ use crate::parser::str::{process_percent_encoded_best_effort, PctEncodedFragment
 use crate::percent_encode::PercentEncoded;
 use crate::spec::Spec;
 use crate::template::components::{ExprBody, Modifier, Operator, VarName, VarSpec};
-use crate::template::context::{AsContext, VisitDoneToken};
+use crate::template::context::{
+    private::Sealed as VisitorSealed, AssocVisitor, Context, ListVisitor, Visitor,
+};
 use crate::template::error::{Error, ErrorKind};
-use crate::template::{UriTemplateStr, ValueTypeRepr};
+use crate::template::{UriTemplateStr, ValueType};
 
 /// A chunk in a template string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,7 +77,7 @@ pub struct Expanded<'a, S, C> {
     _spec: PhantomData<fn() -> S>,
 }
 
-impl<'a, S: Spec, C: AsContext> Expanded<'a, S, C> {
+impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
     /// Creates a new `Expanded` object.
     #[inline]
     pub(super) fn new(template: &'a UriTemplateStr, context: &'a C) -> Result<Self, Error> {
@@ -88,7 +90,6 @@ impl<'a, S: Spec, C: AsContext> Expanded<'a, S, C> {
     }
 
     /// Checks the types of variables are allowed for the corresponding expressions in the template.
-    // FIXME: Don't visit values. Just get variable types.
     fn typecheck_context(template: &UriTemplateStr, context: &C) -> Result<(), Error> {
         let mut pos = 0;
         for chunk in Chunks::new(template) {
@@ -100,12 +101,11 @@ impl<'a, S: Spec, C: AsContext> Expanded<'a, S, C> {
                 }
             };
             for varspec in varlist {
-                let name = varspec.name();
-                let ty = context.get_type(name).repr();
+                let ty = context.visit(TypeVisitor::new(varspec.name()));
                 let modifier = varspec.modifier();
 
                 if matches!(modifier, Modifier::MaxLen(_))
-                    && matches!(ty, ValueTypeRepr::List | ValueTypeRepr::Assoc)
+                    && matches!(ty, ValueType::List | ValueType::Assoc)
                 {
                     // > Prefix modifiers are not applicable to variables that
                     // > have composite values.
@@ -119,7 +119,7 @@ impl<'a, S: Spec, C: AsContext> Expanded<'a, S, C> {
     }
 }
 
-impl<S: Spec, C: AsContext> fmt::Display for Expanded<'_, S, C> {
+impl<S: Spec, C: Context> fmt::Display for Expanded<'_, S, C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for chunk in Chunks::new(self.template) {
             let expr = match chunk {
@@ -140,17 +140,17 @@ impl<S: Spec, C: AsContext> fmt::Display for Expanded<'_, S, C> {
 ///
 /// See [RFC 6570 Appendix A](https://www.rfc-editor.org/rfc/rfc6570#appendix-A).
 #[derive(Debug, Clone, Copy)]
-pub(super) struct OpProps {
+struct OpProps {
     /// Prefix for the first element.
-    pub(super) first: &'static str,
+    first: &'static str,
     /// Separator.
-    pub(super) sep: &'static str,
+    sep: &'static str,
     /// Whether or not the expansion includes the variable or key name.
-    pub(super) named: bool,
+    named: bool,
     /// Result string if the variable is empty.
-    pub(super) ifemp: &'static str,
+    ifemp: &'static str,
     /// Whether or not the reserved values can be written without being encoded.
-    pub(super) allow_reserved: bool,
+    allow_reserved: bool,
 }
 
 impl OpProps {
@@ -241,7 +241,7 @@ impl OpProps {
 }
 
 /// Expands the expression using the given operator.
-fn expand<S: Spec, C: AsContext>(
+fn expand<S: Spec, C: Context>(
     f: &mut fmt::Formatter<'_>,
     expr: ExprBody<'_>,
     context: &C,
@@ -250,7 +250,7 @@ fn expand<S: Spec, C: AsContext>(
 
     let mut is_first_varspec = true;
     for varspec in varlist {
-        let visitor = VarVisitor::<S>::new(f, varspec, op, &mut is_first_varspec);
+        let visitor = ValueVisitor::<S>::new(f, varspec, op, &mut is_first_varspec);
         let token = context.visit(visitor)?;
         let formatter_ptr = token.formatter_ptr();
         if formatter_ptr != f as *mut _ {
@@ -413,7 +413,7 @@ impl<S: Spec, W: fmt::Write> fmt::Write for TruncatePercentEncodeWriter<'_, S, W
 }
 
 /// A writer that writes a prefix only once if and only if some value is written.
-pub struct PrefixOnceWriter<'a, 'b> {
+struct PrefixOnceWriter<'a, 'b> {
     /// Inner writer.
     inner: &'a mut fmt::Formatter<'b>,
     /// Prefix to write.
@@ -459,10 +459,38 @@ impl fmt::Write for PrefixOnceWriter<'_, '_> {
     }
 }
 
-/// Variable visitor.
-// Single `VarVisitor` should be used for single expansion.
+/// An opaque token value that proves some variable is visited.
+// This should not be able to be created by any means other than `VarVisitor::visit_foo()`.
 // Do not derive any traits that allows the value to be generated or cloned.
-pub struct VarVisitor<'a, 'b, S> {
+struct VisitDoneToken<'a, 'b, S>(ValueVisitor<'a, 'b, S>);
+
+impl<'a, 'b, S: Spec> VisitDoneToken<'a, 'b, S> {
+    /// Creates a new token.
+    #[inline]
+    #[must_use]
+    fn new(visitor: ValueVisitor<'a, 'b, S>) -> Self {
+        Self(visitor)
+    }
+
+    /// Returns the raw pointer to the backend formatter.
+    #[inline]
+    #[must_use]
+    fn formatter_ptr(&self) -> *const fmt::Formatter<'b> {
+        self.0.formatter_ptr()
+    }
+}
+
+impl<S: Spec> fmt::Debug for VisitDoneToken<'_, '_, S> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VisitDoneToken")
+    }
+}
+
+/// Visitor to retrieve a variable value.
+// Single `ValueVisitor` should be used for single expansion.
+// Do not derive any traits that allows the value to be generated or cloned.
+struct ValueVisitor<'a, 'b, S> {
     /// Formatter.
     f: &'a mut fmt::Formatter<'b>,
     /// Varspec.
@@ -475,11 +503,11 @@ pub struct VarVisitor<'a, 'b, S> {
     _spec: PhantomData<fn() -> S>,
 }
 
-impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
+impl<'a, 'b, S: Spec> ValueVisitor<'a, 'b, S> {
     /// Creates a visitor.
     #[inline]
     #[must_use]
-    pub(super) fn new(
+    fn new(
         f: &'a mut fmt::Formatter<'b>,
         varspec: VarSpec<'a>,
         op: Operator,
@@ -494,39 +522,37 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
         }
     }
 
-    /// Returns true if the variable to visit is the first one in an expression.
+    /// Returns the raw pointer to the backend formatter.
     #[inline]
     #[must_use]
-    pub fn is_first_varspec(&self) -> bool {
-        *self.is_first_varspec
+    fn formatter_ptr(&self) -> *const fmt::Formatter<'b> {
+        self.f as &_ as *const _
     }
+}
+
+impl<S: Spec> VisitorSealed for ValueVisitor<'_, '_, S> {}
+
+impl<'a, 'b, S: Spec> Visitor for ValueVisitor<'a, 'b, S> {
+    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
+    type ListVisitor = ListValueVisitor<'a, 'b, S>;
+    type AssocVisitor = AssocValueVisitor<'a, 'b, S>;
 
     /// Returns the name of the variable to visit.
     #[inline]
     #[must_use]
-    pub fn var_name(&self) -> VarName<'a> {
+    fn var_name(&self) -> VarName<'a> {
         self.varspec.name()
-    }
-
-    /// Returns the raw pointer to the backend formatter.
-    #[inline]
-    #[must_use]
-    pub(super) fn formatter_ptr(&self) -> *const fmt::Formatter<'b> {
-        self.f as &_ as *const _
     }
 
     /// Visits an undefined variable, i.e. indicates that the requested variable is unavailable.
     #[inline]
-    pub fn visit_undefined(self) -> Result<VisitDoneToken<'a, 'b, S>, fmt::Error> {
+    fn visit_undefined(self) -> Self::Result {
         Ok(VisitDoneToken::new(self))
     }
 
     /// Visits a string variable.
     #[inline]
-    pub fn visit_string<T: fmt::Display>(
-        self,
-        v: T,
-    ) -> Result<VisitDoneToken<'a, 'b, S>, fmt::Error> {
+    fn visit_string<T: fmt::Display>(self, v: T) -> Self::Result {
         let oppr = OpProps::from_op(self.op);
 
         if mem::replace(self.is_first_varspec, false) {
@@ -535,7 +561,7 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
             self.f.write_str(oppr.sep)?;
         }
         let mut writer = if oppr.named {
-            self.f.write_str(self.var_name().as_str())?;
+            self.f.write_str(self.varspec.name().as_str())?;
             PrefixOnceWriter::with_prefix(self.f, "=")
         } else {
             PrefixOnceWriter::new(self.f)
@@ -555,9 +581,9 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
     /// Visits a list variable.
     #[inline]
     #[must_use]
-    pub fn visit_list(self) -> ListVisitor<'a, 'b, S> {
+    fn visit_list(self) -> Self::ListVisitor {
         let oppr = OpProps::from_op(self.op);
-        ListVisitor {
+        ListValueVisitor {
             visitor: self,
             num_elems: 0,
             oppr,
@@ -567,9 +593,9 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
     /// Visits an associative array variable.
     #[inline]
     #[must_use]
-    pub fn visit_assoc(self) -> AssocVisitor<'a, 'b, S> {
+    fn visit_assoc(self) -> Self::AssocVisitor {
         let oppr = OpProps::from_op(self.op);
-        AssocVisitor {
+        AssocValueVisitor {
             visitor: self,
             num_elems: 0,
             oppr,
@@ -577,7 +603,7 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
     }
 }
 
-/// A visitor for a list variable.
+/// Visitor to retrieve value of a list variable.
 // RFC 6570 section 2.3:
 //
 // > A variable defined as a list value is considered undefined if the
@@ -588,18 +614,18 @@ impl<'a, 'b, S: Spec> VarVisitor<'a, 'b, S> {
 //
 // Single variable visitor should be used for single expansion.
 // Do not derive any traits that allows the value to be generated or cloned.
-pub struct ListVisitor<'a, 'b, S> {
+struct ListValueVisitor<'a, 'b, S> {
     /// Visitor.
-    visitor: VarVisitor<'a, 'b, S>,
+    visitor: ValueVisitor<'a, 'b, S>,
     /// Number of already emitted elements.
     num_elems: usize,
     /// Operator props.
     oppr: &'static OpProps,
 }
 
-impl<'a, 'b, S: Spec> ListVisitor<'a, 'b, S> {
+impl<'a, 'b, S: Spec> ListValueVisitor<'a, 'b, S> {
     /// Visits an item.
-    pub fn visit_item<T: fmt::Display>(&mut self, item: T) -> fmt::Result {
+    fn visit_item_impl<T: fmt::Display>(&mut self, item: T) -> fmt::Result {
         let modifier = self.visitor.varspec.modifier();
         let is_explode = match modifier {
             Modifier::MaxLen(_) => panic!(
@@ -618,7 +644,9 @@ impl<'a, 'b, S: Spec> ListVisitor<'a, 'b, S> {
                 self.visitor.f.write_str(self.oppr.sep)?;
             }
             if self.oppr.named {
-                self.visitor.f.write_str(self.visitor.var_name().as_str())?;
+                self.visitor
+                    .f
+                    .write_str(self.visitor.varspec.name().as_str())?;
                 self.visitor.f.write_char('=')?;
             }
         } else {
@@ -630,7 +658,7 @@ impl<'a, 'b, S: Spec> ListVisitor<'a, 'b, S> {
                     self.visitor.f.write_str(self.oppr.sep)?;
                     escape_write::<S, _>(
                         self.visitor.f,
-                        self.visitor.var_name().as_str(),
+                        self.visitor.varspec.name().as_str(),
                         self.oppr.allow_reserved,
                     )?;
                     self.visitor.f.write_char('=')?;
@@ -643,15 +671,30 @@ impl<'a, 'b, S: Spec> ListVisitor<'a, 'b, S> {
         self.num_elems += 1;
         Ok(())
     }
+}
+
+impl<S: Spec> VisitorSealed for ListValueVisitor<'_, '_, S> {}
+
+impl<'a, 'b, S: Spec> ListVisitor for ListValueVisitor<'a, 'b, S> {
+    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
+
+    /// Visits an item.
+    #[inline]
+    fn visit_item<T: fmt::Display>(&mut self, item: T) -> ControlFlow<Self::Result> {
+        match self.visit_item_impl(item) {
+            Ok(_) => ControlFlow::Continue(()),
+            Err(e) => ControlFlow::Break(Err(e)),
+        }
+    }
 
     /// Finishes visiting the list.
     #[inline]
-    pub fn finish(self) -> Result<VisitDoneToken<'a, 'b, S>, fmt::Error> {
+    fn finish(self) -> Self::Result {
         Ok(VisitDoneToken::new(self.visitor))
     }
 }
 
-/// A visitor for an associative array variable.
+/// Visitor to retrieve entries of an associative array variable.
 // RFC 6570 section 2.3:
 //
 // > A variable defined as a list value is considered undefined if the
@@ -662,18 +705,18 @@ impl<'a, 'b, S: Spec> ListVisitor<'a, 'b, S> {
 //
 // Single variable visitor should be used for single expansion.
 // Do not derive any traits that allows the value to be generated or cloned.
-pub struct AssocVisitor<'a, 'b, S> {
+struct AssocValueVisitor<'a, 'b, S> {
     /// Visitor.
-    visitor: VarVisitor<'a, 'b, S>,
+    visitor: ValueVisitor<'a, 'b, S>,
     /// Number of already emitted elements.
     num_elems: usize,
     /// Operator props.
     oppr: &'static OpProps,
 }
 
-impl<'a, 'b, S: Spec> AssocVisitor<'a, 'b, S> {
+impl<'a, 'b, S: Spec> AssocValueVisitor<'a, 'b, S> {
     /// Visits an entry.
-    pub fn visit_entry<K: fmt::Display, V: fmt::Display>(
+    fn visit_entry_impl<K: fmt::Display, V: fmt::Display>(
         &mut self,
         key: K,
         value: V,
@@ -702,7 +745,7 @@ impl<'a, 'b, S: Spec> AssocVisitor<'a, 'b, S> {
                 if self.oppr.named {
                     escape_write::<S, _>(
                         self.visitor.f,
-                        self.visitor.var_name().as_str(),
+                        self.visitor.varspec.name().as_str(),
                         self.oppr.allow_reserved,
                     )?;
                     self.visitor.f.write_char('=')?;
@@ -736,10 +779,119 @@ impl<'a, 'b, S: Spec> AssocVisitor<'a, 'b, S> {
         self.num_elems += 1;
         Ok(())
     }
+}
+
+impl<S: Spec> VisitorSealed for AssocValueVisitor<'_, '_, S> {}
+
+impl<'a, 'b, S: Spec> AssocVisitor for AssocValueVisitor<'a, 'b, S> {
+    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
+
+    /// Visits an entry.
+    #[inline]
+    fn visit_entry<K: fmt::Display, V: fmt::Display>(
+        &mut self,
+        key: K,
+        value: V,
+    ) -> ControlFlow<Self::Result> {
+        match self.visit_entry_impl(key, value) {
+            Ok(_) => ControlFlow::Continue(()),
+            Err(e) => ControlFlow::Break(Err(e)),
+        }
+    }
 
     /// Finishes visiting the associative array.
     #[inline]
-    pub fn finish(self) -> Result<VisitDoneToken<'a, 'b, S>, fmt::Error> {
+    fn finish(self) -> Self::Result {
         Ok(VisitDoneToken::new(self.visitor))
+    }
+}
+
+/// Visitor to retrieve effective type of a variable.
+struct TypeVisitor<'a> {
+    /// Variable name.
+    var_name: VarName<'a>,
+}
+
+impl<'a> TypeVisitor<'a> {
+    /// Creates a new type visitor.
+    #[inline]
+    #[must_use]
+    fn new(var_name: VarName<'a>) -> Self {
+        Self { var_name }
+    }
+}
+
+impl VisitorSealed for TypeVisitor<'_> {}
+
+impl<'a> Visitor for TypeVisitor<'a> {
+    type Result = ValueType;
+    type ListVisitor = ListTypeVisitor<'a>;
+    type AssocVisitor = AssocTypeVisitor<'a>;
+
+    #[inline]
+    fn var_name(&self) -> VarName<'_> {
+        self.var_name
+    }
+    #[inline]
+    fn visit_undefined(self) -> Self::Result {
+        ValueType::undefined()
+    }
+    #[inline]
+    fn visit_string<T: fmt::Display>(self, _: T) -> Self::Result {
+        ValueType::string()
+    }
+    #[inline]
+    fn visit_list(self) -> Self::ListVisitor {
+        ListTypeVisitor(self)
+    }
+    #[inline]
+    fn visit_assoc(self) -> Self::AssocVisitor {
+        AssocTypeVisitor(self)
+    }
+}
+
+/// Visitor to retrieve effective type of a list variable.
+struct ListTypeVisitor<'a>(TypeVisitor<'a>);
+
+impl VisitorSealed for ListTypeVisitor<'_> {}
+
+impl<'a> ListVisitor for ListTypeVisitor<'a> {
+    type Result = ValueType;
+
+    /// Visits an item.
+    #[inline]
+    fn visit_item<T: fmt::Display>(&mut self, _item: T) -> ControlFlow<Self::Result> {
+        ControlFlow::Break(ValueType::nonempty_list())
+    }
+
+    /// Finishes visiting the list.
+    #[inline]
+    fn finish(self) -> Self::Result {
+        ValueType::empty_list()
+    }
+}
+
+/// Visitor to retrieve effective type of an associative array variable.
+struct AssocTypeVisitor<'a>(TypeVisitor<'a>);
+
+impl VisitorSealed for AssocTypeVisitor<'_> {}
+
+impl<'a> AssocVisitor for AssocTypeVisitor<'a> {
+    type Result = ValueType;
+
+    /// Visits an item.
+    #[inline]
+    fn visit_entry<K: fmt::Display, V: fmt::Display>(
+        &mut self,
+        _key: K,
+        _value: V,
+    ) -> ControlFlow<Self::Result> {
+        ControlFlow::Break(ValueType::nonempty_assoc())
+    }
+
+    /// Finishes visiting the list.
+    #[inline]
+    fn finish(self) -> Self::Result {
+        ValueType::empty_assoc()
     }
 }

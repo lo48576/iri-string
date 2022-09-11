@@ -5,11 +5,13 @@
 mod utils;
 
 use iri_string::spec::UriSpec;
-use iri_string::template::{Context, UriTemplateStr, Value};
+use iri_string::template::context::{Context, Visitor};
+use iri_string::template::simple_context::{SimpleContext, Value};
+use iri_string::template::UriTemplateStr;
 
 /// Returns the context used by examples in RFC 6570 section 3.2.
-fn rfc6570_context() -> Context {
-    let mut ctx = Context::new();
+fn rfc6570_context() -> SimpleContext {
+    let mut ctx = SimpleContext::new();
     ctx.insert(
         "count",
         Value::List(vec!["one".to_owned(), "two".to_owned(), "three".to_owned()]),
@@ -196,7 +198,7 @@ fn rfc6570_section3_2() {
 
 #[test]
 fn prefix_modifier_for_percent_encoded_content() {
-    let mut context = Context::new();
+    let mut context = SimpleContext::new();
     context.insert("abcdef", "%61%62%63%64%65%66");
     // `%CE`, `%CE%B1`, `%B1`, `%CE`, `%CE%B2`, `%B2`.
     context.insert("invalid1", "%CE%CE%B1%B1%CE%CE%B2%B2");
@@ -229,10 +231,93 @@ fn prefix_modifier_for_percent_encoded_content() {
 
 #[test]
 fn incomplete_percent_encode() {
-    let mut context = Context::new();
+    let mut context = SimpleContext::new();
     context.insert("incomplete1", "%ce%b1%");
     context.insert("incomplete2", "%ce%b1%c");
     context.insert("incomplete3", "%ce%b1%ce");
+
+    // `&[(template, expected)]`.
+    const CASES: &[(&str, &str)] = &[
+        ("{incomplete1:1}", "%25"),
+        ("{incomplete1:2}", "%25c"),
+        ("{incomplete1:3}", "%25ce"),
+        ("{incomplete1:4}", "%25ce%25"),
+        ("{+incomplete1:1}", "%ce%b1"),
+        ("{+incomplete1:2}", "%ce%b1%25"),
+        ("{+incomplete2:1}", "%ce%b1"),
+        ("{+incomplete2:2}", "%ce%b1%25"),
+        ("{+incomplete2:3}", "%ce%b1%25c"),
+        ("{+incomplete3:1}", "%ce%b1"),
+        ("{+incomplete3:2}", "%ce%b1%ce"),
+        ("{+incomplete3:3}", "%ce%b1%ce"),
+    ];
+
+    for (template, expected) in CASES {
+        let template = UriTemplateStr::new(template).expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&context)
+            .expect("must not have variable type error");
+        assert_eq_display!(expanded, *expected, "template={template:?}");
+        assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+    }
+}
+
+#[test]
+fn fragmented_write() {
+    use core::fmt;
+
+    enum Foo {
+        Incomplete1,
+        Incomplete2,
+        Incomplete3,
+    }
+    impl fmt::Display for Foo {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            use core::fmt::Write;
+
+            f.write_char('%')?;
+            f.write_char('c')?;
+            f.write_char('e')?;
+            f.write_char('%')?;
+            f.write_char('b')?;
+            f.write_char('1')?;
+            f.write_char('%')?;
+            match self {
+                Foo::Incomplete1 => {}
+                Foo::Incomplete2 => {
+                    f.write_char('c')?;
+                }
+                Foo::Incomplete3 => {
+                    f.write_char('c')?;
+                    f.write_char('e')?;
+                }
+            }
+            Ok(())
+        }
+    }
+    struct MyContext {
+        incomplete1: Foo,
+        incomplete2: Foo,
+        incomplete3: Foo,
+    }
+    impl Context for MyContext {
+        fn visit<V: Visitor>(&self, visitor: V) -> V::Result {
+            let name = visitor.var_name().as_str();
+            match name {
+                "incomplete1" => visitor.visit_string(&self.incomplete1),
+                "incomplete2" => visitor.visit_string(&self.incomplete2),
+                "incomplete3" => visitor.visit_string(&self.incomplete3),
+                _ => visitor.visit_undefined(),
+            }
+        }
+    }
+
+    let context = MyContext {
+        incomplete1: Foo::Incomplete1,
+        incomplete2: Foo::Incomplete2,
+        incomplete3: Foo::Incomplete3,
+    };
 
     // `&[(template, expected)]`.
     const CASES: &[(&str, &str)] = &[

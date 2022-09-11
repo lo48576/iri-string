@@ -7,23 +7,87 @@
 //! 1. Prepare a template.
 //!     * Template type is [`UriTemplateStr`] (borrowed) and [`UriTemplateString`] (owned).
 //! 2. Prepare a context.
-//!     * Insert key-value pairs into a [`Context`].
+//!     * Create a value of type that implements [`Context`] trait.
+#![cfg_attr(
+    feature = "alloc",
+    doc = "    * Or, if you use [`SimpleContext`], insert key-value pairs into it."
+)]
 //! 3. Expand.
 //!     * Pass the context to [`UriTemplateStr::expand`] method of the template.
 //! 4. Use the result.
 //!     * Returned [`Expanded`] object can be directly printed since it
 //!       implements [`Display`][`core::fmt::Display`] trait. Or, you can call
-//!       [`.to_string()`][`alloc::string::ToString`] method to convert it to
-//!       a `String`.
+//!       `.to_string()` method of the `alloc::string::ToString` trait to
+//!       convert it to a `String`.
 //!
 //! # Examples
 //!
+//! ## Custom context type
+//!
+//! For details, see [the documentation of `context` module][`context`].
+//!
 //! ```
 //! # use iri_string::template::Error;
-//! use iri_string::spec::{IriSpec, UriSpec};
-//! use iri_string::template::{Context, UriTemplateStr};
+//! use core::fmt;
+//! use iri_string::spec::{IriSpec, Spec, UriSpec};
+//! use iri_string::template::{UriTemplateStr, VarName};
+//! use iri_string::template::context::{Context, Visitor};
 //!
-//! let mut context = Context::new();
+//! struct UserInfo {
+//!     username: &'static str,
+//!     utf8_available: bool,
+//! }
+//!
+//! impl Context for UserInfo {
+//!     fn visit<V: Visitor>(
+//!         &self,
+//!         visitor: V,
+//!     ) -> V::Result {
+//!         match visitor.var_name().as_str() {
+//!             "username" => visitor.visit_string(self.username),
+//!             "utf8" => {
+//!                 if self.utf8_available {
+//!                     // U+2713 CHECK MARK
+//!                     visitor.visit_string("\u{2713}")
+//!                 } else {
+//!                     visitor.visit_undefined()
+//!                 }
+//!             }
+//!             _ => visitor.visit_undefined()
+//!         }
+//!     }
+//! }
+//!
+//! let context = UserInfo {
+//!     username: "foo",
+//!     utf8_available: true,
+//! };
+//!
+//! let template = UriTemplateStr::new("/users/{username}{?utf8}")?;
+//!
+//! #[cfg(feature = "alloc")] {
+//! assert_eq!(
+//!     template.expand::<UriSpec, _>(&context)?.to_string(),
+//!     "/users/foo?utf8=%E2%9C%93"
+//! );
+//! assert_eq!(
+//!     template.expand::<IriSpec, _>(&context)?.to_string(),
+//!     "/users/foo?utf8=\u{2713}"
+//! );
+//! # }
+//! # Ok::<_, Error>(())
+//! ```
+//!
+//! ## `SimpleContext` type (enabled by `alloc` feature flag)
+//!
+//! ```
+//! # use iri_string::template::Error;
+//! #[cfg(feature = "alloc")] {
+//! use iri_string::spec::{IriSpec, UriSpec};
+//! use iri_string::template::UriTemplateStr;
+//! use iri_string::template::simple_context::SimpleContext;
+//!
+//! let mut context = SimpleContext::new();
 //! context.insert("username", "foo");
 //! // U+2713 CHECK MARK
 //! context.insert("utf8", "\u{2713}");
@@ -38,110 +102,37 @@
 //!     template.expand::<IriSpec, _>(&context)?.to_string(),
 //!     "/users/foo?utf8=\u{2713}"
 //! );
+//! # }
 //! # Ok::<_, Error>(())
 //! ```
+//!
+#![cfg_attr(
+    feature = "alloc",
+    doc = "[`SimpleContext`]: `simple_context::SimpleContext`"
+)]
 mod components;
 pub mod context;
 mod error;
 mod expand;
 mod parser;
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+pub mod simple_context;
 mod string;
 
-use alloc::collections::BTreeMap;
-use alloc::string::String;
-use alloc::vec::Vec;
-
 pub use self::components::VarName;
-pub use self::context::AsContext;
-pub use self::error::{CreationError, Error};
+pub use self::context::Context;
+#[cfg(feature = "alloc")]
+pub use self::error::CreationError;
+pub use self::error::Error;
 pub use self::expand::Expanded;
-pub use self::string::{UriTemplateStr, UriTemplateString};
-
-/// Value.
-#[derive(Debug, Clone)]
-pub enum Value {
-    /// Undefined (i.e. null).
-    Undefined,
-    /// String value.
-    String(String),
-    /// List.
-    List(Vec<String>),
-    /// Associative array.
-    Assoc(Vec<(String, String)>),
-}
-
-impl From<&str> for Value {
-    #[inline]
-    fn from(v: &str) -> Self {
-        Self::String(v.into())
-    }
-}
-
-impl From<String> for Value {
-    #[inline]
-    fn from(v: String) -> Self {
-        Self::String(v)
-    }
-}
+pub use self::string::UriTemplateStr;
+#[cfg(feature = "alloc")]
+pub use self::string::UriTemplateString;
 
 /// Variable value type.
 #[derive(Debug, Clone, Copy)]
-pub struct ValueType(ValueTypeRepr);
-
-impl ValueType {
-    /// Returns the value type for an undefined variable.
-    #[inline]
-    #[must_use]
-    pub const fn undefined() -> Self {
-        Self(ValueTypeRepr::Undefined)
-    }
-
-    /// Returns the value type for a string variable.
-    #[inline]
-    #[must_use]
-    pub const fn string() -> Self {
-        Self(ValueTypeRepr::String)
-    }
-
-    /// Returns the value type for an empty list variable.
-    #[inline]
-    #[must_use]
-    pub const fn empty_list() -> Self {
-        Self(ValueTypeRepr::Undefined)
-    }
-
-    /// Returns the value type for a nonempty list variable.
-    #[inline]
-    #[must_use]
-    pub const fn nonempty_list() -> Self {
-        Self(ValueTypeRepr::List)
-    }
-
-    /// Returns the value type for an empty associative array variable.
-    #[inline]
-    #[must_use]
-    pub const fn empty_assoc() -> Self {
-        Self(ValueTypeRepr::Undefined)
-    }
-
-    /// Returns the value type for a nonempty associative array variable.
-    #[inline]
-    #[must_use]
-    pub const fn nonempty_assoc() -> Self {
-        Self(ValueTypeRepr::Assoc)
-    }
-
-    /// Returns the internal representation.
-    #[inline]
-    #[must_use]
-    fn repr(self) -> ValueTypeRepr {
-        self.0
-    }
-}
-
-/// Internal representation of a value type.
-#[derive(Debug, Clone, Copy)]
-enum ValueTypeRepr {
+enum ValueType {
     /// Undefined (i.e. null).
     Undefined,
     /// String value.
@@ -152,140 +143,46 @@ enum ValueTypeRepr {
     Assoc,
 }
 
-/// Template expansion context.
-#[derive(Default, Debug, Clone)]
-pub struct Context {
-    /// Variable values.
-    // Any map types (including `HashMap`) is ok, but the hash map is not provided by `alloc`.
-    //
-    // QUESTION: Should hexdigits in percent-encoded triplets in varnames be
-    // compared case sensitively?
-    variables: BTreeMap<String, Value>,
-}
-
-impl Context {
-    /// Creates a new empty context.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use iri_string::template::Error;
-    /// use iri_string::spec::UriSpec;
-    /// use iri_string::template::{Context, UriTemplateStr};
-    ///
-    /// let empty_ctx = Context::new();
-    /// let template = UriTemplateStr::new("{no_such_variable}")?;
-    /// let expanded = template.expand::<UriSpec, _>(&empty_ctx)?;
-    ///
-    /// assert_eq!(
-    ///     expanded.to_string(),
-    ///     ""
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
+impl ValueType {
+    /// Returns the value type for an undefined variable.
     #[inline]
     #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn undefined() -> Self {
+        ValueType::Undefined
     }
 
-    /// Inserts a variable.
-    ///
-    /// Passing [`Value::Undefined`] removes the value from the context.
-    ///
-    /// The entry will be inserted or removed even if the key is invalid as a
-    /// variable name. Such entries will be simply ignored on expansion.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use iri_string::template::Error;
-    /// use iri_string::spec::UriSpec;
-    /// use iri_string::template::{Context, UriTemplateStr};
-    ///
-    /// let mut context = Context::new();
-    /// context.insert("username", "foo");
-    ///
-    /// let template = UriTemplateStr::new("/users/{username}")?;
-    /// let expanded = template.expand::<UriSpec, _>(&context)?;
-    ///
-    /// assert_eq!(
-    ///     expanded.to_string(),
-    ///     "/users/foo"
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    ///
-    /// Passing [`Value::Undefined`] removes the value from the context.
-    ///
-    /// ```
-    /// # use iri_string::template::Error;
-    /// use iri_string::spec::UriSpec;
-    /// use iri_string::template::{Context, UriTemplateStr, Value};
-    ///
-    /// let mut context = Context::new();
-    /// context.insert("username", "foo");
-    /// context.insert("username", Value::Undefined);
-    ///
-    /// let template = UriTemplateStr::new("/users/{username}")?;
-    /// let expanded = template.expand::<UriSpec, _>(&context)?;
-    ///
-    /// assert_eq!(
-    ///     expanded.to_string(),
-    ///     "/users/"
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    pub fn insert<K, V>(&mut self, key: K, value: V) -> Option<Value>
-    where
-        K: Into<String>,
-        V: Into<Value>,
-    {
-        let key = key.into();
-        match value.into() {
-            Value::Undefined => self.variables.remove(&key),
-            value => self.variables.insert(key, value),
-        }
-    }
-
-    /// Removes all entries in the context.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use iri_string::template::Error;
-    /// use iri_string::spec::UriSpec;
-    /// use iri_string::template::{Context, UriTemplateStr};
-    ///
-    /// let template = UriTemplateStr::new("{foo,bar}")?;
-    /// let mut context = Context::new();
-    ///
-    /// context.insert("foo", "FOO");
-    /// context.insert("bar", "BAR");
-    /// assert_eq!(
-    ///     template.expand::<UriSpec, _>(&context)?.to_string(),
-    ///     "FOO,BAR"
-    /// );
-    ///
-    /// context.clear();
-    /// assert_eq!(
-    ///     template.expand::<UriSpec, _>(&context)?.to_string(),
-    ///     ""
-    /// );
-    /// # Ok::<_, Error>(())
-    /// ```
-    #[inline]
-    pub fn clear(&mut self) {
-        self.variables.clear();
-    }
-
-    /// Returns a reference to the value for the key.
-    //
-    // QUESTION: Should hexdigits in percent-encoded triplets in varnames be
-    // compared case sensitively?
+    /// Returns the value type for a string variable.
     #[inline]
     #[must_use]
-    pub fn get(&self, key: VarName<'_>) -> Option<&Value> {
-        self.variables.get(key.as_str())
+    pub const fn string() -> Self {
+        ValueType::String
+    }
+
+    /// Returns the value type for an empty list variable.
+    #[inline]
+    #[must_use]
+    pub const fn empty_list() -> Self {
+        ValueType::Undefined
+    }
+
+    /// Returns the value type for a nonempty list variable.
+    #[inline]
+    #[must_use]
+    pub const fn nonempty_list() -> Self {
+        ValueType::List
+    }
+
+    /// Returns the value type for an empty associative array variable.
+    #[inline]
+    #[must_use]
+    pub const fn empty_assoc() -> Self {
+        ValueType::Undefined
+    }
+
+    /// Returns the value type for a nonempty associative array variable.
+    #[inline]
+    #[must_use]
+    pub const fn nonempty_assoc() -> Self {
+        ValueType::Assoc
     }
 }

@@ -82,6 +82,8 @@ impl error::Error for Error {}
 
 /// Error on conversion into a URI template type.
 // TODO: Unifiable to `types::CreationError`?
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub struct CreationError<T> {
     /// Soruce data.
     source: T,
@@ -89,6 +91,7 @@ pub struct CreationError<T> {
     error: Error,
 }
 
+#[cfg(feature = "alloc")]
 impl<T> CreationError<T> {
     /// Returns the source data.
     #[must_use]
@@ -109,6 +112,7 @@ impl<T> CreationError<T> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T: fmt::Debug> fmt::Debug for CreationError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CreationError")
@@ -118,6 +122,7 @@ impl<T: fmt::Debug> fmt::Debug for CreationError<T> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T: Clone> Clone for CreationError<T> {
     fn clone(&self) -> Self {
         Self {
@@ -127,6 +132,7 @@ impl<T: Clone> Clone for CreationError<T> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<T> fmt::Display for CreationError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.error.fmt(f)
