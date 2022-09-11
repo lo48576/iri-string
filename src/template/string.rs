@@ -10,10 +10,10 @@ use alloc::string::String;
 use alloc::sync::Arc;
 
 use crate::spec::Spec;
+use crate::template::context::AsContext;
 use crate::template::error::{CreationError, Error, ErrorKind};
 use crate::template::expand::Expanded;
 use crate::template::parser::validate_template_str;
-use crate::template::Context;
 
 /// Implements `PartialEq` and `PartialOrd`.
 macro_rules! impl_cmp {
@@ -182,7 +182,7 @@ impl UriTemplateStr {
     /// context.insert("username", "foo");
     ///
     /// let template = UriTemplateStr::new("/users/{username}")?;
-    /// let expanded = template.expand::<UriSpec>(&context)?;
+    /// let expanded = template.expand::<UriSpec, _>(&context)?;
     ///
     /// assert_eq!(
     ///     expanded.to_string(),
@@ -204,19 +204,22 @@ impl UriTemplateStr {
     /// let template = UriTemplateStr::new("{?alpha}")?;
     ///
     /// assert_eq!(
-    ///     template.expand::<UriSpec>(&context)?.to_string(),
+    ///     template.expand::<UriSpec, _>(&context)?.to_string(),
     ///     "?alpha=%CE%B1",
     ///     "a URI cannot contain Unicode alpha (U+03B1), so it should be escaped"
     /// );
     /// assert_eq!(
-    ///     template.expand::<IriSpec>(&context)?.to_string(),
+    ///     template.expand::<IriSpec, _>(&context)?.to_string(),
     ///     "?alpha=\u{03B1}",
     ///     "an IRI can contain Unicode alpha (U+03B1), so it written as is"
     /// );
     /// # Ok::<_, Error>(())
     /// ```
     #[inline]
-    pub fn expand<'a, S: Spec>(&'a self, context: &'a Context) -> Result<Expanded<'a, S>, Error> {
+    pub fn expand<'a, S: Spec, C: AsContext>(
+        &'a self,
+        context: &'a C,
+    ) -> Result<Expanded<'a, S, C>, Error> {
         Expanded::new(self, context)
     }
 }

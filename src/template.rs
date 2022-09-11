@@ -31,16 +31,17 @@
 //! let template = UriTemplateStr::new("/users/{username}{?utf8}")?;
 //!
 //! assert_eq!(
-//!     template.expand::<UriSpec>(&context)?.to_string(),
+//!     template.expand::<UriSpec, _>(&context)?.to_string(),
 //!     "/users/foo?utf8=%E2%9C%93"
 //! );
 //! assert_eq!(
-//!     template.expand::<IriSpec>(&context)?.to_string(),
+//!     template.expand::<IriSpec, _>(&context)?.to_string(),
 //!     "/users/foo?utf8=\u{2713}"
 //! );
 //! # Ok::<_, Error>(())
 //! ```
 mod components;
+pub mod context;
 mod error;
 mod expand;
 mod parser;
@@ -50,7 +51,8 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use self::components::VarName;
+pub use self::components::VarName;
+pub use self::context::AsContext;
 pub use self::error::{CreationError, Error};
 pub use self::expand::Expanded;
 pub use self::string::{UriTemplateStr, UriTemplateString};
@@ -82,6 +84,74 @@ impl From<String> for Value {
     }
 }
 
+/// Variable value type.
+#[derive(Debug, Clone, Copy)]
+pub struct ValueType(ValueTypeRepr);
+
+impl ValueType {
+    /// Returns the value type for an undefined variable.
+    #[inline]
+    #[must_use]
+    pub const fn undefined() -> Self {
+        Self(ValueTypeRepr::Undefined)
+    }
+
+    /// Returns the value type for a string variable.
+    #[inline]
+    #[must_use]
+    pub const fn string() -> Self {
+        Self(ValueTypeRepr::String)
+    }
+
+    /// Returns the value type for an empty list variable.
+    #[inline]
+    #[must_use]
+    pub const fn empty_list() -> Self {
+        Self(ValueTypeRepr::Undefined)
+    }
+
+    /// Returns the value type for a nonempty list variable.
+    #[inline]
+    #[must_use]
+    pub const fn nonempty_list() -> Self {
+        Self(ValueTypeRepr::List)
+    }
+
+    /// Returns the value type for an empty associative array variable.
+    #[inline]
+    #[must_use]
+    pub const fn empty_assoc() -> Self {
+        Self(ValueTypeRepr::Undefined)
+    }
+
+    /// Returns the value type for a nonempty associative array variable.
+    #[inline]
+    #[must_use]
+    pub const fn nonempty_assoc() -> Self {
+        Self(ValueTypeRepr::Assoc)
+    }
+
+    /// Returns the internal representation.
+    #[inline]
+    #[must_use]
+    fn repr(self) -> ValueTypeRepr {
+        self.0
+    }
+}
+
+/// Internal representation of a value type.
+#[derive(Debug, Clone, Copy)]
+enum ValueTypeRepr {
+    /// Undefined (i.e. null).
+    Undefined,
+    /// String value.
+    String,
+    /// List.
+    List,
+    /// Associative array.
+    Assoc,
+}
+
 /// Template expansion context.
 #[derive(Default, Debug, Clone)]
 pub struct Context {
@@ -105,7 +175,7 @@ impl Context {
     ///
     /// let empty_ctx = Context::new();
     /// let template = UriTemplateStr::new("{no_such_variable}")?;
-    /// let expanded = template.expand::<UriSpec>(&empty_ctx)?;
+    /// let expanded = template.expand::<UriSpec, _>(&empty_ctx)?;
     ///
     /// assert_eq!(
     ///     expanded.to_string(),
@@ -137,7 +207,7 @@ impl Context {
     /// context.insert("username", "foo");
     ///
     /// let template = UriTemplateStr::new("/users/{username}")?;
-    /// let expanded = template.expand::<UriSpec>(&context)?;
+    /// let expanded = template.expand::<UriSpec, _>(&context)?;
     ///
     /// assert_eq!(
     ///     expanded.to_string(),
@@ -158,7 +228,7 @@ impl Context {
     /// context.insert("username", Value::Undefined);
     ///
     /// let template = UriTemplateStr::new("/users/{username}")?;
-    /// let expanded = template.expand::<UriSpec>(&context)?;
+    /// let expanded = template.expand::<UriSpec, _>(&context)?;
     ///
     /// assert_eq!(
     ///     expanded.to_string(),
@@ -193,13 +263,13 @@ impl Context {
     /// context.insert("foo", "FOO");
     /// context.insert("bar", "BAR");
     /// assert_eq!(
-    ///     template.expand::<UriSpec>(&context)?.to_string(),
+    ///     template.expand::<UriSpec, _>(&context)?.to_string(),
     ///     "FOO,BAR"
     /// );
     ///
     /// context.clear();
     /// assert_eq!(
-    ///     template.expand::<UriSpec>(&context)?.to_string(),
+    ///     template.expand::<UriSpec, _>(&context)?.to_string(),
     ///     ""
     /// );
     /// # Ok::<_, Error>(())
@@ -215,7 +285,7 @@ impl Context {
     // compared case sensitively?
     #[inline]
     #[must_use]
-    fn get(&self, key: VarName<'_>) -> Option<&Value> {
+    pub fn get(&self, key: VarName<'_>) -> Option<&Value> {
         self.variables.get(key.as_str())
     }
 }

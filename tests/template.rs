@@ -187,7 +187,7 @@ fn rfc6570_section3_2() {
     for (template, expected) in SUCCESS_CASES {
         let template = UriTemplateStr::new(template).expect("must be valid template");
         let expanded = template
-            .expand::<UriSpec>(&context)
+            .expand::<UriSpec, _>(&context)
             .expect("must not have variable type error");
         assert_eq_display!(expanded, expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
@@ -220,7 +220,7 @@ fn prefix_modifier_for_percent_encoded_content() {
     for (template, expected) in CASES {
         let template = UriTemplateStr::new(template).expect("must be valid template");
         let expanded = template
-            .expand::<UriSpec>(&context)
+            .expand::<UriSpec, _>(&context)
             .expect("must not have variable type error");
         assert_eq_display!(expanded, *expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
@@ -253,7 +253,7 @@ fn incomplete_percent_encode() {
     for (template, expected) in CASES {
         let template = UriTemplateStr::new(template).expect("must be valid template");
         let expanded = template
-            .expand::<UriSpec>(&context)
+            .expand::<UriSpec, _>(&context)
             .expect("must not have variable type error");
         assert_eq_display!(expanded, *expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");

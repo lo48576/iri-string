@@ -59,7 +59,7 @@ pub(super) struct Literal<'a>(&'a str);
 /// Variable name.
 // QUESTION: Should hexdigits in percent-encoded triplets be compared case sensitively?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct VarName<'a>(&'a str);
+pub struct VarName<'a>(&'a str);
 
 impl<'a> VarName<'a> {
     /// Creates a `VarName` from the trusted string.
@@ -76,14 +76,14 @@ impl<'a> VarName<'a> {
     /// Returns the varibale name.
     #[inline]
     #[must_use]
-    pub(super) fn as_str(&self) -> &'a str {
+    pub fn as_str(&self) -> &'a str {
         self.0
     }
 }
 
 /// Variable specifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct VarSpec<'a> {
+pub struct VarSpec<'a> {
     /// Variable name.
     name: VarName<'a>,
     /// Variable modifier.

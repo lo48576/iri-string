@@ -80,7 +80,7 @@ fn test_with_file(filename: &str) {
                 v => panic!("unexpected `expected` value: {v:?}"),
             };
             let result = UriTemplateStr::new(template)
-                .and_then(|template| template.expand::<UriSpec>(&context));
+                .and_then(|template| template.expand::<UriSpec, _>(&context));
             match (result, expected) {
                 (Ok(expanded), Some(candidates)) => {
                     let expanded = expanded.to_string();
