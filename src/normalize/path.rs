@@ -173,7 +173,8 @@ impl PathToNormalize<'_> {
         // Some(false): Something other than `/` is already written as the path.
         // Some(true): Only a `/` is written as the path.
         let mut only_a_slash_is_written = None;
-        while !rest.is_empty() {
+        let mut too_deep_area_may_have_dot_segments = true;
+        while !rest.is_empty() && too_deep_area_may_have_dot_segments {
             /// The size of the queue to track the path segments.
             ///
             /// This should be nonzero.
@@ -213,9 +214,12 @@ impl PathToNormalize<'_> {
             for seg in PathSegmentsIter::new(&rest) {
                 let kind = seg.kind(&rest);
                 match kind {
-                    SegmentKind::Dot => {}
+                    SegmentKind::Dot => {
+                        too_deep_area_may_have_dot_segments = true;
+                    }
                     SegmentKind::DotDot => {
                         level = level.saturating_sub(1);
+                        too_deep_area_may_have_dot_segments = true;
                         if level < queue.len() {
                             queue[level] = None;
                         }
@@ -223,6 +227,7 @@ impl PathToNormalize<'_> {
                     SegmentKind::Normal => {
                         if level < queue.len() {
                             queue[level] = Some(seg.segment(&rest));
+                            too_deep_area_may_have_dot_segments = false;
                             end = seg.range.end;
                             if level == 0 {
                                 first_segment_has_leading_slash = seg.has_leading_slash;
@@ -270,6 +275,54 @@ impl PathToNormalize<'_> {
             }
 
             rest.remove_start(end);
+        }
+
+        if !rest.is_empty() {
+            // No need of searching dot segments anymore.
+            assert!(
+                !too_deep_area_may_have_dot_segments,
+                "[consistency] loop condition of the previous loop"
+            );
+            // Apply only normalization (if needed).
+            for seg in PathSegmentsIter::new(&rest) {
+                assert_eq!(
+                    seg.kind(&rest),
+                    SegmentKind::Normal,
+                    "[consistency] already confirmed that there are no more dot segments"
+                );
+                let segname = seg.segment(&rest);
+                // Omit the leading slash of the segment only if the segment is
+                // the first one and marked as not having a leading slash.
+                match only_a_slash_is_written {
+                    None => {
+                        // First segment.
+                        if seg.has_leading_slash {
+                            f.write_char('/')?;
+                        }
+                        only_a_slash_is_written = Some(seg.has_leading_slash && segname.is_empty());
+                    }
+                    Some(only_a_slash) => {
+                        if only_a_slash && !authority_is_present {
+                            // Apply serialization of WHATWG URL Standard.
+                            // This prevents `<scheme=foo>:<path=//bar>` from
+                            // written as // `foo://bar`, which is interpreted
+                            // as // `<scheme=foo>://<authority=bar>`.
+                            // Adding `./`, the serialization result would
+                            // be `foo:/.//bar`, which is safe.
+                            f.write_str("./")?;
+                            only_a_slash_is_written = Some(false);
+                        }
+                        f.write_char('/')?;
+                    }
+                }
+
+                // Write the segment name.
+                if op.case_pct_normalization {
+                    write!(f, "{}", PctCaseNormalized::<S>::new(segname))?;
+                } else {
+                    f.write_str(segname)?;
+                }
+            }
         }
 
         Ok(())
