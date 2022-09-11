@@ -2,9 +2,14 @@
 
 ## [Unreleased]
 
+* Add `template` module that contains URI Template
+  ([RFC 6570](https://www.rfc-editor.org/rfc/rfc6570)) processor.
 * Add `PercentEncoded::{unreserve,characters}` methods.
 
 ### Added
+* Add `template` module that contains URI Template
+  ([RFC 6570](https://www.rfc-editor.org/rfc/rfc6570)) processor.
+    + The processor supports nostd environment.
 * Add `PercentEncoded::{unreserve,characters}` methods.
     + List of added methods:
         - `percent_encode::PercentEncoded::characters()`
