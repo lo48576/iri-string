@@ -1,5 +1,11 @@
 //! Functions for common string operations.
 
+pub(crate) use self::maybe_pct_encoded::{
+    process_percent_encoded_best_effort, PctEncodedFragments,
+};
+
+mod maybe_pct_encoded;
+
 /// Returns the inner string if wrapped.
 #[must_use]
 pub(crate) fn get_wrapped_inner(s: &str, open: u8, close: u8) -> Option<&str> {

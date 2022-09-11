@@ -401,7 +401,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
 ///
 /// The parameters `upper` and `lower` should be an ASCII hexadecimal digit.
 #[must_use]
-fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
+pub(super) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
     let i_upper = match (upper & 0xf0).cmp(&0x40) {
         Ordering::Less => upper - b'0',
         Ordering::Equal => upper - (b'A' - 10),
