@@ -12,9 +12,17 @@ See the [documentation](https://docs.rs/iri-string) for details.
 ## Features
 
 * `no_std` support.
-* String types (both owned and borrowed) for IRIs.
+* String types (both owned and borrowed) for RFC 3986 URIs and RFC 3987 IRIs.
+    + Native slice types, so highly operable with `Cow`, `ToOwned`, etc.
+    + URIs/IRIs validation.
+    + Conversions between URIs and IRIs.
+    + Decomposition into components.
 * IRI reference resolution algorithm.
 * IRI normalization algorithm.
+* Masking password part of an IRI (optional and not automatic).
+* Percent encoding of user-provided strings.
+* IRI builder.
+* RFC 6570 URI Template.
 
 ### Feature flags
 
