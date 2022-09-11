@@ -65,6 +65,9 @@ fn write_trim_password(f: &mut fmt::Formatter<'_>, s: &str, pw_range: Range<usiz
 
 /// A wrapper of an IRI string that masks the non-empty password when `Display`ed.
 ///
+/// This is a retrun type of `mask_password` method of IRI string types (such as
+/// [`RiStr::mask_password`]).
+///
 /// # Examples
 ///
 /// ```
@@ -83,6 +86,8 @@ fn write_trim_password(f: &mut fmt::Formatter<'_>, s: &str, pw_range: Range<usiz
 /// # }
 /// # Ok::<_, Error>(())
 /// ```
+///
+/// [`RiStr::mask_password`]: `crate::types::RiStr::mask_password`
 #[derive(Clone, Copy)]
 pub struct PasswordMasked<'a, T: ?Sized> {
     /// IRI reference.
@@ -222,9 +227,14 @@ impl_mask!(RiRelativeStr, RiRelativeString);
 
 /// A wrapper of an IRI string that replaces the non-empty password when `Display`ed.
 ///
+/// This is a retrun type of `mask_password` method of IRI string types (such as
+/// [`RiStr::mask_password`]).
+///
 /// Note that the result might be invalid as an IRI since arbitrary string can
 /// go to the place of the password. Because of this, [`ToDedicatedString`]
 /// trait is not implemented for this type.
+///
+/// [`PasswordMasked::replace_password`]: `PasswordMasked::replace_password`
 pub struct PasswordReplaced<'a, T: ?Sized, D> {
     /// IRI reference.
     iri_ref: &'a T,
