@@ -5,6 +5,15 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+# Default features.
+default = ["std"]
+
+alloc = ["iri-string/alloc"]
+std = ["alloc", "iri-string/std"]
+memchr = ["iri-string/memchr"]
+serde = ["iri-string/serde"]
+
 [dependencies]
 iri-string = { path = ".." }
 
