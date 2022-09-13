@@ -5,6 +5,10 @@
 * Add `template` module that contains URI Template
   ([RFC 6570](https://www.rfc-editor.org/rfc/rfc6570)) processor.
 * Add `PercentEncoded::{unreserve,characters}` methods.
+* Remove "WHATWG" normalization.
+    + Fixes the issue [#29](https://github.com/lo48576/iri-string/issues/29) and
+      [#30](https://github.com/lo48576/iri-string/issues/30).
+* Add normalization that preserves relative path in some special condition.
 
 ### Added
 * Add `template` module that contains URI Template
@@ -14,6 +18,32 @@
     + List of added methods:
         - `percent_encode::PercentEncoded::characters()`
         - `percent_encode::PercentEncoded::unreserve()`
+* Add normalization that preserves relative path in some special condition.
+    + When the authority component is absent and the path is relative, the dot-segments
+      removal is not applied to the path. This behavior is inspired by WHATWG URL
+      Standard, but the implementation is not guaranteed to follow that spec.
+    + List of added items:
+        - `types::RiStr::normalize_but_preserve_authorityless_relative_path()`
+        - `types::RiStr::is_normalized_but_authorityless_relative_path_preserved()`
+        - `types::RiAbsoluteStr::normalize_but_preserve_authorityless_relative_path()`
+        - `types::RiAbsoluteStr::is_normalized_but_authorityless_relative_path_preserved()`
+        - `normalize::Normalized::and_normalize_but_preserve_authorityless_relative_path()`
+        - `normalize::Normalized::enable_normalization_preserving_authorityless_relative_path()`
+    + Note that this normalization algorithm is not compatible with RFC 3986
+      algorithm for some inputs.
+
+### Changed (breaking)
+* Remove non-compliant "WHATWG" normalization.
+    + Fixes the issue [#29](https://github.com/lo48576/iri-string/issues/29) and
+      [#30](https://github.com/lo48576/iri-string/issues/30).
+    + Previous implementations of normalization is described as "defined in WHATWG spec",
+      but they were not compliant to the spec. Specifically, when the authority
+      component is absent and the path is relative, WHATWG spec requires the path
+      to be treated as "opaque", but the old implementation applied dot-segments
+      removal to the path.
+    + List of removed items:
+        - `types::RiStr::is_normalized_whatwg()`
+        - `types::RiAbsoluteStr::is_normalized_whatwg()`
 
 ## [0.6.0]
 
