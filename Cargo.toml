@@ -2,6 +2,7 @@
 members = [
     ".",
     "iri-string-tests",
+    "iri-string-benches",
 ]
 
 [package]
@@ -44,7 +45,6 @@ memchr = { version = "2.4.1", default-features = false, optional = true }
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
-criterion = "0.4.0"
 serde_test = "1.0.104"
 
 [badges]
@@ -65,12 +65,3 @@ required-features = ["std"]
 [[example]]
 name = "resolve"
 required-features = ["std"]
-
-[[bench]]
-name = "resolve"
-harness = false
-required-features = ["alloc"]
-
-[[bench]]
-name = "validate"
-harness = false
