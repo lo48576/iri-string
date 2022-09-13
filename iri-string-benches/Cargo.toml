@@ -1,5 +1,5 @@
 [package]
-name = "iri-string-tests"
+name = "iri-string-benches"
 version = "0.0.0"
 edition = "2021"
 
@@ -17,5 +17,14 @@ serde = ["iri-string/serde"]
 [dependencies]
 iri-string = { path = ".." }
 
-serde = { version = "1.0.140", features = ["derive"] }
-serde_json = { version = "1.0.82", features = ["arbitrary_precision"] }
+[dev-dependencies]
+criterion = "0.4.0"
+
+[[bench]]
+name = "resolve"
+harness = false
+required-features = ["alloc"]
+
+[[bench]]
+name = "validate"
+harness = false
