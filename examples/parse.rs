@@ -151,6 +151,9 @@ fn print_components<S: iri_string::spec::Spec>(iri: &RiReferenceStr<S>) {
 
 pub fn print_normalized(iri: &IriStr) {
     println!("is_normalized_rfc3986: {}", iri.is_normalized_rfc3986());
-    println!("is_normalized_whatwg: {}", iri.is_normalized_whatwg());
+    println!(
+        "is_normalized_but_authorityless_relative_path_preserved: {}",
+        iri.is_normalized_but_authorityless_relative_path_preserved()
+    );
     println!("normalized: {}", iri.normalize());
 }

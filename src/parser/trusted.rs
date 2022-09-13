@@ -9,7 +9,7 @@ use core::num::NonZeroUsize;
 
 use crate::components::RiReferenceComponents;
 use crate::format::eq_str_display;
-use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost};
+use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost, NormalizednessCheckMode};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
 use crate::spec::Spec;
 use crate::types::RiReferenceStr;
@@ -330,7 +330,7 @@ pub(crate) fn extract_fragment(iri: &str) -> Option<&str> {
 ///
 /// Note that scheme-based normalization is not considered.
 #[must_use]
-pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> bool {
+pub(crate) fn is_normalized<S: Spec>(i: &str, mode: NormalizednessCheckMode) -> bool {
     let (i, scheme) = scheme_colon(i);
     let (after_authority, authority) = slash_slash_authority_opt(i);
     let (_after_path, path) = until_query(after_authority);
@@ -375,22 +375,39 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, whatwg_serialization: bool) -> boo
     }
 
     // Check `path`.
-    // Syntax-based normalization: Dot segments should be removed.
+    //
+    // Syntax-based normalization: Dot segments might be removed.
     // Note that we don't have to care `%2e` and `%2E` since `.` is unreserved
     // and they will be decoded if not normalized.
-    // Also note that WHATWG serialization will use `/.//` as a path prefix.
+    // Also note that WHATWG serialization will use `/.//` as a path prefix if
+    // the path is absolute and won't modify the path if the path is relative.
+    //
     // Percent-encoding normalization: unresreved characters should be decoded
     // in `path`, `query`, and `fragments`.
-    let path_span_no_dot_segments = if whatwg_serialization {
-        path.strip_prefix("/.//").unwrap_or(path)
+    let path_span_no_dot_segments = if authority.is_some() {
+        Some(path)
     } else {
-        path
+        match mode {
+            NormalizednessCheckMode::Default => Some(path.strip_prefix("/.//").unwrap_or(path)),
+            NormalizednessCheckMode::Rfc3986 => Some(path),
+            NormalizednessCheckMode::PreserveAuthoritylessRelativePath => {
+                if path.starts_with('/') {
+                    // Absolute.
+                    Some(path.strip_prefix("/.//").unwrap_or(path))
+                } else {
+                    // Relative. Treat the path as "opaque". No span to check.
+                    None
+                }
+            }
+        }
     };
-    if path_span_no_dot_segments
-        .split('/')
-        .any(|segment| matches!(segment, "." | ".."))
-    {
-        return false;
+    if let Some(path_span_no_dot_segments) = path_span_no_dot_segments {
+        if path_span_no_dot_segments
+            .split('/')
+            .any(|segment| matches!(segment, "." | ".."))
+        {
+            return false;
+        }
     }
     is_pct_case_normalized::<S>(after_authority)
 }

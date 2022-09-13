@@ -20,6 +20,10 @@ pub struct TestCase<'a> {
     pub normalized_uri: &'a str,
     /// Normalized string as IRI.
     pub normalized_iri: &'a str,
+    /// Normalized (by WHATWG-like algorithm) string as URI.
+    pub normalized_uri_whatwg_like: Option<&'a str>,
+    /// Normalized (by WHATWG-like algorithm) string as IRI.
+    pub normalized_iri_whatwg_like: Option<&'a str>,
     /// Different IRIs.
     pub different_iris: &'a [&'a str],
 }
@@ -257,6 +261,20 @@ macro_rules! test_case {
     (@field=normalized_iri; normalized_iri: $value:expr, $($rest:tt)*) => {
         $value
     };
+    // Normalized URI (WHATWG-like).
+    (@field=normalized_uri_whatwg_like; normalized_uri_whatwg_like: $value:expr, $($rest:tt)*) => {
+        Some($value)
+    };
+    (@field=normalized_uri_whatwg_like;) => {
+        None
+    };
+    // Normalized IRI (WHATWG-like).
+    (@field=normalized_iri_whatwg_like; normalized_iri_whatwg_like: $value:expr, $($rest:tt)*) => {
+        Some($value)
+    };
+    (@field=normalized_iri_whatwg_like;) => {
+        None
+    };
     // Different IRIs.
     (@field=different_iris; different_iris: $value:expr, $($rest:tt)*) => {
         $value
@@ -280,6 +298,8 @@ macro_rules! test_case {
             components: test_case!(@field=components; $($args)*),
             normalized_uri: test_case!(@field=normalized_uri; $($args)*),
             normalized_iri: test_case!(@field=normalized_iri; $($args)*),
+            normalized_uri_whatwg_like: test_case!(@field=normalized_uri_whatwg_like; $($args)*),
+            normalized_iri_whatwg_like: test_case!(@field=normalized_iri_whatwg_like; $($args)*),
             different_iris: test_case!(@field=different_iris; $($args)*),
         }
     };
@@ -385,6 +405,8 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         },
         normalized_uri: "scheme:/.//not-a-host",
         normalized_iri: "scheme:/.//not-a-host",
+        normalized_uri_whatwg_like: "scheme:..///not-a-host",
+        normalized_iri_whatwg_like: "scheme:..///not-a-host",
     },
     {
         name: "Relative URI reference as a relative path `..`",
@@ -425,6 +447,8 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         },
         normalized_uri: "scheme:/path",
         normalized_iri: "scheme:/path",
+        normalized_uri_whatwg_like: "scheme:foo/../path",
+        normalized_iri_whatwg_like: "scheme:foo/../path",
     },
     {
         name: "Non-normalized URI",

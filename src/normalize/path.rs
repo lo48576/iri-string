@@ -7,7 +7,7 @@ use crate::parser::str::{find_split_hole, rfind};
 use crate::spec::{Spec, UriSpec};
 
 use super::pct_case::PctCaseNormalized;
-use super::{Error, NormalizationOp};
+use super::{Error, NormalizationMode, NormalizationOp};
 
 /// Path that is (possibly) not yet processed or being processed.
 #[derive(Debug, Clone, Copy)]
@@ -152,6 +152,24 @@ impl PathToNormalize<'_> {
         if self.is_empty() {
             return Ok(());
         }
+
+        if (op.mode == NormalizationMode::PreserveAuthoritylessRelativePath)
+            && !authority_is_present
+            && self.byte_at(0) != Some(b'/')
+        {
+            // Treat the path as "opaque", i.e. do not apply dot segments removal.
+            // See <https://github.com/lo48576/iri-string/issues/29>.
+            debug_assert!(
+                op.mode.case_pct_normalization(),
+                "[consistency] case/pct normalization should still be applied"
+            );
+            if let Some(prefix) = self.0 {
+                write!(f, "{}", PctCaseNormalized::<S>::new(prefix))?;
+            }
+            write!(f, "{}", PctCaseNormalized::<S>::new(self.1))?;
+            return Ok(());
+        }
+
         let mut rest = *self;
 
         // Skip the prefix dot segments without leading slashes (such as `./`,
@@ -307,10 +325,10 @@ impl PathToNormalize<'_> {
             }
             Some(only_a_slash) => {
                 if only_a_slash && !authority_is_present {
-                    // Apply serialization of WHATWG URL Standard.
+                    // Apply serialization like WHATWG URL Standard.
                     // This prevents `<scheme=foo>:<path=//bar>` from written as
                     // `foo://bar`, which is interpreted as
-                    // `<scheme=foo>://<authority=bar>`. Adding `./`, the
+                    // `<scheme=foo>://<authority=bar>`. Prepending `./`, the
                     // serialization result would be `foo:/.//bar`, which is safe.
                     f.write_str("./")?;
                     *only_a_slash_is_written = Some(false);
@@ -320,7 +338,7 @@ impl PathToNormalize<'_> {
         }
 
         // Write the segment name.
-        if op.case_pct_normalization {
+        if op.mode.case_pct_normalization() {
             write!(f, "{}", PctCaseNormalized::<S>::new(segname))
         } else {
             f.write_str(segname)
@@ -368,7 +386,7 @@ impl PathToNormalize<'_> {
         let _ = self.fmt_write_normalize::<UriSpec, _>(
             &mut prefix,
             NormalizationOp {
-                case_pct_normalization: false,
+                mode: NormalizationMode::None,
             },
             // Assume the authority is absent.
             false,
