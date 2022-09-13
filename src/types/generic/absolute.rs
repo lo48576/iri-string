@@ -305,6 +305,9 @@ impl<S: Spec> RiAbsoluteStr<S> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// [`normalize_but_preserve_authorityless_relative_path`]:
+    ///     `Self::normalize_but_preserve_authorityless_relative_path`
     #[inline]
     #[must_use]
     pub fn is_normalized_but_authorityless_relative_path_preserved(&self) -> bool {
@@ -342,6 +345,9 @@ impl<S: Spec> RiAbsoluteStr<S> {
     ///
     /// This normalization would be similar to that of [WHATWG URL Standard]
     /// while this implementation is not guaranteed to stricly follow the spec.
+    ///
+    /// Note that this normalization algorithm is not compatible with RFC 3986
+    /// algorithm for some inputs.
     ///
     /// Note that case normalization and percent-encoding normalization will
     /// still be applied to any path.

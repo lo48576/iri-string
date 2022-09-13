@@ -574,12 +574,15 @@ impl<'a, T: ?Sized> Normalized<'a, T> {
         self.input.op.mode = NormalizationMode::Default;
     }
 
-    /// Enables the normalization according to the WHATWG URL Standard.
+    /// Enables the normalization that preserve relative path under some condition.
     ///
-    /// This lets the normalizer apply the case normalization, percent-encoding
-    /// normalization, and dot segments removal.
+    /// Note that this normalization algorithm is not compatible with RFC 3986
+    /// algorithm for some inputs.
+    ///
+    /// See [`RiStr::normalize_but_preserve_authorityless_relative_path()`]
+    /// for detail.
     #[inline]
-    pub fn enable_normalization_whatwg(&mut self) {
+    pub fn enable_normalization_preserving_authorityless_relative_path(&mut self) {
         self.input.op.mode = NormalizationMode::PreserveAuthoritylessRelativePath;
     }
 
@@ -591,11 +594,17 @@ impl<'a, T: ?Sized> Normalized<'a, T> {
         self
     }
 
-    /// Returns `Self` with WHATWG normalization enabled.
+    /// Returns `Self` with special normalization enabled.
+    ///
+    /// Note that this normalization algorithm is not compatible with RFC 3986
+    /// algorithm for some inputs.
+    ///
+    /// See [`RiStr::normalize_but_preserve_authorityless_relative_path()`]
+    /// for detail.
     #[inline]
     #[must_use]
     pub fn and_normalize_but_preserve_authorityless_relative_path(mut self) -> Self {
-        self.enable_normalization_whatwg();
+        self.enable_normalization_preserving_authorityless_relative_path();
         self
     }
 
