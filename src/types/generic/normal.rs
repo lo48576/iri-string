@@ -7,7 +7,7 @@ use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
 use crate::mask_password::password_range_to_hide;
 use crate::mask_password::PasswordMasked;
-use crate::normalize::{Error, NormalizationInput, Normalized};
+use crate::normalize::{Error, NormalizationInput, Normalized, NormalizednessCheckMode};
 use crate::parser::trusted as trusted_parser;
 #[cfg(feature = "alloc")]
 use crate::raw;
@@ -207,7 +207,7 @@ impl<S: Spec> RiStr<S> {
     /// let iri2 = IriStr::new("scheme:/..//bar")?;
     /// // The normalization result would be `scheme://bar` according to RFC
     /// // 3986, but it is unintended and should be treated as a failure.
-    /// // WHATWG URL Stardard handles this case.
+    /// // This crate automatically handles this case so that `.normalize()` won't fail.
     /// assert!(!iri.ensure_rfc3986_normalizable().is_err());
     /// # Ok::<_, Error>(())
     /// ```
@@ -218,9 +218,66 @@ impl<S: Spec> RiStr<S> {
 
     /// Returns `true` if the IRI is already normalized.
     ///
+    /// This returns the same result as `self.normalize().to_string() == self`,
+    /// but does this more efficiently without heap allocation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
+    /// assert!(!iri.is_normalized());
+    ///
+    /// let normalized = iri.normalize().to_dedicated_string();
+    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
+    /// assert!(normalized.is_normalized());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:/.///foo")?;
+    /// // Already normalized.
+    /// assert!(iri.is_normalized());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:relative/..//not-a-host")?;
+    /// // Default normalization algorithm assumes the path part to be NOT opaque.
+    /// assert!(!iri.is_normalized());
+    ///
+    /// let normalized = iri.normalize().to_dedicated_string();
+    /// assert_eq!(normalized, "scheme:/.//not-a-host");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    #[inline]
+    pub fn is_normalized(&self) -> bool {
+        trusted_parser::is_normalized::<S>(self.as_str(), NormalizednessCheckMode::Default)
+    }
+
+    /// Returns `true` if the IRI is already normalized in the sense of RFC 3986.
+    ///
     /// This returns the same result as
-    /// `self.try_normalize.map_or(false, |normalized| normalized == self))`, but
-    /// does this more efficiently without heap allocation.
+    /// `self.ensure_rfc3986_normalizable() && (self.normalize().to_string() == self)`,
+    /// but does this more efficiently without heap allocation.
     ///
     /// # Examples
     ///
@@ -246,25 +303,39 @@ impl<S: Spec> RiStr<S> {
     /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("http://example.com/.///foo")?;
+    /// let iri = IriStr::new("scheme:/.///foo")?;
+    /// // Not normalized in the sense of RFC 3986.
+    /// assert!(!iri.is_normalized_rfc3986());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:relative/..//not-a-host")?;
+    /// // RFC 3986 normalization algorithm assumes the path part to be NOT opaque.
     /// assert!(!iri.is_normalized_rfc3986());
     ///
-    /// // Already normalized, but WHATWG URL Standard serialization is applied.
-    /// assert!(iri.is_normalized_whatwg());
-    /// assert!(!iri.is_normalized_rfc3986());
+    /// let normalized = iri.normalize().to_dedicated_string();
+    /// assert_eq!(normalized, "scheme:/.//not-a-host");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
     #[inline]
     pub fn is_normalized_rfc3986(&self) -> bool {
-        trusted_parser::is_normalized::<S>(self.as_str(), false)
+        trusted_parser::is_normalized::<S>(self.as_str(), NormalizednessCheckMode::Rfc3986)
     }
 
-    /// Returns `true` if the IRI is already normalized in the sense of WHATWG spec.
+    /// Returns `true` if the IRI is already normalized in the sense of
+    /// [`normalize_but_preserve_authorityless_relative_path`] method.
     ///
     /// This returns the same result as
-    /// `self.try_normalize_whatwg.map_or(false, |normalized| normalized == self))`,
+    /// `self.normalize_but_preserve_authorityless_relative_path().to_string() == self`,
     /// but does this more efficiently without heap allocation.
     ///
     /// # Examples
@@ -275,20 +346,51 @@ impl<S: Spec> RiStr<S> {
     /// use iri_string::format::ToDedicatedString;
     /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriStr::new("scheme:a/..//not-a-host")?;
-    /// assert!(!iri.is_normalized_whatwg());
+    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
+    /// assert!(!iri.is_normalized_but_authorityless_relative_path_preserved());
     ///
-    /// let normalized = iri.normalize().to_dedicated_string();
-    /// assert_eq!(normalized, "scheme:/.//not-a-host");
-    /// assert!(normalized.is_normalized_whatwg());
-    /// assert!(!normalized.is_normalized_rfc3986(), "not normalized in the sense of RFC 3987");
+    /// let normalized = iri
+    ///     .normalize_but_preserve_authorityless_relative_path()
+    ///     .to_dedicated_string();
+    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
+    /// assert!(normalized.is_normalized());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:/.///foo")?;
+    /// // Already normalized in the sense of
+    /// // `normalize_but_opaque_authorityless_relative_path()` method.
+    /// assert!(iri.is_normalized_but_authorityless_relative_path_preserved());
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:relative/..//not-a-host")?;
+    /// // Relative path is treated as opaque since the autority component is absent.
+    /// assert!(iri.is_normalized_but_authorityless_relative_path_preserved());
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
     #[must_use]
     #[inline]
-    pub fn is_normalized_whatwg(&self) -> bool {
-        trusted_parser::is_normalized::<S>(self.as_str(), true)
+    pub fn is_normalized_but_authorityless_relative_path_preserved(&self) -> bool {
+        trusted_parser::is_normalized::<S>(
+            self.as_str(),
+            NormalizednessCheckMode::PreserveAuthoritylessRelativePath,
+        )
     }
 
     /// Returns the normalized IRI.
@@ -299,12 +401,12 @@ impl<S: Spec> RiStr<S> {
     /// # use iri_string::validate::Error;
     /// # #[cfg(feature = "alloc")] {
     /// use iri_string::format::ToDedicatedString;
-    /// use iri_string::types::IriAbsoluteStr;
+    /// use iri_string::types::IriStr;
     ///
-    /// let iri = IriAbsoluteStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query")?;
+    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
     ///
     /// let normalized = iri.normalize().to_dedicated_string();
-    /// assert_eq!(normalized, "http://example.com/baz?query");
+    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
@@ -312,6 +414,59 @@ impl<S: Spec> RiStr<S> {
     #[must_use]
     pub fn normalize(&self) -> Normalized<'_, Self> {
         Normalized::from_input(NormalizationInput::from(self)).and_normalize()
+    }
+
+    /// Returns the normalized IRI, but preserving dot segments in relative path
+    /// if the authority component is absent.
+    ///
+    /// This normalization would be similar to that of [WHATWG URL Standard]
+    /// while this implementation is not guaranteed to stricly follow the spec.
+    ///
+    /// Note that case normalization and percent-encoding normalization will
+    /// still be applied to any path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("HTTP://example.COM/foo/./bar/%2e%2e/../baz?query#fragment")?;
+    ///
+    /// let normalized = iri
+    ///     .normalize_but_preserve_authorityless_relative_path()
+    ///     .to_dedicated_string();
+    /// assert_eq!(normalized, "http://example.com/baz?query#fragment");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::format::ToDedicatedString;
+    /// use iri_string::types::IriStr;
+    ///
+    /// let iri = IriStr::new("scheme:relative/../f%6f%6f")?;
+    ///
+    /// let normalized = iri
+    ///     .normalize_but_preserve_authorityless_relative_path()
+    ///     .to_dedicated_string();
+    /// assert_eq!(normalized, "scheme:relative/../foo");
+    /// // `.normalize()` would normalize this to `scheme:/foo`.
+    /// # assert_eq!(iri.normalize().to_dedicated_string(), "scheme:/foo");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// [WHATWG URL Standard]: https://url.spec.whatwg.org/
+    #[inline]
+    #[must_use]
+    pub fn normalize_but_preserve_authorityless_relative_path(&self) -> Normalized<'_, Self> {
+        Normalized::from_input(NormalizationInput::from(self))
+            .and_normalize_but_preserve_authorityless_relative_path()
     }
 
     /// Returns the proxy to the IRI with password masking feature.
