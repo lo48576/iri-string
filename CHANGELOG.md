@@ -2,11 +2,11 @@
 
 ## [Unreleased]
 
-* Add `template::VarName::new()` method.
 * Add `new_unchecked()` methods to string types.
+* Move `template::VarName` type into `template::context` module and deprecate the old name.
+* Add `template::context::VarName::new()` method.
 
 ### Added
-* Add `template::VarName::new()` method.
 * Add `new_unchecked()` methods to string types.
     + List of added methods:
         - `template::UriTemplateStr::new_unchecked()`
@@ -23,6 +23,11 @@
         - `types::RiRelativeString::new_unchecked()`
         - `types::RiStr::new_unchecked()`
         - `types::RiString::new_unchecked()`
+* Add `template::context::VarName::new()` method.
+
+### Changed (non-breaking)
+* Move `template::VarName` type into `template::context` module and deprecate the old name.
+    + The old name (`template::VarName`) is still available while it is marked as deprecated.
 
 ## [0.7.0]
 
