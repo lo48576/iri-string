@@ -97,15 +97,56 @@ pub(crate) use self::pct_case::{
     is_pct_case_normalized, NormalizedAsciiOnlyHost, PctCaseNormalized,
 };
 
-/// Normalization operation.
+/// Normalization algorithm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct NormalizationOp {
-    /// Whether to apply case normalization and percent-encoding normalization.
+pub(crate) enum NormalizationMode {
+    /// No normalization.
+    None,
+    /// Default normalization mode.
+    ///
+    /// Applies RFC 3986 normalization whenever possible. When not possible,
+    /// applies serialization algorithm defined in WHATWG URL standard.
+    Default,
+    /// WHATWG-like normalization mode.
+    ///
+    /// Preserves relative path as is (modulo case/pct normalization) when the
+    /// authority component is absent.
+    PreserveAuthoritylessRelativePath,
+}
+
+impl NormalizationMode {
+    /// Returns true if case normalization and percent-encoding normalization should be applied.
     ///
     /// Note that even when this option is `true`, plain US-ASCII characters
     /// won't be automatically lowered. Users should apply case normalization
     /// for US-ASCII only `host` component by themselves.
-    pub(crate) case_pct_normalization: bool,
+    #[inline]
+    #[must_use]
+    fn case_pct_normalization(self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Default | Self::PreserveAuthoritylessRelativePath => true,
+        }
+    }
+}
+
+/// Normalizedness check algorithm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NormalizednessCheckMode {
+    /// Default algorithm (corresponding to [`NormalizationMode::Default`]).
+    Default,
+    /// Strict RFC 3986 normalization.
+    Rfc3986,
+    /// WHATWG-like normalization algorithm (corresponding to
+    /// [`NormalizationMode::PreserveAuthoritylessRelativePath`]).
+    PreserveAuthoritylessRelativePath,
+}
+
+/// Normalization operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct NormalizationOp {
+    /// Normalization mode.
+    pub(crate) mode: NormalizationMode,
 }
 
 /// Spec-agnostic IRI normalization/resolution input.
@@ -239,7 +280,7 @@ impl<'a> NormalizationInput<'a> {
             query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
             fragment: r_fragment,
             op: NormalizationOp {
-                case_pct_normalization: false,
+                mode: NormalizationMode::None,
             },
         }
     }
@@ -259,7 +300,7 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
             query,
             fragment,
             op: NormalizationOp {
-                case_pct_normalization: false,
+                mode: NormalizationMode::None,
             },
         }
     }
@@ -287,7 +328,7 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
             query,
             fragment,
             op: NormalizationOp {
-                case_pct_normalization: false,
+                mode: NormalizationMode::None,
             },
         }
     }
@@ -355,7 +396,7 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Write the scheme.
-        if self.input.op.case_pct_normalization {
+        if self.input.op.mode.case_pct_normalization() {
             normalize_scheme(f, self.input.scheme)?;
         } else {
             f.write_str(self.input.scheme)?;
@@ -365,7 +406,7 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
         // Write the authority if available.
         if let Some(authority) = self.input.authority {
             f.write_str("//")?;
-            if self.input.op.case_pct_normalization {
+            if self.input.op.mode.case_pct_normalization() {
                 normalize_authority::<S>(f, authority)?;
             } else {
                 // No case/pct normalization.
@@ -376,7 +417,7 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
         // Process and write the path.
         match self.input.path {
             Path::Done(s) => {
-                if self.input.op.case_pct_normalization {
+                if self.input.op.mode.case_pct_normalization() {
                     // Normalize the path.
                     PathToNormalize::from_single_path(s).fmt_write_normalize::<S, _>(
                         f,
@@ -396,7 +437,7 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
         // Write the query if available.
         if let Some(query) = self.input.query {
             f.write_char('?')?;
-            if self.input.op.case_pct_normalization {
+            if self.input.op.mode.case_pct_normalization() {
                 normalize_query::<S>(f, query)?;
             } else {
                 f.write_str(query)?;
@@ -406,7 +447,7 @@ impl<S: Spec> fmt::Display for NormalizedInner<'_, S> {
         // Write the fragment if available.
         if let Some(fragment) = self.input.fragment {
             f.write_char('#')?;
-            if self.input.op.case_pct_normalization {
+            if self.input.op.mode.case_pct_normalization() {
                 normalize_fragment::<S>(f, fragment)?;
             } else {
                 f.write_str(fragment)?;
@@ -524,10 +565,25 @@ impl<'a, T: ?Sized> Normalized<'a, T> {
         }
     }
 
-    /// Enables the case normalization and percent-encoding normalization.
+    /// Enables the normalization.
+    ///
+    /// This lets the normalizer apply the case normalization, percent-encoding
+    /// normalization, and dot segments removal.
     #[inline]
     pub fn enable_normalization(&mut self) {
-        self.input.op.case_pct_normalization = true;
+        self.input.op.mode = NormalizationMode::Default;
+    }
+
+    /// Enables the normalization that preserve relative path under some condition.
+    ///
+    /// Note that this normalization algorithm is not compatible with RFC 3986
+    /// algorithm for some inputs.
+    ///
+    /// See [`RiStr::normalize_but_preserve_authorityless_relative_path()`]
+    /// for detail.
+    #[inline]
+    pub fn enable_normalization_preserving_authorityless_relative_path(&mut self) {
+        self.input.op.mode = NormalizationMode::PreserveAuthoritylessRelativePath;
     }
 
     /// Returns `Self` with normalization enabled.
@@ -535,6 +591,20 @@ impl<'a, T: ?Sized> Normalized<'a, T> {
     #[must_use]
     pub fn and_normalize(mut self) -> Self {
         self.enable_normalization();
+        self
+    }
+
+    /// Returns `Self` with special normalization enabled.
+    ///
+    /// Note that this normalization algorithm is not compatible with RFC 3986
+    /// algorithm for some inputs.
+    ///
+    /// See [`RiStr::normalize_but_preserve_authorityless_relative_path()`]
+    /// for detail.
+    #[inline]
+    #[must_use]
+    pub fn and_normalize_but_preserve_authorityless_relative_path(mut self) -> Self {
+        self.enable_normalization_preserving_authorityless_relative_path();
         self
     }
 

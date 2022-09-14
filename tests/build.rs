@@ -252,7 +252,10 @@ fn build_normalizedness() {
         let mut buf = [0_u8; 512];
         let s = write_to_slice(&mut buf, &built).expect("not enough buffer");
         let built_slice = IriStr::new(s).expect("should be valid IRI reference");
-        assert!(built_slice.is_normalized_whatwg(), "should be normalized");
+        assert!(
+            built_slice.is_normalized_but_authorityless_relative_path_preserved(),
+            "should be normalized"
+        );
         let slice_judge = built_slice.is_normalized_rfc3986();
 
         assert_eq!(
@@ -456,8 +459,8 @@ fn user_with_colon() {
     assert!(result.is_err(), "`user` part cannot have a colon");
 }
 
-/// Builder should be able to build a normalized IRI even it requires WHATWG URL
-/// Standard serialization.
+/// Builder should be able to build a normalized IRI even when it requires
+/// edge case handling of RFC 3986 normalization.
 #[test]
 fn normalize_double_slash_prefix() {
     let mut builder = Builder::new();
@@ -466,7 +469,7 @@ fn normalize_double_slash_prefix() {
     builder.normalize();
     let built = builder
         .build::<IriStr>()
-        .expect("normalizable by WHATWG URL Standard serialization");
+        .expect("normalizable by `/.` path prefix");
     // Naive application of RFC 3986 normalization/resolution algorithm
     // results in `scheme://bar`, but this is unintentional. `bar` should be
     // the second path segment, not a host. So this should be rejected.
@@ -482,8 +485,8 @@ fn normalize_double_slash_prefix() {
     assert_eq_display!(built, "scheme:/.//bar");
 }
 
-/// Builder should be able to build a normalized IRI even it requires WHATWG URL
-/// Standard serialization.
+/// Builder should be able to build a normalized IRI even when it requires
+/// edge case handling of RFC 3986 normalization.
 #[test]
 fn absolute_double_slash_path_without_authority() {
     let mut builder = Builder::new();
@@ -503,7 +506,7 @@ fn absolute_double_slash_path_without_authority() {
     builder.normalize();
     let built = builder
         .build::<IriStr>()
-        .expect("normalizable by WHATWG URL Standard serialization");
+        .expect("normalizable by `/.` path prefix");
     // Naive application of RFC 3986 normalization/resolution algorithm
     // results in `scheme://bar`, but this is unintentional. `bar` should be
     // the second path segment, not a host. So this should be rejected.
@@ -554,7 +557,7 @@ fn no_authority_and_double_slash_prefix_with_normalization() {
     builder.normalize();
     let built = builder
         .build::<IriReferenceStr>()
-        .expect("normalizable by WHATWG URL Standard serialization");
+        .expect("normalizable by `/.` path prefix");
     assert_eq_display!(built, "/.//double-slash");
     assert!(built.ensure_rfc3986_normalizable().is_err());
 }

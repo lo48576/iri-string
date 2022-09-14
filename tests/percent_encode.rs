@@ -100,3 +100,75 @@ fn fragment_iri() {
     #[cfg(feature = "alloc")]
     assert_eq!(encoded.to_string(), expected);
 }
+
+#[test]
+fn unreserve_uri_unreserved() {
+    let encoded = PercentEncodedForUri::unreserve("%a0-._~\u{03B1}");
+    let expected = "%25a0-._~%CE%B1";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn unreserve_iri_unreserved() {
+    let encoded = PercentEncodedForIri::unreserve("%a0-._~\u{03B1}");
+    let expected = "%25a0-._~\u{03B1}";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn unreserve_uri_reserved() {
+    let encoded = PercentEncodedForUri::unreserve(":/?#[]@ !$&'()*+,;=");
+    let expected = "%3A%2F%3F%23%5B%5D%40%20%21%24%26%27%28%29%2A%2B%2C%3B%3D";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn unreserve_iri_reserved() {
+    let encoded = PercentEncodedForIri::unreserve(":/?#[]@ !$&'()*+,;=");
+    let expected = "%3A%2F%3F%23%5B%5D%40%20%21%24%26%27%28%29%2A%2B%2C%3B%3D";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn characters_uri_unreserved() {
+    let encoded = PercentEncodedForUri::characters("%a0-._~\u{03B1}");
+    let expected = "%25a0-._~%CE%B1";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn characters_iri_unreserved() {
+    let encoded = PercentEncodedForIri::characters("%a0-._~\u{03B1}");
+    let expected = "%25a0-._~\u{03B1}";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn characters_uri_reserved() {
+    let encoded = PercentEncodedForUri::characters(":/?#[]@ !$&'()*+,;=");
+    let expected = ":/?#[]@%20!$&'()*+,;=";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}
+
+#[test]
+fn characters_iri_reserved() {
+    let encoded = PercentEncodedForIri::characters(":/?#[]@ !$&'()*+,;=");
+    let expected = ":/?#[]@%20!$&'()*+,;=";
+    assert_eq_display!(encoded, expected);
+    #[cfg(feature = "alloc")]
+    assert_eq!(encoded.to_string(), expected);
+}

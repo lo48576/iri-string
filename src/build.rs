@@ -13,7 +13,7 @@ use alloc::string::ToString;
 use crate::format::Censored;
 #[cfg(feature = "alloc")]
 use crate::format::{ToDedicatedString, ToStringFallible};
-use crate::normalize::{self, PathCharacteristic, PctCaseNormalized};
+use crate::normalize::{self, NormalizationMode, PathCharacteristic, PctCaseNormalized};
 use crate::parser::str::{find_split, prior_byte2};
 use crate::parser::validate as parser;
 use crate::spec::Spec;
@@ -377,7 +377,7 @@ impl<'a> Builder<'a> {
         } else if self.scheme.is_some() || self.authority.is_some() || path_is_absolute {
             // Apply full syntax-based normalization.
             let op = normalize::NormalizationOp {
-                case_pct_normalization: true,
+                mode: NormalizationMode::Default,
             };
             normalize::PathToNormalize::from_single_path(self.path).fmt_write_normalize::<S, _>(
                 f,
@@ -1171,7 +1171,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
                 is_path_acceptable = true;
             }
             let op = normalize::NormalizationOp {
-                case_pct_normalization: true,
+                mode: NormalizationMode::Default,
             };
             let path_characteristic = PathCharacteristic::from_path_to_display::<S>(
                 &normalize::PathToNormalize::from_single_path(builder.path),

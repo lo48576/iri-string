@@ -1,0 +1,21 @@
+[package]
+name = "iri-string-tests"
+version = "0.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# Default features.
+default = ["std"]
+
+alloc = ["iri-string/alloc"]
+std = ["alloc", "iri-string/std"]
+memchr = ["iri-string/memchr"]
+serde = ["iri-string/serde"]
+
+[dependencies]
+iri-string = { path = ".." }
+
+serde = { version = "1.0.140", features = ["derive"] }
+serde_json = { version = "1.0.82", features = ["arbitrary_precision"] }

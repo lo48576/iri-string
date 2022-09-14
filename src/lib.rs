@@ -9,22 +9,38 @@
 //!
 //! # Capability
 //!
-//! This crate provides three features: string types, resolvers, and validators.
+//! This crate provides many features for IRIs / URIs.
 //!
 //! ## String types
 //!
 //! [`types` module][`types`] module provides various string types for IRIs and URIs.
+//! The borrowed string types are unsized slice types (such as `[u8]` and `str`)
+//! and not a sized struct, so they are highly interoperable with for example
+//! `Cow` and `Rc`. Conversions between `&str` and borrwed IRI string types are easy.
 //!
 //! ## Resolvers
 //!
 //! [`resolve` module][`resolve`] provides IRI / URI references resolver.
 //! However, you are recommended to use methods of string types such as
-//! [`RiReferenceStr::resolve_against()`] or [`RiRelativeStr::resolve_against()`], rather than the
-//! freestanding resolver function.
+//! [`RiReferenceStr::resolve_against()`] or [`RiRelativeStr::resolve_against()`]
+//! if you don't intend to resolve multiple IRIs against the same base.
 //!
 //! ## Validators
 //!
 //! Validator functions are provided from [`validate` module][`validate`].
+//!
+//! ## Percent encoding
+//!
+//! [`percent_encode` module][`percent_encode`] provides a converter to encode
+//! user-provided string into percent-encoded one (if syntax requires so).
+//!
+//! ## IRI builder
+//!
+//! [`build` module][`build`] provides IRI builder.
+//!
+//! ## URI template (RFC 6570)
+//!
+//! [`template` module][`template`] provides an RFC 6570 URI Template processor.
 //!
 //! # Feature flags
 //!
@@ -136,5 +152,6 @@ pub mod percent_encode;
 pub(crate) mod raw;
 pub mod resolve;
 pub mod spec;
+pub mod template;
 pub mod types;
 pub mod validate;

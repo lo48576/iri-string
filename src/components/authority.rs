@@ -5,6 +5,11 @@ use crate::spec::Spec;
 use crate::types::RiReferenceStr;
 
 /// Subcomponents of authority.
+///
+/// This is a return type of the `authority_components` method of the string
+/// types (for example [`RiStr::authority_components`].
+///
+/// [`RiStr::authority_components`]: `crate::types::RiStr::authority_components`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct AuthorityComponents<'a> {
     /// Authority string, excluding the leading `//`.
