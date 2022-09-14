@@ -81,7 +81,7 @@ impl<'a> VarName<'a> {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// use iri_string::template::VarName;
+    /// use iri_string::template::context::VarName;
     ///
     /// let name = VarName::new("hello")?;
     /// assert_eq!(name.as_str(), "hello");

@@ -30,8 +30,8 @@
 //! # use iri_string::template::Error;
 //! use core::fmt;
 //! use iri_string::spec::{IriSpec, Spec, UriSpec};
-//! use iri_string::template::{UriTemplateStr, VarName};
-//! use iri_string::template::context::{Context, Visitor};
+//! use iri_string::template::UriTemplateStr;
+//! use iri_string::template::context::{Context, VarName, Visitor};
 //!
 //! struct UserInfo {
 //!     username: &'static str,
@@ -120,7 +120,6 @@ mod parser;
 pub mod simple_context;
 mod string;
 
-pub use self::components::VarName;
 pub use self::context::Context;
 #[cfg(feature = "alloc")]
 pub use self::error::CreationError;
@@ -129,6 +128,15 @@ pub use self::expand::Expanded;
 pub use self::string::UriTemplateStr;
 #[cfg(feature = "alloc")]
 pub use self::string::UriTemplateString;
+
+/// Deprecated old name of [`template::context::VarName`].
+///
+/// [`template::context::VarName`]: `components::VarName`
+#[deprecated(
+    since = "0.7.1",
+    note = "renamed (moved) to `template::context::VarName`"
+)]
+pub type VarName<'a> = self::components::VarName<'a>;
 
 /// Variable value type.
 #[derive(Debug, Clone, Copy)]
