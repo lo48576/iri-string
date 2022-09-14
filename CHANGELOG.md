@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0]
+
 * Add `template` module that contains URI Template
   ([RFC 6570](https://www.rfc-editor.org/rfc/rfc6570)) processor.
 * Add `PercentEncoded::{unreserve,characters}` methods.
@@ -872,8 +874,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.6.0...develop>
-[0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.0...develop>
+[0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
+[0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.6.0>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>
 [0.5.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.5>
 [0.5.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.4>
