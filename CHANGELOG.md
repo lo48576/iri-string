@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Add `template::VarName::new()` method.
+
+### Added
+* Add `template::VarName::new()` method.
+
 ## [0.7.0]
 
 * Add `template` module that contains URI Template

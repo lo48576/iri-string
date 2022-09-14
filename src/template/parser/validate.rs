@@ -55,7 +55,7 @@ fn validate_varspec(s: &str, offset: usize) -> Result<(), Error> {
 }
 
 /// Returns `Ok(())` if the given string is a valid varname.
-fn validate_varname(s: &str, offset: usize) -> Result<(), Error> {
+pub(crate) fn validate_varname(s: &str, offset: usize) -> Result<(), Error> {
     let rest = match s.as_bytes().first() {
         Some(b'%') if starts_with_double_hexdigits(&s.as_bytes()[1..]) => &s[3..],
         Some(b) if b.is_ascii() && is_ascii_varchar_start(*b) => &s[1..],
