@@ -65,7 +65,7 @@
 //!
 //! let template = UriTemplateStr::new("/users/{username}{?utf8}")?;
 //!
-//! #[cfg(feature = "alloc")] {
+//! # #[cfg(feature = "alloc")] {
 //! assert_eq!(
 //!     template.expand::<UriSpec, _>(&context)?.to_string(),
 //!     "/users/foo?utf8=%E2%9C%93"
@@ -82,7 +82,7 @@
 //!
 //! ```
 //! # use iri_string::template::Error;
-//! #[cfg(feature = "alloc")] {
+//! # #[cfg(feature = "alloc")] {
 //! use iri_string::spec::{IriSpec, UriSpec};
 //! use iri_string::template::UriTemplateStr;
 //! use iri_string::template::simple_context::SimpleContext;

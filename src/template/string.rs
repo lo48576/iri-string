@@ -184,7 +184,7 @@ impl UriTemplateStr {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
@@ -207,7 +207,7 @@ impl UriTemplateStr {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::{IriSpec, UriSpec};
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
