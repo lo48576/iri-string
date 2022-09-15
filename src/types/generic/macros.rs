@@ -121,6 +121,7 @@ macro_rules! impl_cmp2_as_str {
 /// Methods to be implemented:
 ///
 /// * `pub fn new()`
+/// * `pub fn new_unchecked()`
 /// * `pub(crate) fn new_maybe_unchecked()`
 /// * `fn new_always_unchecked()`
 /// * `pub fn as_str()`
@@ -188,6 +189,22 @@ macro_rules! define_custom_string_slice {
             #[inline]
             pub fn new(s: &str) -> Result<&Self, crate::validate::Error> {
                 core::convert::TryFrom::try_from(s)
+            }
+
+            /// Creates a new string without validation.
+            ///
+            /// This does not validate the given string, so it is caller's
+            /// responsibility to ensure the given string is valid.
+            ///
+            /// # Safety
+            ///
+            /// The given string must be syntactically valid as `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
+            #[inline]
+            #[must_use]
+            pub unsafe fn new_unchecked(s: &str) -> &Self {
+                Self::new_always_unchecked(s)
             }
 
             /// Creates a new string maybe without validation.
@@ -415,6 +432,7 @@ macro_rules! define_custom_string_slice {
 ///
 /// Methods to be implemented:
 ///
+/// * `pub fn new_unchecked()`
 /// * `pub(crate) fn new_maybe_unchecked()`
 /// * `pub(crate) fn new_always_unchecked()`
 /// * `pub fn shrink_to_fit()`
@@ -507,6 +525,22 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> $ty<S> {
+            /// Creates a new string without validation.
+            ///
+            /// This does not validate the given string, so it is caller's
+            /// responsibility to ensure the given string is valid.
+            ///
+            /// # Safety
+            ///
+            /// The given string must be syntactically valid as `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
+            #[inline]
+            #[must_use]
+            pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+                Self::new_always_unchecked(s)
+            }
+
             /// Creates a new string maybe without validation.
             ///
             /// This does not validate the given string at any time.
