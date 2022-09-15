@@ -36,6 +36,22 @@ pub struct UriTemplateString {
 }
 
 impl UriTemplateString {
+    /// Creates a new string without validation.
+    ///
+    /// This does not validate the given string, so it is caller's
+    /// responsibility to ensure the given string is valid.
+    ///
+    /// # Safety
+    ///
+    /// The given string must be syntactically valid as `Self` type.
+    /// If not, any use of the returned value or the call of this
+    /// function itself may result in undefined behavior.
+    #[inline]
+    #[must_use]
+    pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+        Self { inner: s }
+    }
+
     /// Shrinks the capacity of the inner buffer to match its length.
     #[inline]
     pub fn shrink_to_fit(&mut self) {

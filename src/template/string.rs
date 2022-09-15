@@ -104,6 +104,22 @@ impl UriTemplateStr {
         TryFrom::try_from(s)
     }
 
+    /// Creates a new string without validation.
+    ///
+    /// This does not validate the given string, so it is caller's
+    /// responsibility to ensure the given string is valid.
+    ///
+    /// # Safety
+    ///
+    /// The given string must be syntactically valid as `Self` type.
+    /// If not, any use of the returned value or the call of this
+    /// function itself may result in undefined behavior.
+    #[inline]
+    #[must_use]
+    pub unsafe fn new_unchecked(s: &str) -> &Self {
+        Self::new_always_unchecked(s)
+    }
+
     /// Creates a new string without any validation.
     ///
     /// This does not validate the given string at any time.
