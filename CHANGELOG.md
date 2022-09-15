@@ -3,9 +3,26 @@
 ## [Unreleased]
 
 * Add `template::VarName::new()` method.
+* Add `new_unchecked()` methods to string types.
 
 ### Added
 * Add `template::VarName::new()` method.
+* Add `new_unchecked()` methods to string types.
+    + List of added methods:
+        - `template::UriTemplateStr::new_unchecked()`
+        - `template::UriTemplateString::new_unchecked()`
+        - `types::RiAbsoluteStr::new_unchecked()`
+        - `types::RiAbsoluteString::new_unchecked()`
+        - `types::RiFragmentStr::new_unchecked()`
+        - `types::RiFragmentString::new_unchecked()`
+        - `types::RiQueryStr::new_unchecked()`
+        - `types::RiQueryString::new_unchecked()`
+        - `types::RiReferenceStr::new_unchecked()`
+        - `types::RiReferenceString::new_unchecked()`
+        - `types::RiRelativeStr::new_unchecked()`
+        - `types::RiRelativeString::new_unchecked()`
+        - `types::RiStr::new_unchecked()`
+        - `types::RiString::new_unchecked()`
 
 ## [0.7.0]
 
