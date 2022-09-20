@@ -55,7 +55,7 @@
 use core::fmt;
 use core::ops::ControlFlow;
 
-use crate::template::components::VarName;
+pub use crate::template::components::VarName;
 
 /// A trait for types that can behave as a URI template expansion context.
 pub trait Context: Sized {

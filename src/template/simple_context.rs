@@ -6,8 +6,7 @@ use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::vec::Vec;
 
-use crate::template::context::{Context, Visitor};
-use crate::template::VarName;
+use crate::template::context::{Context, VarName, Visitor};
 
 /// Value.
 #[derive(Debug, Clone)]
