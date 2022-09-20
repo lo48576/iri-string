@@ -204,7 +204,9 @@ macro_rules! define_custom_string_slice {
             #[inline]
             #[must_use]
             pub unsafe fn new_unchecked(s: &str) -> &Self {
-                Self::new_always_unchecked(s)
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Creates a new string maybe without validation.
@@ -213,13 +215,14 @@ macro_rules! define_custom_string_slice {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: &str) -> &Self {
                 debug_assert_eq!($validate::<S>(s), Ok(()));
-                // It is caller's responsibility to guarantee the given string is valid.
-                // Previous `debug_assert_eq!` will ensure the safety in debug build.
-                Self::new_always_unchecked(s)
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`. Additionally in debug build, just
+                // checked the content is actually valid by `$validate::<S>(s)`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Creates a new string without any validation.
@@ -230,11 +233,14 @@ macro_rules! define_custom_string_slice {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[inline]
             #[must_use]
             unsafe fn new_always_unchecked(s: &str) -> &Self {
-                &*(s as *const str as *const Self)
+                // SAFETY: the cast is safe since `Self` type has `repr(transparent)`
+                // attribute and the content is guaranteed as valid by the
+                // precondition of the function.
+                unsafe { &*(s as *const str as *const Self) }
             }
 
             /// Returns `&str`.
@@ -538,7 +544,9 @@ macro_rules! define_custom_string_owned {
             #[inline]
             #[must_use]
             pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
-                Self::new_always_unchecked(s)
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Creates a new string maybe without validation.
@@ -549,10 +557,16 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[inline]
             #[must_use]
             pub(crate) unsafe fn new_always_unchecked(s: alloc::string::String) -> Self {
+                // The construction itself can be written in safe Rust, but
+                // every other place including unsafe functions expects
+                // `self.inner` to be syntactically valid as `Self`. In order to
+                // make them safe, the construction should validate the value
+                // or at least should require users to validate the value by
+                // making the function `unsafe`.
                 Self {
                     _spec: core::marker::PhantomData,
                     inner: s,
@@ -565,11 +579,18 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
-                debug_assert_eq!($validate::<S>(&s), Ok(()));
-                Self::new_always_unchecked(s)
+                debug_assert_eq!(
+                    $validate::<S>(&s),
+                    Ok(()),
+                    "[precondition] the given string must be valid"
+                );
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`. Additionally in debug build, just
+                // checked the content is actually valid by `$validate::<S>(s)`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Returns a mutable reference to the inner string buffer.
@@ -580,7 +601,10 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The content after modification must be valid.
+            /// The content after modification must be syntactically valid as
+            /// `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
             #[inline]
             #[must_use]
             // TODO: Use wrapper type to enforce validation on finish?

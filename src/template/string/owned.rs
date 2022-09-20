@@ -49,6 +49,12 @@ impl UriTemplateString {
     #[inline]
     #[must_use]
     pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+        // The construction itself can be written in safe Rust, but
+        // every other place including unsafe functions expects
+        // `self.inner` to be syntactically valid as `Self`. In order to
+        // make them safe, the construction should validate the value
+        // or at least should require users to validate the value by
+        // making the function `unsafe`.
         Self { inner: s }
     }
 

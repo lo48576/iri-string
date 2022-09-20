@@ -117,7 +117,9 @@ impl UriTemplateStr {
     #[inline]
     #[must_use]
     pub unsafe fn new_unchecked(s: &str) -> &Self {
-        Self::new_always_unchecked(s)
+        // SAFETY: `new_always_unchecked` requires the same precondition
+        // as `new_always_unchecked`.
+        unsafe { Self::new_always_unchecked(s) }
     }
 
     /// Creates a new string without any validation.
@@ -132,7 +134,10 @@ impl UriTemplateStr {
     #[inline]
     #[must_use]
     unsafe fn new_always_unchecked(s: &str) -> &Self {
-        &*(s as *const str as *const Self)
+        // SAFETY: the cast is safe since `Self` type has `repr(transparent)`
+        // attribute and the content is guaranteed as valid by the
+        // precondition of the function.
+        unsafe { &*(s as *const str as *const Self) }
     }
 
     /// Returns the template as a plain `&str`.
