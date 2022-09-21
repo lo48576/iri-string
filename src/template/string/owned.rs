@@ -98,10 +98,9 @@ impl AsRef<str> for UriTemplateString {
 impl AsRef<UriTemplateStr> for UriTemplateString {
     #[inline]
     fn as_ref(&self) -> &UriTemplateStr {
-        unsafe {
-            // This is safe because `&self` and `self.as_ref()` must be valid.
-            UriTemplateStr::new_always_unchecked(AsRef::<str>::as_ref(self))
-        }
+        // SAFETY: `UriTemplateString and `UriTemplateStr` requires same validation,
+        // so the content of `self: &UriTemplateString` must be valid as `UriTemplateStr`.
+        unsafe { UriTemplateStr::new_always_unchecked(AsRef::<str>::as_ref(self)) }
     }
 }
 
@@ -157,6 +156,10 @@ impl From<UriTemplateString> for Box<UriTemplateStr> {
     fn from(s: UriTemplateString) -> Box<UriTemplateStr> {
         let inner: String = s.into();
         let buf = Box::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Box<str>` and `Box<UriTemplateStr>` are
+        // compatible. Additionally, `UriTemplateString` and `UriTemplateStr`
+        // require the same syntax.
         unsafe {
             let raw: *mut str = Box::into_raw(buf);
             Box::<UriTemplateStr>::from_raw(raw as *mut UriTemplateStr)

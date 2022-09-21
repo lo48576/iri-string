@@ -209,11 +209,9 @@ macro_rules! impl_mask {
                 s.try_reserve(iri_ref.len() - (pw_range.end - pw_range.start))?;
                 s.push_str(&iri_ref[..pw_range.start]);
                 s.push_str(&iri_ref[pw_range.end..]);
-                let iri = unsafe {
-                    // SAFETY: IRI remains valid and type does not change if
-                    // the password is trimmed.
-                    <$owned<S>>::new_maybe_unchecked(s)
-                };
+                // SAFETY: IRI remains valid and type does not change if
+                // the password is trimmed.
+                let iri = unsafe { <$owned<S>>::new_maybe_unchecked(s) };
                 Ok(iri)
             }
         }

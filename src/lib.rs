@@ -136,6 +136,7 @@
 #![warn(missing_docs)]
 #![warn(unsafe_op_in_unsafe_fn)]
 #![warn(clippy::missing_docs_in_private_items)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

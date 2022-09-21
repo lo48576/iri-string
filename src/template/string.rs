@@ -293,6 +293,9 @@ impl From<&UriTemplateStr> for Arc<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Arc::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Arc<str>` and `Arc<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *const str = Arc::into_raw(buf);
             Self::from_raw(raw as *const UriTemplateStr)
@@ -305,6 +308,9 @@ impl From<&UriTemplateStr> for Box<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Box::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Box<str>` and `Box<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *mut str = Box::into_raw(buf);
             Self::from_raw(raw as *mut UriTemplateStr)
@@ -317,6 +323,9 @@ impl From<&UriTemplateStr> for Rc<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Rc::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Rc<str>` and `Rc<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *const str = Rc::into_raw(buf);
             Self::from_raw(raw as *const UriTemplateStr)
@@ -337,6 +346,7 @@ impl<'a> TryFrom<&'a str> for &'a UriTemplateStr {
     #[inline]
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         match validate_template_str(s) {
+            // SAFETY: just checked the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }
@@ -351,6 +361,7 @@ impl<'a> TryFrom<&'a [u8]> for &'a UriTemplateStr {
         let s = core::str::from_utf8(bytes)
             .map_err(|e| Error::new(ErrorKind::InvalidUtf8, e.valid_up_to()))?;
         match validate_template_str(s) {
+            // SAFETY: just checked the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }

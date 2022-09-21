@@ -136,10 +136,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// ```
     #[must_use]
     pub fn base(&self) -> &'a RiAbsoluteStr<S> {
-        unsafe {
-            // SAFETY: `base_components` can only be created from `&RiAbsoluteStr<S>`.
-            RiAbsoluteStr::new_maybe_unchecked(self.base_components.iri().as_str())
-        }
+        // SAFETY: `base_components` can only be created from `&RiAbsoluteStr<S>`,
+        // and the type of `base_components` does not allow modification of the
+        // content after it is created.
+        unsafe { RiAbsoluteStr::new_maybe_unchecked(self.base_components.iri().as_str()) }
     }
 }
 
