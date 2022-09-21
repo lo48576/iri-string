@@ -17,6 +17,9 @@ macro_rules! impl_from_slice_into_smartptr {
             fn from(s: &$ty<S>) -> Self {
                 let inner: &str = s.as_str();
                 let buf = $($smartptr)::* ::<str>::from(inner);
+                // SAFETY: `$ty<S>` has `repr(transparent)` attribute, so the
+                // memory layouts of `$smartptr<str>` and `$smartptr<$ty<S>>`
+                // are compatible.
                 unsafe {
                     let raw: *$mut str = $($smartptr)::* ::into_raw(buf);
                     $($smartptr)::* ::<$ty<S>>::from_raw(raw as *$mut $ty<S>)
@@ -354,6 +357,7 @@ macro_rules! define_custom_string_slice {
             #[inline]
             fn try_from(s: &'a str) -> Result<Self, Self::Error> {
                 match $validate::<S>(s) {
+                    // SAFETY: just checked `s` is valid as `$ty`.
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
                     Err(e) => Err(e),
                 }
@@ -367,6 +371,7 @@ macro_rules! define_custom_string_slice {
             fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
                 let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
                 match $validate::<S>(s) {
+                    // SAFETY: just checked `s` is valid as `$ty`.
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
                     Err(e) => Err(e),
                 }
@@ -692,10 +697,9 @@ macro_rules! define_custom_string_owned {
         impl<S: crate::spec::Spec> AsRef<$slice<S>> for $ty<S> {
             #[inline]
             fn as_ref(&self) -> &$slice<S> {
-                unsafe {
-                    // This is safe because `&self` and `self.as_ref()` must be valid.
-                    $slice::new_always_unchecked(AsRef::<str>::as_ref(self))
-                }
+                // SAFETY: `$ty<S>` and `$slice<S>` requires same validation, so
+                // the content of `self: &$ty<S>` must be valid as `$slice<S>`.
+                unsafe { $slice::new_always_unchecked(AsRef::<str>::as_ref(self)) }
             }
         }
 
@@ -752,6 +756,11 @@ macro_rules! define_custom_string_owned {
             fn from(s: $ty<S>) -> alloc::boxed::Box<$slice<S>> {
                 let inner: alloc::string::String = s.into();
                 let buf = alloc::boxed::Box::<str>::from(inner);
+                // SAFETY: `$slice<S>` has `repr(transparent)` attribute, so
+                // the memory layouts of `Box<str>` and `Box<$slice<S>>` are
+                // compatible. Additionally, `$ty<S>` and `$slice<S>` require
+                // the same syntax (it is the macro user's responsibility to
+                // guarantee).
                 unsafe {
                     let raw: *mut str = alloc::boxed::Box::into_raw(buf);
                     alloc::boxed::Box::<$slice<S>>::from_raw(raw as *mut $slice<S>)
@@ -947,11 +956,10 @@ macro_rules! impl_trivial_conv_between_iri {
         impl<S: crate::spec::Spec> AsRef<$to_slice<S>> for $from_slice<S> {
             #[inline]
             fn as_ref(&self) -> &$to_slice<S> {
-                unsafe {
-                    // This should be safe.
-                    // Caller of impl_infallible_conv_between_iri!` macro is responsible for that.
-                    <$to_slice<S>>::new_maybe_unchecked(self.as_str())
-                }
+                // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
+                // The caller of `impl_trivial_conv_between_iri!` macro is
+                // responsible for guaranteeing that.
+                unsafe { <$to_slice<S>>::new_maybe_unchecked(self.as_str()) }
             }
         }
 
@@ -974,11 +982,10 @@ macro_rules! impl_trivial_conv_between_iri {
         impl<S: crate::spec::Spec> From<$from_owned<S>> for $to_owned<S> {
             #[inline]
             fn from(s: $from_owned<S>) -> $to_owned<S> {
-                unsafe {
-                    // This should be safe.
-                    // Caller of `impl_infallible_conv_between_iri!` macro is responsible for that.
-                    <$to_owned<S>>::new_maybe_unchecked(s.into())
-                }
+                // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
+                // The caller of `impl_trivial_conv_between_iri!` macro is
+                // responsible for guaranteeing that.
+                unsafe { <$to_owned<S>>::new_maybe_unchecked(s.into()) }
             }
         }
 
@@ -999,11 +1006,9 @@ macro_rules! impl_trivial_conv_between_iri {
 
             fn try_from(s: $to_owned<S>) -> Result<Self, Self::Error> {
                 match <&$from_slice<S>>::try_from(s.as_str()) {
-                    Ok(_) => Ok(unsafe {
-                        // This should be safe because `<$from_slice<S>>::try_from()` validated the
-                        // string and it was ok.
-                        <$from_owned<S>>::new_always_unchecked(s.into())
-                    }),
+                    // SAFETY: just checked `s.as_str()` is valid as `$from_slice<S>`, and it
+                    // requires the same syntax as `$from_owned<S>`.
+                    Ok(_) => Ok(unsafe { <$from_owned<S>>::new_always_unchecked(s.into()) }),
                     Err(e) => Err(crate::types::CreationError::new(e, s)),
                 }
             }

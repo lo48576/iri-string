@@ -529,10 +529,12 @@ impl<S: Spec> RiAbsoluteStr<S> {
     #[inline]
     #[must_use]
     pub fn query(&self) -> Option<&RiQueryStr<S>> {
-        trusted_parser::extract_query_absolute_iri(self.as_str()).map(|query| unsafe {
-            // This is safe because `extract_query` returns the query part of an IRI, and the
-            // returned string is substring of the source IRI.
-            RiQueryStr::new_maybe_unchecked(query)
+        trusted_parser::extract_query_absolute_iri(self.as_str()).map(|query| {
+            // SAFETY: `trusted_parser::extract_query_absolute_iri()` must return
+            // the query part of an IRI (including the leading `?` character),
+            // and the returned string consists of allowed characters since it
+            // is a substring of the source IRI.
+            unsafe { RiQueryStr::new_maybe_unchecked(query) }
         })
     }
 
@@ -634,9 +636,9 @@ impl<S: Spec> RiAbsoluteString<S> {
             None => return,
         };
         let separator_colon = pw_range.start - 1;
+        // SAFETY: the IRI must still be valid after the password component and
+        // the leading separator colon is removed.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component and
-            // the leading separator colon is removed.
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
             debug_assert!(
@@ -687,8 +689,8 @@ impl<S: Spec> RiAbsoluteString<S> {
             Some(b':'),
             "[validity] the password component must be prefixed with a separator colon"
         );
+        // SAFETY: the IRI must be valid after the password is replaced with empty string.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component is removed.
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
             debug_assert!(

@@ -142,12 +142,10 @@ macro_rules! impl_conversion_between_uri {
                     <$ty_borrowed_uri>::new(self.as_str()).is_ok(),
                     "[consistency] the ASCII-only IRI must also be a valid URI"
                 );
-                let uri = unsafe {
-                    // SAFETY: An ASCII-only IRI is a URI.
-                    // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
-                    // and the difference is that URIs can only have ASCII characters.
-                    <$ty_borrowed_uri>::new_maybe_unchecked(self.as_str())
-                };
+                // SAFETY: An ASCII-only IRI is a URI.
+                // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
+                // and the difference is that URIs can only have ASCII characters.
+                let uri = unsafe { <$ty_borrowed_uri>::new_maybe_unchecked(self.as_str()) };
                 Some(uri)
             }
         }
@@ -219,15 +217,15 @@ macro_rules! impl_conversion_between_uri {
             /// ```
             #[inline]
             pub fn try_encode_to_uri_inline(&mut self) -> Result<(), TryReserveError> {
+                // SAFETY: IRI is valid after it is encoded to URI (by percent encoding).
                 unsafe {
-                    // SAFETY: IRI is valid after it is encoded to URI (by percent encoding).
                     let buf = self.as_inner_mut();
                     try_percent_encode_iri_inline(buf)?;
-                    debug_assert!(
-                        <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
-                        "[consistency] the content must be valid at any time"
-                    );
                 }
+                debug_assert!(
+                    <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
+                    "[consistency] the content must be valid at any time"
+                );
                 Ok(())
             }
 
@@ -294,12 +292,10 @@ macro_rules! impl_conversion_between_uri {
                     <$ty_borrowed_uri>::new(s.as_str()).is_ok(),
                     "[consistency] the encoded IRI must also be a valid URI"
                 );
-                let uri = unsafe {
-                    // SAFETY: An ASCII-only IRI is a URI.
-                    // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
-                    // and the difference is that URIs can only have ASCII characters.
-                    <$ty_owned_uri>::new_maybe_unchecked(s)
-                };
+                // SAFETY: An ASCII-only IRI is a URI.
+                // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
+                // and the difference is that URIs can only have ASCII characters.
+                let uri = unsafe { <$ty_owned_uri>::new_maybe_unchecked(s) };
                 Ok(uri)
             }
 
@@ -333,12 +329,10 @@ macro_rules! impl_conversion_between_uri {
                     <$ty_borrowed_uri>::new(s.as_str()).is_ok(),
                     "[consistency] the ASCII-only IRI must also be a valid URI"
                 );
-                let uri = unsafe {
-                    // SAFETY: An ASCII-only IRI is a URI.
-                    // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
-                    // and the difference is that URIs can only have ASCII characters.
-                    <$ty_owned_uri>::new_maybe_unchecked(s)
-                };
+                // SAFETY: An ASCII-only IRI is a URI.
+                // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
+                // and the difference is that URIs can only have ASCII characters.
+                let uri = unsafe { <$ty_owned_uri>::new_maybe_unchecked(s) };
                 Ok(uri)
             }
         }
