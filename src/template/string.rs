@@ -1,6 +1,5 @@
 //! Template string types.
 
-use core::convert::TryFrom;
 use core::fmt;
 
 #[cfg(feature = "alloc")]
@@ -384,7 +383,7 @@ impl fmt::Display for UriTemplateStr {
 mod __serde_slice {
     use super::UriTemplateStr;
 
-    use core::{convert::TryFrom, fmt};
+    use core::fmt;
 
     use serde::{
         de::{self, Visitor},

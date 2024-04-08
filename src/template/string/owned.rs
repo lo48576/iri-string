@@ -241,7 +241,7 @@ impl fmt::Display for UriTemplateString {
 mod __serde_owned {
     use super::UriTemplateString;
 
-    use core::{convert::TryFrom, fmt};
+    use core::fmt;
 
     #[cfg(feature = "serde")]
     use alloc::string::String;

@@ -1,7 +1,5 @@
 //! IRI reference.
 
-use core::convert::TryFrom;
-
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
