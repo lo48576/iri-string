@@ -286,7 +286,7 @@ macro_rules! define_custom_string_slice {
         impl<S: crate::spec::Spec> PartialOrd for $ty<S> {
             #[inline]
             fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-                self.inner.partial_cmp(&other.inner)
+                Some(self.inner.cmp(&other.inner))
             }
         }
 
