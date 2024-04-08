@@ -6,7 +6,7 @@ extern crate alloc;
 #[macro_use]
 mod utils;
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::ToString;
 
 use iri_string::percent_encode::{PercentEncodedForIri, PercentEncodedForUri};

@@ -236,6 +236,7 @@ impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
 mod tests {
     use super::*;
 
+    #[cfg(all(feature = "alloc", not(feature = "std")))]
     use alloc::string::ToString;
 
     use crate::spec::{IriSpec, UriSpec};

@@ -3,7 +3,9 @@
 use core::ops::ControlFlow;
 
 use alloc::collections::BTreeMap;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 
 use crate::template::context::{Context, VarName, Visitor};

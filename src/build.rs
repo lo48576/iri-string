@@ -7,7 +7,7 @@ use core::marker::PhantomData;
 
 #[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::ToString;
 
 use crate::format::Censored;

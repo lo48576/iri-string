@@ -3,11 +3,11 @@
 use core::fmt::{self, Write as _};
 use core::ops::Range;
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::borrow::ToOwned;
 #[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use crate::components::AuthorityComponents;
