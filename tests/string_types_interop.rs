@@ -2,9 +2,9 @@
 
 use iri_string::types::*;
 
-fn assert_convertible<T: ?Sized>(source: &str)
+fn assert_convertible<T>(source: &str)
 where
-    T: PartialEq<str> + core::fmt::Debug,
+    T: ?Sized + PartialEq<str> + core::fmt::Debug,
     for<'a> &'a T: TryFrom<&'a str>,
     for<'a> <&'a T as TryFrom<&'a str>>::Error: core::fmt::Debug,
 {
@@ -14,9 +14,9 @@ where
     }
 }
 
-fn assert_non_convertible<T: ?Sized>(source: &str)
+fn assert_non_convertible<T>(source: &str)
 where
-    T: PartialEq<str> + core::fmt::Debug,
+    T: ?Sized + PartialEq<str> + core::fmt::Debug,
     for<'a> &'a T: TryFrom<&'a str>,
     for<'a> <&'a T as TryFrom<&'a str>>::Error: core::fmt::Debug,
 {

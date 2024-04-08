@@ -1,7 +1,5 @@
 //! Fragment string.
 
-use core::convert::TryFrom;
-
 use crate::{
     spec::Spec,
     validate::{fragment, Error},

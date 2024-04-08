@@ -4,7 +4,7 @@ use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 #[cfg(feature = "alloc")]

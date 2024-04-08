@@ -1,8 +1,6 @@
 //! IRI reference.
 
-use core::convert::TryFrom;
-
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use crate::components::AuthorityComponents;

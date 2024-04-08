@@ -3,7 +3,7 @@
 //! Note that functions in this module may operates on raw `&str` types.
 //! It is caller's responsilibility to guarantee that the given string satisfies the precondition.
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 #[cfg(feature = "alloc")]

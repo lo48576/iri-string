@@ -1,7 +1,5 @@
 //! Query string.
 
-use core::convert::TryFrom;
-
 use crate::{
     spec::Spec,
     validate::{query, Error},

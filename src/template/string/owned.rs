@@ -2,8 +2,12 @@
 
 use core::fmt;
 
-use alloc::borrow::{Cow, ToOwned};
+use alloc::borrow::Cow;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::borrow::ToOwned;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use crate::template::error::{CreationError, Error, ErrorKind};
@@ -241,9 +245,9 @@ impl fmt::Display for UriTemplateString {
 mod __serde_owned {
     use super::UriTemplateString;
 
-    use core::{convert::TryFrom, fmt};
+    use core::fmt;
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "alloc", feature = "serde", not(feature = "std")))]
     use alloc::string::String;
 
     use serde::{

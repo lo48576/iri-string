@@ -4,6 +4,7 @@
 extern crate alloc;
 
 use alloc::format;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use iri_string::spec::Spec;

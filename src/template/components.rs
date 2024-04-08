@@ -54,10 +54,6 @@ impl<'a> ExprBody<'a> {
     }
 }
 
-/// Literal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct Literal<'a>(&'a str);
-
 /// Variable name.
 // QUESTION: Should hexdigits in percent-encoded triplets be compared case sensitively?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
