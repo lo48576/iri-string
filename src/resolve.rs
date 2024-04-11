@@ -80,7 +80,7 @@
 use crate::components::RiReferenceComponents;
 use crate::normalize::{NormalizationInput, Normalized};
 use crate::spec::Spec;
-use crate::types::{RiAbsoluteStr, RiReferenceStr, RiStr};
+use crate::types::{RiAbsoluteStr, RiQueryStr, RiReferenceStr, RiStr};
 
 /// A resolver against the fixed base.
 #[derive(Debug, Clone, Copy)]
@@ -140,6 +140,168 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
         // and the type of `base_components` does not allow modification of the
         // content after it is created.
         unsafe { RiAbsoluteStr::new_maybe_unchecked(self.base_components.iri().as_str()) }
+    }
+}
+
+/// Components getters.
+///
+/// These getters are more efficient than calling through the result of `.base()`.
+impl<'a, S: Spec> FixedBaseResolver<'a, S> {
+    /// Returns the scheme.
+    ///
+    /// The following colon is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let base = IriAbsoluteStr::new("http://example.com/base/?query")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// assert_eq!(resolver.scheme_str(), "http");
+    /// assert_eq!(base.scheme_str(), "http");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn scheme_str(&self) -> &str {
+        let scheme_end = self
+            .base_components
+            .scheme_end
+            .expect("[validity] absolute IRI should have the scheme part")
+            .get();
+        &self.base_components.iri().as_str()[..scheme_end]
+    }
+
+    /// Returns the authority.
+    ///
+    /// The leading `//` is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let base = IriAbsoluteStr::new("http://user:pass@example.com/base/?query")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// assert_eq!(resolver.authority_str(), Some("user:pass@example.com"));
+    /// assert_eq!(base.authority_str(), Some("user:pass@example.com"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    pub fn authority_str(&self) -> Option<&str> {
+        let authority_end = self.base_components.authority_end?.get();
+        let scheme_end = self
+            .base_components
+            .scheme_end
+            .expect("[validity] absolute IRI should have the scheme part")
+            .get();
+        // +3: "://".len()
+        let authority_start = scheme_end + 3;
+        Some(&self.base_components.iri().as_str()[authority_start..authority_end])
+    }
+
+    /// Returns the path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let base = IriAbsoluteStr::new("http://user:pass@example.com/base/?query")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// assert_eq!(resolver.path_str(), "/base/");
+    /// assert_eq!(base.path_str(), "/base/");
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[must_use]
+    pub fn path_str(&self) -> &str {
+        let iri = self.base_components.iri();
+
+        // -1: "?".len() and "#".len()
+        let path_end = self
+            .base_components
+            .query_start
+            .or(self.base_components.fragment_start)
+            .map_or(iri.len(), |v| v.get() - 1);
+        let path_start = self
+            .base_components
+            .authority_end
+            .unwrap_or_else(|| {
+                self.base_components
+                    .scheme_end
+                    .expect("[validity] absolute IRI should have the scheme part")
+            })
+            .get();
+
+        &iri.as_str()[path_start..path_end]
+    }
+
+    /// Returns the query.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::{IriAbsoluteStr, IriQueryStr};
+    ///
+    /// let base = IriAbsoluteStr::new("http://user:pass@example.com/base/?query")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    /// let query = IriQueryStr::new("query")?;
+    ///
+    /// assert_eq!(resolver.query(), Some(query));
+    /// assert_eq!(base.query(), Some(query));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query(&self) -> Option<&RiQueryStr<S>> {
+        let query_raw = self.query_str()?;
+        let query = RiQueryStr::new(query_raw)
+            .expect("[validity] must be valid query if present in an absolute-IRI");
+        Some(query)
+    }
+
+    /// Returns the query in a raw string slice.
+    ///
+    /// The leading question mark (`?`) is truncated.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::resolve::FixedBaseResolver;
+    /// use iri_string::types::IriAbsoluteStr;
+    ///
+    /// let base = IriAbsoluteStr::new("http://user:pass@example.com/base/?query")?;
+    /// let resolver = FixedBaseResolver::new(base);
+    ///
+    /// assert_eq!(resolver.query_str(), Some("query"));
+    /// assert_eq!(base.query_str(), Some("query"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn query_str(&self) -> Option<&str> {
+        let query_start = self.base_components.query_start?.get();
+        assert!(
+            self.base_components.fragment_start.is_none(),
+            "[validity] absolute-IRI should have no fragment part"
+        );
+
+        Some(&self.base_components.iri().as_str()[query_start..])
     }
 }
 
