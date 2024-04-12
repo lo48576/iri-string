@@ -47,25 +47,29 @@ impl Splitter {
 
     /// Decomposes an IRI into five major components: scheme, authority, path, query, and fragment.
     #[must_use]
-    pub(crate) fn split_into_major(
+    fn split_into_major(
         self,
         s: &str,
     ) -> (Option<&str>, Option<&str>, &str, Option<&str>, Option<&str>) {
         let (scheme, next_of_scheme) = match self.scheme_end {
+            // +1: ":".len()
             Some(end) => (Some(&s[..end.get()]), end.get() + 1),
             None => (None, 0),
         };
         let (authority, next_of_authority) = match self.authority_end {
+            // +2: "//".len()
             Some(end) => (Some(&s[(next_of_scheme + 2)..end.get()]), end.get()),
             None => (None, next_of_scheme),
         };
         let (fragment, end_of_prev_of_fragment) = match self.fragment_start {
+            // -1: "#".len()
             Some(start) => (Some(&s[start.get()..]), start.get() - 1),
             None => (None, s.len()),
         };
         let (query, end_of_path) = match self.query_start {
             Some(start) => (
                 Some(&s[start.get()..end_of_prev_of_fragment]),
+                // -1: "?".len()
                 start.get() - 1,
             ),
             None => (None, end_of_prev_of_fragment),
