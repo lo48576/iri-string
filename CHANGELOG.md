@@ -8,6 +8,7 @@
 * Move `template::VarName` type into `template::context` module and deprecate the old name.
 * Add `template::context::VarName::new()` method.
 * Add component getters to `resolve::FixedBaseResolver`.
+* Fix some lint warnings detected by newer clippy.
 
 ### Added
 * Add `new_unchecked()` methods to string types.
