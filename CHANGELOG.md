@@ -2,10 +2,13 @@
 
 ## [Unreleased]
 
+## [0.7.1]
+
 * Add `new_unchecked()` methods to string types.
 * Move `template::VarName` type into `template::context` module and deprecate the old name.
 * Add `template::context::VarName::new()` method.
 * Add component getters to `resolve::FixedBaseResolver`.
+* Fix some lint warnings detected by newer clippy.
 
 ### Added
 * Add `new_unchecked()` methods to string types.
@@ -910,7 +913,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.1...develop>
+[0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
 [0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
 [0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.6.0>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>

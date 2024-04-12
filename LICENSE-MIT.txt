@@ -1,4 +1,4 @@
-Copyright 2019-2022 YOSHIOKA Takuma
+Copyright 2019-2024 YOSHIOKA Takuma
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
