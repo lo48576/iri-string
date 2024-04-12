@@ -7,7 +7,7 @@ pub(crate) mod authority;
 use core::cmp::Ordering;
 use core::num::NonZeroUsize;
 
-use crate::components::RiReferenceComponents;
+use crate::components::{RiReferenceComponents, Splitter};
 use crate::format::eq_str_display;
 use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost, NormalizednessCheckMode};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
@@ -91,52 +91,48 @@ fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
 pub(crate) fn decompose_iri_reference<S: Spec>(
     i: &RiReferenceStr<S>,
 ) -> RiReferenceComponents<'_, S> {
-    ///// Inner function to avoid unnecessary monomorphizations on `S`.
-    //fn decompose(i: &str) -> (Option<&str>, Option<&str>, &str, Option<&str>, Option<&str>) {
-    //    let (i, scheme) = scheme_colon_opt(i);
-    //    let (i, authority) = slash_slash_authority_opt(i);
-    //    let (i, path) = until_query(i);
-    //    let (query, fragment) = decompose_query_and_fragment(i);
-    //    (scheme, authority, path, query, fragment)
-    //}
-
     /// Inner function to avoid unnecessary monomorphizations on `S`.
-    fn decompose(
-        i: &str,
-    ) -> (
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-    ) {
+    fn decompose(i: &str) -> Splitter {
         let len = i.len();
-        let (i, scheme) = scheme_colon_opt(i);
-        let scheme_end = scheme.and_then(|s| NonZeroUsize::new(s.len()));
-        let authority_start = len - i.len() + 2;
-        let (i, authority) = slash_slash_authority_opt(i);
-        let authority_end = authority.and_then(|s| NonZeroUsize::new(authority_start + s.len()));
-        let (i, _path) = until_query(i);
-        let next_of_path = len - i.len() + 1;
-        let (query, fragment) = decompose_query_and_fragment(i);
-        let (query_start, fragment_start) = match (query, fragment) {
-            (Some(query), Some(_fragment)) => (
-                NonZeroUsize::new(next_of_path),
-                NonZeroUsize::new(next_of_path + query.len() + 1),
-            ),
-            (Some(_query), None) => (NonZeroUsize::new(next_of_path), None),
-            (None, Some(_fragment)) => (None, NonZeroUsize::new(next_of_path)),
-            (None, None) => (None, None),
+
+        let (i, scheme_end) = {
+            let (i, scheme) = scheme_colon_opt(i);
+            let end = scheme.and_then(|s| NonZeroUsize::new(s.len()));
+            (i, end)
         };
-        (scheme_end, authority_end, query_start, fragment_start)
+        let (i, authority_end) = {
+            // 2: "//".len()
+            let start = len - i.len() + 2;
+            // `authority` does not contain the two slashes of `://'.
+            let (i, authority) = slash_slash_authority_opt(i);
+            let end = authority.and_then(|s| NonZeroUsize::new(start + s.len()));
+            (i, end)
+        };
+        let (i, _path) = until_query(i);
+
+        let (query_start, fragment_start) = {
+            // This could theoretically be zero if `len` is `usize::MAX` and
+            // `i` has neither a query nor a fragment. However, this is
+            // practically impossible.
+            let after_first_prefix = NonZeroUsize::new((len - i.len()).wrapping_add(1));
+
+            let (query, fragment) = decompose_query_and_fragment(i);
+            match (query.is_some(), fragment) {
+                (true, Some(fragment)) => {
+                    (after_first_prefix, NonZeroUsize::new(len - fragment.len()))
+                }
+                (true, None) => (after_first_prefix, None),
+                (false, Some(_fragment)) => (None, after_first_prefix),
+                (false, None) => (None, None),
+            }
+        };
+
+        Splitter::new(scheme_end, authority_end, query_start, fragment_start)
     }
 
-    let (scheme_end, authority_end, query_start, fragment_start) = decompose(i.as_str());
     RiReferenceComponents {
         iri: i,
-        scheme_end,
-        authority_end,
-        query_start,
-        fragment_start,
+        splitter: decompose(i.as_str()),
     }
 }
 
