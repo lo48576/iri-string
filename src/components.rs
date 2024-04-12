@@ -3,6 +3,7 @@
 mod authority;
 
 use core::num::NonZeroUsize;
+use core::ops::{Range, RangeTo};
 
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
@@ -54,6 +55,53 @@ impl Splitter {
         };
         let path = &s[next_of_authority..end_of_path];
         (scheme, authority, path, query, fragment)
+    }
+
+    /// Returns the range for the scheme part.
+    #[inline]
+    #[must_use]
+    pub(crate) fn scheme_range(self) -> Option<RangeTo<usize>> {
+        self.scheme_end.map(|end| ..end.get())
+    }
+
+    /// Returns the range for the authority part.
+    #[inline]
+    #[must_use]
+    pub(crate) fn authority_range(self) -> Option<Range<usize>> {
+        let end = self.authority_end?.get();
+        // 2: "//".len()
+        // +3: "://".len()
+        let start = self.scheme_end.map_or(2, |v| v.get() + 3);
+        Some(start..end)
+    }
+
+    /// Returns the range for the path part.
+    #[inline]
+    #[must_use]
+    pub(crate) fn path_range(self, full_len: usize) -> Range<usize> {
+        // -1: "?".len() and "#".len()
+        let end = self
+            .query_start
+            .or(self.fragment_start)
+            .map_or(full_len, |v| v.get() - 1);
+        let start = self.authority_end.map_or_else(
+            // +1: ":".len()
+            || self.scheme_end.map_or(0, |v| v.get() + 1),
+            NonZeroUsize::get,
+        );
+
+        start..end
+    }
+
+    /// Returns the range for the query part excluding a prefix `?`.
+    #[inline]
+    #[must_use]
+    pub(crate) fn query_range(self, full_len: usize) -> Option<Range<usize>> {
+        let start = self.query_start?.get();
+        // -1: "#".len()
+        let end = self.fragment_start.map_or(full_len, |v| v.get() - 1);
+
+        Some(start..end)
     }
 }
 

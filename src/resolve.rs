@@ -168,13 +168,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[inline]
     #[must_use]
     pub fn scheme_str(&self) -> &str {
-        let scheme_end = self
+        let range = self
             .base_components
             .splitter
-            .scheme_end
-            .expect("[validity] absolute IRI should have the scheme part")
-            .get();
-        &self.base_components.iri().as_str()[..scheme_end]
+            .scheme_range()
+            .expect("[validity] absolute IRI should have the scheme part");
+        &self.base_components.iri().as_str()[range]
     }
 
     /// Returns the authority.
@@ -197,16 +196,8 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// ```
     #[must_use]
     pub fn authority_str(&self) -> Option<&str> {
-        let authority_end = self.base_components.splitter.authority_end?.get();
-        let scheme_end = self
-            .base_components
-            .splitter
-            .scheme_end
-            .expect("[validity] absolute IRI should have the scheme part")
-            .get();
-        // +3: "://".len()
-        let authority_start = scheme_end + 3;
-        Some(&self.base_components.iri().as_str()[authority_start..authority_end])
+        let range = self.base_components.splitter.authority_range()?;
+        Some(&self.base_components.iri().as_str()[range])
     }
 
     /// Returns the path.
@@ -228,27 +219,8 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[must_use]
     pub fn path_str(&self) -> &str {
         let iri = self.base_components.iri();
-
-        // -1: "?".len() and "#".len()
-        let path_end = self
-            .base_components
-            .splitter
-            .query_start
-            .or(self.base_components.splitter.fragment_start)
-            .map_or(iri.len(), |v| v.get() - 1);
-        let path_start = self
-            .base_components
-            .splitter
-            .authority_end
-            .unwrap_or_else(|| {
-                self.base_components
-                    .splitter
-                    .scheme_end
-                    .expect("[validity] absolute IRI should have the scheme part")
-            })
-            .get();
-
-        &iri.as_str()[path_start..path_end]
+        let range = self.base_components.splitter.path_range(iri.len());
+        &iri.as_str()[range]
     }
 
     /// Returns the query.
@@ -300,13 +272,9 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[inline]
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
-        let query_start = self.base_components.splitter.query_start?.get();
-        assert!(
-            self.base_components.splitter.fragment_start.is_none(),
-            "[validity] absolute-IRI should have no fragment part"
-        );
-
-        Some(&self.base_components.iri().as_str()[query_start..])
+        let iri = self.base_components.iri.as_str();
+        let range = self.base_components.splitter.query_range(iri.len())?;
+        Some(&iri[range])
     }
 }
 
