@@ -1,8 +1,6 @@
 //! IRI reference.
 
-use core::convert::TryFrom;
-
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use crate::components::AuthorityComponents;
@@ -119,10 +117,11 @@ impl<S: Spec> RiReferenceStr<S> {
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
         // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
-        <&RiStr<S>>::try_from(self.as_str()).map_err(|_| unsafe {
-            // This is safe because of the syntax rule `IRI-reference = IRI / irelative-ref`.
-            // It says that if an IRI reference is not an IRI, then it is a relative IRI.
-            RiRelativeStr::new_maybe_unchecked(self.as_str())
+
+        <&RiStr<S>>::try_from(self.as_str()).map_err(|_| {
+            // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
+            // See the RFC 3987 syntax rule `IRI-reference = IRI / irelative-ref`.
+            unsafe { RiRelativeStr::new_maybe_unchecked(self.as_str()) }
         })
     }
 
@@ -345,10 +344,11 @@ impl<S: Spec> RiReferenceStr<S> {
     #[inline]
     #[must_use]
     pub fn query(&self) -> Option<&RiQueryStr<S>> {
-        trusted_parser::extract_query(self.as_str()).map(|query| unsafe {
-            // This is safe because `extract_query` returns the query part of an IRI, and the
-            // returned string is substring of the source IRI.
-            RiQueryStr::new_maybe_unchecked(query)
+        trusted_parser::extract_query(self.as_str()).map(|query| {
+            // SAFETY: `extract_query` returns the query part of an IRI, and the
+            // returned string should have only valid characters since is the
+            // substring of the source IRI.
+            unsafe { RiQueryStr::new_maybe_unchecked(query) }
         })
     }
 
@@ -449,10 +449,11 @@ impl<S: Spec> RiReferenceStr<S> {
     /// ```
     #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        trusted_parser::extract_fragment(self.as_str()).map(|fragment| unsafe {
-            // This is safe because `extract_fragment` returns the fragment part of an IRI, and the
-            // returned string is substring of the source IRI.
-            RiFragmentStr::new_maybe_unchecked(fragment)
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| {
+            // SAFETY: `extract_fragment` returns the fragment part of an IRI,
+            // and the returned string should have only valid characters since
+            // is the substring of the source IRI.
+            unsafe { RiFragmentStr::new_maybe_unchecked(fragment) }
         })
     }
 
@@ -505,16 +506,12 @@ impl<S: Spec> RiReferenceString<S> {
         // >
         // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
         if iri::<S>(&s).is_ok() {
-            Ok(unsafe {
-                // This is safe because `s` is already validated by condition of `if`.
-                RiString::new_always_unchecked(s)
-            })
+            // SAFETY: just checked `s` is valid as an IRI.
+            Ok(unsafe { RiString::new_always_unchecked(s) })
         } else {
-            Err(unsafe {
-                // This is safe because of the syntax rule `IRI-reference = IRI / irelative-ref`.
-                // It says that if an IRI reference is not an IRI, then it is a relative IRI.
-                RiRelativeString::new_maybe_unchecked(s)
-            })
+            // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
+            // See the RFC 3987 syntax rule `IRI-reference = IRI / irelative-ref`.
+            Err(unsafe { RiRelativeString::new_maybe_unchecked(s) })
         }
     }
 
@@ -574,9 +571,9 @@ impl<S: Spec> RiReferenceString<S> {
             None => return,
         };
         let separator_colon = pw_range.start - 1;
+        // SAFETY: the IRI must be valid after the password component and
+        // the leading separator colon is removed.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component and
-            // the leading separator colon is removed.
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
             debug_assert!(
@@ -627,13 +624,15 @@ impl<S: Spec> RiReferenceString<S> {
             Some(b':'),
             "[validity] the password component must be prefixed with a separator colon"
         );
+        // SAFETY: the IRI must be valid after the password component is
+        // replaced with the empty password.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component is removed.
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
             debug_assert!(
                 RiReferenceStr::<S>::new(buf).is_ok(),
-                "[validity] the IRI must be valid after the password component is removed"
+                "[validity] the IRI must be valid after the password component \
+                 is replaced with the empty password"
             );
         }
     }

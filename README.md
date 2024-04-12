@@ -37,7 +37,7 @@ See the [documentation](https://docs.rs/iri-string) for details.
 
 #### memchr
 * `memchr`
-    + Enable optimization for internal parsers, using [`memchr`] crate.
+    + Enables optimization for internal parsers, using [`memchr`] crate.
 
 [`memchr`]: https://crates.io/crates/memchr
 

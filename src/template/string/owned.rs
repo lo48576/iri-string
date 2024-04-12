@@ -2,8 +2,12 @@
 
 use core::fmt;
 
-use alloc::borrow::{Cow, ToOwned};
+use alloc::borrow::Cow;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::borrow::ToOwned;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 use crate::template::error::{CreationError, Error, ErrorKind};
@@ -36,6 +40,28 @@ pub struct UriTemplateString {
 }
 
 impl UriTemplateString {
+    /// Creates a new string without validation.
+    ///
+    /// This does not validate the given string, so it is caller's
+    /// responsibility to ensure the given string is valid.
+    ///
+    /// # Safety
+    ///
+    /// The given string must be syntactically valid as `Self` type.
+    /// If not, any use of the returned value or the call of this
+    /// function itself may result in undefined behavior.
+    #[inline]
+    #[must_use]
+    pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+        // The construction itself can be written in safe Rust, but
+        // every other place including unsafe functions expects
+        // `self.inner` to be syntactically valid as `Self`. In order to
+        // make them safe, the construction should validate the value
+        // or at least should require users to validate the value by
+        // making the function `unsafe`.
+        Self { inner: s }
+    }
+
     /// Shrinks the capacity of the inner buffer to match its length.
     #[inline]
     pub fn shrink_to_fit(&mut self) {
@@ -76,10 +102,9 @@ impl AsRef<str> for UriTemplateString {
 impl AsRef<UriTemplateStr> for UriTemplateString {
     #[inline]
     fn as_ref(&self) -> &UriTemplateStr {
-        unsafe {
-            // This is safe because `&self` and `self.as_ref()` must be valid.
-            UriTemplateStr::new_always_unchecked(AsRef::<str>::as_ref(self))
-        }
+        // SAFETY: `UriTemplateString and `UriTemplateStr` requires same validation,
+        // so the content of `self: &UriTemplateString` must be valid as `UriTemplateStr`.
+        unsafe { UriTemplateStr::new_always_unchecked(AsRef::<str>::as_ref(self)) }
     }
 }
 
@@ -135,6 +160,10 @@ impl From<UriTemplateString> for Box<UriTemplateStr> {
     fn from(s: UriTemplateString) -> Box<UriTemplateStr> {
         let inner: String = s.into();
         let buf = Box::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Box<str>` and `Box<UriTemplateStr>` are
+        // compatible. Additionally, `UriTemplateString` and `UriTemplateStr`
+        // require the same syntax.
         unsafe {
             let raw: *mut str = Box::into_raw(buf);
             Box::<UriTemplateStr>::from_raw(raw as *mut UriTemplateStr)
@@ -216,9 +245,9 @@ impl fmt::Display for UriTemplateString {
 mod __serde_owned {
     use super::UriTemplateString;
 
-    use core::{convert::TryFrom, fmt};
+    use core::fmt;
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "alloc", feature = "serde", not(feature = "std")))]
     use alloc::string::String;
 
     use serde::{

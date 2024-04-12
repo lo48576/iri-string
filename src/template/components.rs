@@ -3,6 +3,8 @@
 use core::mem;
 
 use crate::parser::str::find_split_hole;
+use crate::template::error::Error;
+use crate::template::parser::validate as validate_parser;
 
 /// Expression body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,10 +54,6 @@ impl<'a> ExprBody<'a> {
     }
 }
 
-/// Literal.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(super) struct Literal<'a>(&'a str);
-
 /// Variable name.
 // QUESTION: Should hexdigits in percent-encoded triplets be compared case sensitively?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -69,8 +67,31 @@ impl<'a> VarName<'a> {
     /// The given string should be a valid variable name.
     #[inline]
     #[must_use]
-    pub(super) fn new(s: &'a str) -> Self {
+    pub(super) fn from_trusted(s: &'a str) -> Self {
         Self(s)
+    }
+
+    /// Creates a `VarName` from the string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::template::Error;
+    /// use iri_string::template::context::VarName;
+    ///
+    /// let name = VarName::new("hello")?;
+    /// assert_eq!(name.as_str(), "hello");
+    ///
+    /// assert!(VarName::new("0+non-variable-name").is_err());
+    ///
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    pub fn new(s: &'a str) -> Result<Self, Error> {
+        match validate_parser::validate_varname(s, 0) {
+            Ok(_) => Ok(Self::from_trusted(s)),
+            Err(e) => Err(e),
+        }
     }
 
     /// Returns the varibale name.
@@ -115,7 +136,7 @@ impl<'a> VarSpec<'a> {
         if let Some(varname) = s.strip_suffix('*') {
             // `varname "*"`.
             return Self {
-                name: VarName::new(varname),
+                name: VarName::from_trusted(varname),
                 modifier: Modifier::Explode,
             };
         }
@@ -126,7 +147,7 @@ impl<'a> VarSpec<'a> {
                     .parse()
                     .expect("[precondition] the input should be valid `varspec`");
                 Self {
-                    name: VarName::new(varname),
+                    name: VarName::from_trusted(varname),
                     modifier: Modifier::MaxLen(max_len),
                 }
             }

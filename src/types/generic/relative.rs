@@ -255,10 +255,11 @@ impl<S: Spec> RiRelativeStr<S> {
     #[inline]
     #[must_use]
     pub fn query(&self) -> Option<&RiQueryStr<S>> {
-        trusted_parser::extract_query(self.as_str()).map(|query| unsafe {
-            // This is safe because `extract_query` returns the query part of an IRI, and the
-            // returned string is substring of the source IRI.
-            RiQueryStr::new_maybe_unchecked(query)
+        trusted_parser::extract_query(self.as_str()).map(|query| {
+            // SAFETY: `extract_query` returns the query part of an IRI, and the
+            // returned string should have only valid characters since is the
+            // substring of the source IRI.
+            unsafe { RiQueryStr::new_maybe_unchecked(query) }
         })
     }
 
@@ -415,9 +416,9 @@ impl<S: Spec> RiRelativeString<S> {
             None => return,
         };
         let separator_colon = pw_range.start - 1;
+        // SAFETY: removing password component and the leading colon preserves
+        // the IRI still syntactically valid.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component and
-            // the leading separator colon is removed.
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
             debug_assert!(
@@ -468,13 +469,15 @@ impl<S: Spec> RiRelativeString<S> {
             Some(b':'),
             "[validity] the password component must be prefixed with a separator colon"
         );
+        // SAFETY: the IRI must be valid after the password component is
+        // replaced with the empty password.
         unsafe {
-            // SAFETY: the IRI must be valid after the password component is removed.
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
             debug_assert!(
                 RiRelativeStr::<S>::new(buf).is_ok(),
-                "[validity] the IRI must be valid after the password component is removed"
+                "[validity] the IRI must be valid after the password component \
+                 is replaced with the empty password"
             );
         }
     }

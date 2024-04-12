@@ -2,6 +2,45 @@
 
 ## [Unreleased]
 
+## [0.7.1]
+
+* Add `new_unchecked()` methods to string types.
+* Move `template::VarName` type into `template::context` module and deprecate the old name.
+* Add `template::context::VarName::new()` method.
+* Add component getters to `resolve::FixedBaseResolver`.
+* Fix some lint warnings detected by newer clippy.
+
+### Added
+* Add `new_unchecked()` methods to string types.
+    + List of added methods:
+        - `template::UriTemplateStr::new_unchecked()`
+        - `template::UriTemplateString::new_unchecked()`
+        - `types::RiAbsoluteStr::new_unchecked()`
+        - `types::RiAbsoluteString::new_unchecked()`
+        - `types::RiFragmentStr::new_unchecked()`
+        - `types::RiFragmentString::new_unchecked()`
+        - `types::RiQueryStr::new_unchecked()`
+        - `types::RiQueryString::new_unchecked()`
+        - `types::RiReferenceStr::new_unchecked()`
+        - `types::RiReferenceString::new_unchecked()`
+        - `types::RiRelativeStr::new_unchecked()`
+        - `types::RiRelativeString::new_unchecked()`
+        - `types::RiStr::new_unchecked()`
+        - `types::RiString::new_unchecked()`
+* Add `template::context::VarName::new()` method.
+* Add component getters to `resolve::FixedBaseResolver`.
+    + List of added methods:
+        - `resolve::FixedBaseResolver::scheme_str()`
+        - `resolve::FixedBaseResolver::authority_str()`
+        - `resolve::FixedBaseResolver::path_str()`
+        - `resolve::FixedBaseResolver::query()`
+        - `resolve::FixedBaseResolver::query_str()`
+        - `resolve::FixedBaseResolver::fragment_str()`
+
+### Changed (non-breaking)
+* Move `template::VarName` type into `template::context` module and deprecate the old name.
+    + The old name (`template::VarName`) is still available while it is marked as deprecated.
+
 ## [0.7.0]
 
 * Add `template` module that contains URI Template
@@ -874,7 +913,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.0...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.1...develop>
+[0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
 [0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
 [0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.6.0>
 [0.5.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.5.6>

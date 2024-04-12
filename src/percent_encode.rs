@@ -42,7 +42,7 @@ enum Context {
 
 /// A proxy to percent-encode a string.
 ///
-/// Type aliases [`PercentEncodedForUri`] and [`PercentEncodedForUri`] are provided.
+/// Type aliases [`PercentEncodedForIri`] and [`PercentEncodedForUri`] are provided.
 /// You can use them to make the expression simpler, for example write
 /// `PercentEncodedForUri::from_path(foo)` instead of
 /// `PercentEncoded::<_, UriSpec>::from_path(foo)`.

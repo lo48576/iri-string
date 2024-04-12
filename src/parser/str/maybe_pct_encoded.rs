@@ -266,11 +266,7 @@ impl DecoderBuffer {
     ///
     /// * `buf` should be more than 12 bytes. If not, this method may panic.
     #[must_use]
-    pub(crate) fn push_encoded<'a>(
-        &'a mut self,
-        buf: &mut [u8],
-        s: &'_ str,
-    ) -> (usize, PushResult) {
+    pub(crate) fn push_encoded(&mut self, buf: &mut [u8], s: &str) -> (usize, PushResult) {
         debug_assert!(
             buf.len() >= 12,
             "[internal precondition] destination buffer should be at least 12 bytes"

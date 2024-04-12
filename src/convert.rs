@@ -4,7 +4,7 @@ use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
 #[cfg(feature = "alloc")]
@@ -191,9 +191,9 @@ fn percent_encode_bytes(f: &mut fmt::Formatter<'_>, s: &str, buf: &mut [u8]) -> 
         }
         let num_dest_written = (src_len - bytes.len()) * 3;
         let buf_filled = &buf[..num_dest_written];
+        // SAFETY: `b'%'` and `HEXDIGITS[_]` are all ASCII characters, so
+        // `buf_filled` is filled with ASCII characters and is valid UTF-8 bytes.
         unsafe {
-            // SAFETY: `b'%'` and `HEXDIGITS[_]` are all ASCII characters,
-            // so the string is valid UTF-8 bytes.
             debug_assert!(core::str::from_utf8(buf_filled).is_ok());
             core::str::from_utf8_unchecked(buf_filled)
         }

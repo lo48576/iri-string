@@ -825,11 +825,11 @@ impl VisitorSealed for TypeVisitor<'_> {}
 
 impl<'a> Visitor for TypeVisitor<'a> {
     type Result = ValueType;
-    type ListVisitor = ListTypeVisitor<'a>;
-    type AssocVisitor = AssocTypeVisitor<'a>;
+    type ListVisitor = ListTypeVisitor;
+    type AssocVisitor = AssocTypeVisitor;
 
     #[inline]
-    fn var_name(&self) -> VarName<'_> {
+    fn var_name(&self) -> VarName<'a> {
         self.var_name
     }
     #[inline]
@@ -842,20 +842,20 @@ impl<'a> Visitor for TypeVisitor<'a> {
     }
     #[inline]
     fn visit_list(self) -> Self::ListVisitor {
-        ListTypeVisitor(self)
+        ListTypeVisitor
     }
     #[inline]
     fn visit_assoc(self) -> Self::AssocVisitor {
-        AssocTypeVisitor(self)
+        AssocTypeVisitor
     }
 }
 
 /// Visitor to retrieve effective type of a list variable.
-struct ListTypeVisitor<'a>(TypeVisitor<'a>);
+struct ListTypeVisitor;
 
-impl VisitorSealed for ListTypeVisitor<'_> {}
+impl VisitorSealed for ListTypeVisitor {}
 
-impl<'a> ListVisitor for ListTypeVisitor<'a> {
+impl ListVisitor for ListTypeVisitor {
     type Result = ValueType;
 
     /// Visits an item.
@@ -872,11 +872,11 @@ impl<'a> ListVisitor for ListTypeVisitor<'a> {
 }
 
 /// Visitor to retrieve effective type of an associative array variable.
-struct AssocTypeVisitor<'a>(TypeVisitor<'a>);
+struct AssocTypeVisitor;
 
-impl VisitorSealed for AssocTypeVisitor<'_> {}
+impl VisitorSealed for AssocTypeVisitor {}
 
-impl<'a> AssocVisitor for AssocTypeVisitor<'a> {
+impl AssocVisitor for AssocTypeVisitor {
     type Result = ValueType;
 
     /// Visits an item.

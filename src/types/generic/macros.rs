@@ -17,6 +17,9 @@ macro_rules! impl_from_slice_into_smartptr {
             fn from(s: &$ty<S>) -> Self {
                 let inner: &str = s.as_str();
                 let buf = $($smartptr)::* ::<str>::from(inner);
+                // SAFETY: `$ty<S>` has `repr(transparent)` attribute, so the
+                // memory layouts of `$smartptr<str>` and `$smartptr<$ty<S>>`
+                // are compatible.
                 unsafe {
                     let raw: *$mut str = $($smartptr)::* ::into_raw(buf);
                     $($smartptr)::* ::<$ty<S>>::from_raw(raw as *$mut $ty<S>)
@@ -121,6 +124,7 @@ macro_rules! impl_cmp2_as_str {
 /// Methods to be implemented:
 ///
 /// * `pub fn new()`
+/// * `pub fn new_unchecked()`
 /// * `pub(crate) fn new_maybe_unchecked()`
 /// * `fn new_always_unchecked()`
 /// * `pub fn as_str()`
@@ -190,19 +194,38 @@ macro_rules! define_custom_string_slice {
                 core::convert::TryFrom::try_from(s)
             }
 
+            /// Creates a new string without validation.
+            ///
+            /// This does not validate the given string, so it is caller's
+            /// responsibility to ensure the given string is valid.
+            ///
+            /// # Safety
+            ///
+            /// The given string must be syntactically valid as `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
+            #[inline]
+            #[must_use]
+            pub unsafe fn new_unchecked(s: &str) -> &Self {
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`.
+                unsafe { Self::new_always_unchecked(s) }
+            }
+
             /// Creates a new string maybe without validation.
             ///
             /// This does validation on debug build.
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: &str) -> &Self {
                 debug_assert_eq!($validate::<S>(s), Ok(()));
-                // It is caller's responsibility to guarantee the given string is valid.
-                // Previous `debug_assert_eq!` will ensure the safety in debug build.
-                Self::new_always_unchecked(s)
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`. Additionally in debug build, just
+                // checked the content is actually valid by `$validate::<S>(s)`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Creates a new string without any validation.
@@ -213,11 +236,14 @@ macro_rules! define_custom_string_slice {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[inline]
             #[must_use]
             unsafe fn new_always_unchecked(s: &str) -> &Self {
-                &*(s as *const str as *const Self)
+                // SAFETY: the cast is safe since `Self` type has `repr(transparent)`
+                // attribute and the content is guaranteed as valid by the
+                // precondition of the function.
+                unsafe { &*(s as *const str as *const Self) }
             }
 
             /// Returns `&str`.
@@ -260,7 +286,7 @@ macro_rules! define_custom_string_slice {
         impl<S: crate::spec::Spec> PartialOrd for $ty<S> {
             #[inline]
             fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-                self.inner.partial_cmp(&other.inner)
+                Some(self.inner.cmp(&other.inner))
             }
         }
 
@@ -331,6 +357,7 @@ macro_rules! define_custom_string_slice {
             #[inline]
             fn try_from(s: &'a str) -> Result<Self, Self::Error> {
                 match $validate::<S>(s) {
+                    // SAFETY: just checked `s` is valid as `$ty`.
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
                     Err(e) => Err(e),
                 }
@@ -344,6 +371,7 @@ macro_rules! define_custom_string_slice {
             fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
                 let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
                 match $validate::<S>(s) {
+                    // SAFETY: just checked `s` is valid as `$ty`.
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
                     Err(e) => Err(e),
                 }
@@ -415,6 +443,7 @@ macro_rules! define_custom_string_slice {
 ///
 /// Methods to be implemented:
 ///
+/// * `pub fn new_unchecked()`
 /// * `pub(crate) fn new_maybe_unchecked()`
 /// * `pub(crate) fn new_always_unchecked()`
 /// * `pub fn shrink_to_fit()`
@@ -507,6 +536,24 @@ macro_rules! define_custom_string_owned {
         }
 
         impl<S: crate::spec::Spec> $ty<S> {
+            /// Creates a new string without validation.
+            ///
+            /// This does not validate the given string, so it is caller's
+            /// responsibility to ensure the given string is valid.
+            ///
+            /// # Safety
+            ///
+            /// The given string must be syntactically valid as `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
+            #[inline]
+            #[must_use]
+            pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`.
+                unsafe { Self::new_always_unchecked(s) }
+            }
+
             /// Creates a new string maybe without validation.
             ///
             /// This does not validate the given string at any time.
@@ -515,10 +562,16 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[inline]
             #[must_use]
             pub(crate) unsafe fn new_always_unchecked(s: alloc::string::String) -> Self {
+                // The construction itself can be written in safe Rust, but
+                // every other place including unsafe functions expects
+                // `self.inner` to be syntactically valid as `Self`. In order to
+                // make them safe, the construction should validate the value
+                // or at least should require users to validate the value by
+                // making the function `unsafe`.
                 Self {
                     _spec: core::marker::PhantomData,
                     inner: s,
@@ -531,11 +584,18 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The given string must be valid.
+            /// The given string must be syntactically valid as `Self` type.
             #[must_use]
             pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
-                debug_assert_eq!($validate::<S>(&s), Ok(()));
-                Self::new_always_unchecked(s)
+                debug_assert_eq!(
+                    $validate::<S>(&s),
+                    Ok(()),
+                    "[precondition] the given string must be valid"
+                );
+                // SAFETY: `new_always_unchecked` requires the same precondition
+                // as `new_always_unchecked`. Additionally in debug build, just
+                // checked the content is actually valid by `$validate::<S>(s)`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Returns a mutable reference to the inner string buffer.
@@ -546,7 +606,10 @@ macro_rules! define_custom_string_owned {
             ///
             /// # Safety
             ///
-            /// The content after modification must be valid.
+            /// The content after modification must be syntactically valid as
+            /// `Self` type.
+            /// If not, any use of the returned value or the call of this
+            /// function itself may result in undefined behavior.
             #[inline]
             #[must_use]
             // TODO: Use wrapper type to enforce validation on finish?
@@ -634,10 +697,9 @@ macro_rules! define_custom_string_owned {
         impl<S: crate::spec::Spec> AsRef<$slice<S>> for $ty<S> {
             #[inline]
             fn as_ref(&self) -> &$slice<S> {
-                unsafe {
-                    // This is safe because `&self` and `self.as_ref()` must be valid.
-                    $slice::new_always_unchecked(AsRef::<str>::as_ref(self))
-                }
+                // SAFETY: `$ty<S>` and `$slice<S>` requires same validation, so
+                // the content of `self: &$ty<S>` must be valid as `$slice<S>`.
+                unsafe { $slice::new_always_unchecked(AsRef::<str>::as_ref(self)) }
             }
         }
 
@@ -694,6 +756,11 @@ macro_rules! define_custom_string_owned {
             fn from(s: $ty<S>) -> alloc::boxed::Box<$slice<S>> {
                 let inner: alloc::string::String = s.into();
                 let buf = alloc::boxed::Box::<str>::from(inner);
+                // SAFETY: `$slice<S>` has `repr(transparent)` attribute, so
+                // the memory layouts of `Box<str>` and `Box<$slice<S>>` are
+                // compatible. Additionally, `$ty<S>` and `$slice<S>` require
+                // the same syntax (it is the macro user's responsibility to
+                // guarantee).
                 unsafe {
                     let raw: *mut str = alloc::boxed::Box::into_raw(buf);
                     alloc::boxed::Box::<$slice<S>>::from_raw(raw as *mut $slice<S>)
@@ -889,11 +956,10 @@ macro_rules! impl_trivial_conv_between_iri {
         impl<S: crate::spec::Spec> AsRef<$to_slice<S>> for $from_slice<S> {
             #[inline]
             fn as_ref(&self) -> &$to_slice<S> {
-                unsafe {
-                    // This should be safe.
-                    // Caller of impl_infallible_conv_between_iri!` macro is responsible for that.
-                    <$to_slice<S>>::new_maybe_unchecked(self.as_str())
-                }
+                // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
+                // The caller of `impl_trivial_conv_between_iri!` macro is
+                // responsible for guaranteeing that.
+                unsafe { <$to_slice<S>>::new_maybe_unchecked(self.as_str()) }
             }
         }
 
@@ -916,11 +982,10 @@ macro_rules! impl_trivial_conv_between_iri {
         impl<S: crate::spec::Spec> From<$from_owned<S>> for $to_owned<S> {
             #[inline]
             fn from(s: $from_owned<S>) -> $to_owned<S> {
-                unsafe {
-                    // This should be safe.
-                    // Caller of `impl_infallible_conv_between_iri!` macro is responsible for that.
-                    <$to_owned<S>>::new_maybe_unchecked(s.into())
-                }
+                // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
+                // The caller of `impl_trivial_conv_between_iri!` macro is
+                // responsible for guaranteeing that.
+                unsafe { <$to_owned<S>>::new_maybe_unchecked(s.into()) }
             }
         }
 
@@ -941,11 +1006,9 @@ macro_rules! impl_trivial_conv_between_iri {
 
             fn try_from(s: $to_owned<S>) -> Result<Self, Self::Error> {
                 match <&$from_slice<S>>::try_from(s.as_str()) {
-                    Ok(_) => Ok(unsafe {
-                        // This should be safe because `<$from_slice<S>>::try_from()` validated the
-                        // string and it was ok.
-                        <$from_owned<S>>::new_always_unchecked(s.into())
-                    }),
+                    // SAFETY: just checked `s.as_str()` is valid as `$from_slice<S>`, and it
+                    // requires the same syntax as `$from_owned<S>`.
+                    Ok(_) => Ok(unsafe { <$from_owned<S>>::new_always_unchecked(s.into()) }),
                     Err(e) => Err(crate::types::CreationError::new(e, s)),
                 }
             }

@@ -1,11 +1,10 @@
 //! Template string types.
 
-use core::convert::TryFrom;
 use core::fmt;
 
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::boxed::Box;
 #[cfg(feature = "alloc")]
 use alloc::rc::Rc;
@@ -104,6 +103,24 @@ impl UriTemplateStr {
         TryFrom::try_from(s)
     }
 
+    /// Creates a new string without validation.
+    ///
+    /// This does not validate the given string, so it is caller's
+    /// responsibility to ensure the given string is valid.
+    ///
+    /// # Safety
+    ///
+    /// The given string must be syntactically valid as `Self` type.
+    /// If not, any use of the returned value or the call of this
+    /// function itself may result in undefined behavior.
+    #[inline]
+    #[must_use]
+    pub unsafe fn new_unchecked(s: &str) -> &Self {
+        // SAFETY: `new_always_unchecked` requires the same precondition
+        // as `new_always_unchecked`.
+        unsafe { Self::new_always_unchecked(s) }
+    }
+
     /// Creates a new string without any validation.
     ///
     /// This does not validate the given string at any time.
@@ -116,7 +133,10 @@ impl UriTemplateStr {
     #[inline]
     #[must_use]
     unsafe fn new_always_unchecked(s: &str) -> &Self {
-        &*(s as *const str as *const Self)
+        // SAFETY: the cast is safe since `Self` type has `repr(transparent)`
+        // attribute and the content is guaranteed as valid by the
+        // precondition of the function.
+        unsafe { &*(s as *const str as *const Self) }
     }
 
     /// Returns the template as a plain `&str`.
@@ -184,7 +204,7 @@ impl UriTemplateStr {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
@@ -207,7 +227,7 @@ impl UriTemplateStr {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::{IriSpec, UriSpec};
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
@@ -272,6 +292,9 @@ impl From<&UriTemplateStr> for Arc<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Arc::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Arc<str>` and `Arc<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *const str = Arc::into_raw(buf);
             Self::from_raw(raw as *const UriTemplateStr)
@@ -284,6 +307,9 @@ impl From<&UriTemplateStr> for Box<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Box::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Box<str>` and `Box<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *mut str = Box::into_raw(buf);
             Self::from_raw(raw as *mut UriTemplateStr)
@@ -296,6 +322,9 @@ impl From<&UriTemplateStr> for Rc<UriTemplateStr> {
     fn from(s: &UriTemplateStr) -> Self {
         let inner: &str = s.as_str();
         let buf = Rc::<str>::from(inner);
+        // SAFETY: `UriTemplateStr` has `repr(transparent)` attribute, so
+        // the memory layouts of `Rc<str>` and `Rc<UriTemplateStr>` are
+        // compatible.
         unsafe {
             let raw: *const str = Rc::into_raw(buf);
             Self::from_raw(raw as *const UriTemplateStr)
@@ -316,6 +345,7 @@ impl<'a> TryFrom<&'a str> for &'a UriTemplateStr {
     #[inline]
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
         match validate_template_str(s) {
+            // SAFETY: just checked the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }
@@ -330,6 +360,7 @@ impl<'a> TryFrom<&'a [u8]> for &'a UriTemplateStr {
         let s = core::str::from_utf8(bytes)
             .map_err(|e| Error::new(ErrorKind::InvalidUtf8, e.valid_up_to()))?;
         match validate_template_str(s) {
+            // SAFETY: just checked the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }
@@ -352,7 +383,7 @@ impl fmt::Display for UriTemplateStr {
 mod __serde_slice {
     use super::UriTemplateStr;
 
-    use core::{convert::TryFrom, fmt};
+    use core::fmt;
 
     use serde::{
         de::{self, Visitor},

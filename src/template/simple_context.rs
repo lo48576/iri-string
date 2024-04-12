@@ -3,11 +3,12 @@
 use core::ops::ControlFlow;
 
 use alloc::collections::BTreeMap;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
+#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 
-use crate::template::context::{Context, Visitor};
-use crate::template::VarName;
+use crate::template::context::{Context, VarName, Visitor};
 
 /// Value.
 #[derive(Debug, Clone)]
@@ -54,7 +55,7 @@ impl SimpleContext {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
@@ -87,7 +88,7 @@ impl SimpleContext {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;
@@ -110,7 +111,7 @@ impl SimpleContext {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// ## [cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::{SimpleContext, Value};
@@ -147,7 +148,7 @@ impl SimpleContext {
     ///
     /// ```
     /// # use iri_string::template::Error;
-    /// #[cfg(feature = "alloc")] {
+    /// # #[cfg(feature = "alloc")] {
     /// use iri_string::spec::UriSpec;
     /// use iri_string::template::UriTemplateStr;
     /// use iri_string::template::simple_context::SimpleContext;

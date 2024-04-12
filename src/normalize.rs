@@ -81,7 +81,7 @@ use core::marker::PhantomData;
 #[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
 
-use crate::components::RiReferenceComponents;
+use crate::components::{RiReferenceComponents, Splitter};
 #[cfg(feature = "alloc")]
 use crate::format::{ToDedicatedString, ToStringFallible};
 use crate::parser::str::rfind_split_hole;
@@ -168,44 +168,29 @@ pub(crate) struct NormalizationInput<'a> {
 
 impl<'a> NormalizationInput<'a> {
     /// Creates a `NormalizedInput` from IRIs to resolve.
+    #[inline]
     #[must_use]
     pub(crate) fn with_resolution_params<S: Spec>(
         base_components: &RiReferenceComponents<'a, S>,
         reference: &'a RiReferenceStr<S>,
     ) -> Self {
-        let b = base_components;
         let r = RiReferenceComponents::from(reference);
 
-        let (r_scheme, r_authority, r_path, r_query, r_fragment) = r.to_major();
-        let (b_scheme, b_authority, b_path, b_query, _) = b.to_major();
-        let b_scheme = b_scheme.expect("[validity] non-relative IRI must have a scheme");
-
         Self::create_normalization_input(
-            r_scheme,
-            r_authority,
-            r_path,
-            r_query,
-            r_fragment,
-            b_scheme,
-            b_authority,
-            b_path,
-            b_query,
+            r.iri.as_str(),
+            &r.splitter,
+            base_components.iri.as_str(),
+            &base_components.splitter,
         )
     }
 
     /// Creates a `NormalizationInput` from components to resolve an IRI.
     #[must_use]
-    #[allow(clippy::too_many_arguments)]
     fn create_normalization_input(
-        r_scheme: Option<&'a str>,
-        r_authority: Option<&'a str>,
-        r_path: &'a str,
-        r_query: Option<&'a str>,
-        r_fragment: Option<&'a str>,
-        b_scheme: &'a str,
-        b_authority: Option<&'a str>,
-        b_path: &'a str,
-        b_query: Option<&'a str>,
+        r_iri: &'a str,
+        r: &Splitter,
+        b_iri: &'a str,
+        b: &Splitter,
     ) -> Self {
         /// The toplevel component the reference has.
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -225,22 +210,28 @@ impl<'a> NormalizationInput<'a> {
         impl RefToplevel {
             /// Choose a component from either of the reference or the base,
             /// based on the toplevel component of the reference.
-            fn choose<T>(self, component: RefToplevel, reference: T, base: T) -> T {
+            #[inline]
+            #[must_use]
+            fn choose_then<T, F, G>(self, component: RefToplevel, reference: F, base: G) -> T
+            where
+                F: FnOnce() -> T,
+                G: FnOnce() -> T,
+            {
                 if self <= component {
-                    reference
+                    reference()
                 } else {
-                    base
+                    base()
                 }
             }
         }
 
-        let ref_toplevel = if r_scheme.is_some() {
+        let ref_toplevel = if r.has_scheme() {
             RefToplevel::Scheme
-        } else if r_authority.is_some() {
+        } else if r.has_authority() {
             RefToplevel::Authority
-        } else if !r_path.is_empty() {
+        } else if !r.is_path_empty(r_iri.len()) {
             RefToplevel::Path
-        } else if r_query.is_some() {
+        } else if r.has_query() {
             RefToplevel::Query
         } else {
             RefToplevel::None
@@ -248,9 +239,10 @@ impl<'a> NormalizationInput<'a> {
 
         let path = match ref_toplevel {
             RefToplevel::Scheme | RefToplevel::Authority => {
-                Path::NeedsProcessing(PathToNormalize::from_single_path(r_path))
+                Path::NeedsProcessing(PathToNormalize::from_single_path(r.path_str(r_iri)))
             }
             RefToplevel::Path => {
+                let r_path = r.path_str(r_iri);
                 if r_path.starts_with('/') {
                     Path::NeedsProcessing(PathToNormalize::from_single_path(r_path))
                 } else {
@@ -260,7 +252,8 @@ impl<'a> NormalizationInput<'a> {
                     // > o  If the base URI has a defined authority component and an empty
                     // >    path, then return a string consisting of "/" concatenated with the
                     // >    reference's path; otherwise,
-                    let b_path = if b_authority.is_some() && b_path.is_empty() {
+                    let b_path = b.path_str(b_iri);
+                    let b_path = if b.has_authority() && b_path.is_empty() {
                         "/"
                     } else {
                         b_path
@@ -270,15 +263,26 @@ impl<'a> NormalizationInput<'a> {
                     ))
                 }
             }
-            RefToplevel::Query | RefToplevel::None => Path::Done(b_path),
+            RefToplevel::Query | RefToplevel::None => Path::Done(b.path_str(b_iri)),
         };
 
         Self {
-            scheme: r_scheme.unwrap_or(b_scheme),
-            authority: ref_toplevel.choose(RefToplevel::Authority, r_authority, b_authority),
+            scheme: r.scheme_str(r_iri).unwrap_or_else(|| {
+                b.scheme_str(b_iri)
+                    .expect("[validity] non-relative IRI must have a scheme")
+            }),
+            authority: ref_toplevel.choose_then(
+                RefToplevel::Authority,
+                || r.authority_str(r_iri),
+                || b.authority_str(b_iri),
+            ),
             path,
-            query: ref_toplevel.choose(RefToplevel::Query, r_query, b_query),
-            fragment: r_fragment,
+            query: ref_toplevel.choose_then(
+                RefToplevel::Query,
+                || r.query_str(r_iri),
+                || b.query_str(b_iri),
+            ),
+            fragment: r.fragment_str(r_iri),
             op: NormalizationOp {
                 mode: NormalizationMode::None,
             },
