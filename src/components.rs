@@ -3,7 +3,7 @@
 mod authority;
 
 use core::num::NonZeroUsize;
-use core::ops::{Range, RangeTo};
+use core::ops::{Range, RangeFrom, RangeTo};
 
 use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
@@ -85,6 +85,20 @@ impl Splitter {
         self.scheme_end.map(|end| ..end.get())
     }
 
+    /// Returns the scheme as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn scheme_str<'a>(&self, s: &'a str) -> Option<&'a str> {
+        self.scheme_range().map(|range| &s[range])
+    }
+
+    /// Returns true if the IRI has a scheme part, false otherwise.
+    #[inline]
+    #[must_use]
+    pub(crate) fn has_scheme(&self) -> bool {
+        self.scheme_end.is_some()
+    }
+
     /// Returns the range for the authority part.
     #[inline]
     #[must_use]
@@ -94,6 +108,20 @@ impl Splitter {
         // +3: "://".len()
         let start = self.scheme_end.map_or(2, |v| v.get() + 3);
         Some(start..end)
+    }
+
+    /// Returns the authority as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn authority_str<'a>(&self, s: &'a str) -> Option<&'a str> {
+        self.authority_range().map(|range| &s[range])
+    }
+
+    /// Returns true if the IRI has an authority part, false otherwise.
+    #[inline]
+    #[must_use]
+    pub(crate) fn has_authority(&self) -> bool {
+        self.authority_end.is_some()
     }
 
     /// Returns the range for the path part.
@@ -114,6 +142,20 @@ impl Splitter {
         start..end
     }
 
+    /// Returns the path as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn path_str<'a>(&self, s: &'a str) -> &'a str {
+        &s[self.path_range(s.len())]
+    }
+
+    /// Returns true if the path part of the IRI is empty.
+    #[inline]
+    #[must_use]
+    pub(crate) fn is_path_empty(&self, full_len: usize) -> bool {
+        self.path_range(full_len).is_empty()
+    }
+
     /// Returns the range for the query part excluding a prefix `?`.
     #[inline]
     #[must_use]
@@ -123,6 +165,34 @@ impl Splitter {
         let end = self.fragment_start.map_or(full_len, |v| v.get() - 1);
 
         Some(start..end)
+    }
+
+    /// Returns the query as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn query_str<'a>(&self, s: &'a str) -> Option<&'a str> {
+        self.query_range(s.len()).map(|range| &s[range])
+    }
+
+    /// Returns true if the IRI has a query part, false otherwise.
+    #[inline]
+    #[must_use]
+    pub(crate) fn has_query(&self) -> bool {
+        self.query_start.is_some()
+    }
+
+    /// Returns the range for the fragment part excluding a prefix `#`.
+    #[inline]
+    #[must_use]
+    pub(crate) fn fragment_range(self) -> Option<RangeFrom<usize>> {
+        self.fragment_start.map(|v| v.get()..)
+    }
+
+    /// Returns the fragment as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn fragment_str<'a>(&self, s: &'a str) -> Option<&'a str> {
+        self.fragment_range().map(|range| &s[range])
     }
 }
 
