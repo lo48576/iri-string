@@ -91,24 +91,8 @@ fn decompose_query_and_fragment(i: &str) -> (Option<&str>, Option<&str>) {
 pub(crate) fn decompose_iri_reference<S: Spec>(
     i: &RiReferenceStr<S>,
 ) -> RiReferenceComponents<'_, S> {
-    ///// Inner function to avoid unnecessary monomorphizations on `S`.
-    //fn decompose(i: &str) -> (Option<&str>, Option<&str>, &str, Option<&str>, Option<&str>) {
-    //    let (i, scheme) = scheme_colon_opt(i);
-    //    let (i, authority) = slash_slash_authority_opt(i);
-    //    let (i, path) = until_query(i);
-    //    let (query, fragment) = decompose_query_and_fragment(i);
-    //    (scheme, authority, path, query, fragment)
-    //}
-
     /// Inner function to avoid unnecessary monomorphizations on `S`.
-    fn decompose(
-        i: &str,
-    ) -> (
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-        Option<NonZeroUsize>,
-    ) {
+    fn decompose(i: &str) -> Splitter {
         let len = i.len();
         let (i, scheme) = scheme_colon_opt(i);
         let scheme_end = scheme.and_then(|s| NonZeroUsize::new(s.len()));
@@ -127,18 +111,12 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
             (None, Some(_fragment)) => (None, NonZeroUsize::new(next_of_path)),
             (None, None) => (None, None),
         };
-        (scheme_end, authority_end, query_start, fragment_start)
+        Splitter::new(scheme_end, authority_end, query_start, fragment_start)
     }
 
-    let (scheme_end, authority_end, query_start, fragment_start) = decompose(i.as_str());
     RiReferenceComponents {
         iri: i,
-        splitter: Splitter {
-            scheme_end,
-            authority_end,
-            query_start,
-            fragment_start,
-        },
+        splitter: decompose(i.as_str()),
     }
 }
 

@@ -15,19 +15,36 @@ pub use self::authority::AuthorityComponents;
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Splitter {
     /// Scheme end.
-    pub(crate) scheme_end: Option<NonZeroUsize>,
+    scheme_end: Option<NonZeroUsize>,
     /// Authority end.
     ///
     /// Note that absence of the authority and the empty authority is
     /// distinguished.
-    pub(crate) authority_end: Option<NonZeroUsize>,
+    authority_end: Option<NonZeroUsize>,
     /// Query start (after the leading `?`).
-    pub(crate) query_start: Option<NonZeroUsize>,
+    query_start: Option<NonZeroUsize>,
     /// Fragment start (after the leading `#`).
-    pub(crate) fragment_start: Option<NonZeroUsize>,
+    fragment_start: Option<NonZeroUsize>,
 }
 
 impl Splitter {
+    /// Creates a new splitter.
+    #[inline]
+    #[must_use]
+    pub(crate) fn new(
+        scheme_end: Option<NonZeroUsize>,
+        authority_end: Option<NonZeroUsize>,
+        query_start: Option<NonZeroUsize>,
+        fragment_start: Option<NonZeroUsize>,
+    ) -> Self {
+        Self {
+            scheme_end,
+            authority_end,
+            query_start,
+            fragment_start,
+        }
+    }
+
     /// Decomposes an IRI into five major components: scheme, authority, path, query, and fragment.
     #[must_use]
     pub(crate) fn split_into_major(
