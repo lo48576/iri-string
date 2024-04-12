@@ -170,6 +170,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     pub fn scheme_str(&self) -> &str {
         let scheme_end = self
             .base_components
+            .splitter
             .scheme_end
             .expect("[validity] absolute IRI should have the scheme part")
             .get();
@@ -196,9 +197,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// ```
     #[must_use]
     pub fn authority_str(&self) -> Option<&str> {
-        let authority_end = self.base_components.authority_end?.get();
+        let authority_end = self.base_components.splitter.authority_end?.get();
         let scheme_end = self
             .base_components
+            .splitter
             .scheme_end
             .expect("[validity] absolute IRI should have the scheme part")
             .get();
@@ -230,14 +232,17 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
         // -1: "?".len() and "#".len()
         let path_end = self
             .base_components
+            .splitter
             .query_start
-            .or(self.base_components.fragment_start)
+            .or(self.base_components.splitter.fragment_start)
             .map_or(iri.len(), |v| v.get() - 1);
         let path_start = self
             .base_components
+            .splitter
             .authority_end
             .unwrap_or_else(|| {
                 self.base_components
+                    .splitter
                     .scheme_end
                     .expect("[validity] absolute IRI should have the scheme part")
             })
@@ -295,9 +300,9 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[inline]
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
-        let query_start = self.base_components.query_start?.get();
+        let query_start = self.base_components.splitter.query_start?.get();
         assert!(
-            self.base_components.fragment_start.is_none(),
+            self.base_components.splitter.fragment_start.is_none(),
             "[validity] absolute-IRI should have no fragment part"
         );
 

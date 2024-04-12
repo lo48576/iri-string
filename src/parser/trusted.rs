@@ -7,7 +7,7 @@ pub(crate) mod authority;
 use core::cmp::Ordering;
 use core::num::NonZeroUsize;
 
-use crate::components::RiReferenceComponents;
+use crate::components::{RiReferenceComponents, Splitter};
 use crate::format::eq_str_display;
 use crate::normalize::{is_pct_case_normalized, NormalizedAsciiOnlyHost, NormalizednessCheckMode};
 use crate::parser::str::{find_split2, find_split3, find_split4_hole, find_split_hole};
@@ -133,10 +133,12 @@ pub(crate) fn decompose_iri_reference<S: Spec>(
     let (scheme_end, authority_end, query_start, fragment_start) = decompose(i.as_str());
     RiReferenceComponents {
         iri: i,
-        scheme_end,
-        authority_end,
-        query_start,
-        fragment_start,
+        splitter: Splitter {
+            scheme_end,
+            authority_end,
+            query_start,
+            fragment_start,
+        },
     }
 }
 

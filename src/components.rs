@@ -10,13 +10,9 @@ use crate::types::RiReferenceStr;
 
 pub use self::authority::AuthorityComponents;
 
-/// Components of an IRI reference.
-///
-/// See <https://tools.ietf.org/html/rfc3986#section-5.2.2>.
+/// Positions to split an IRI into components.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RiReferenceComponents<'a, S: Spec> {
-    /// Original complete string.
-    pub(crate) iri: &'a RiReferenceStr<S>,
+pub(crate) struct Splitter {
     /// Scheme end.
     pub(crate) scheme_end: Option<NonZeroUsize>,
     /// Authority end.
@@ -30,19 +26,13 @@ pub(crate) struct RiReferenceComponents<'a, S: Spec> {
     pub(crate) fragment_start: Option<NonZeroUsize>,
 }
 
-impl<'a, S: Spec> RiReferenceComponents<'a, S> {
-    /// Returns five major components: scheme, authority, path, query, and fragment.
+impl Splitter {
+    /// Decomposes an IRI into five major components: scheme, authority, path, query, and fragment.
     #[must_use]
-    pub(crate) fn to_major(
+    pub(crate) fn split_into_major(
         self,
-    ) -> (
-        Option<&'a str>,
-        Option<&'a str>,
-        &'a str,
-        Option<&'a str>,
-        Option<&'a str>,
-    ) {
-        let s = self.iri.as_str();
+        s: &str,
+    ) -> (Option<&str>, Option<&str>, &str, Option<&str>, Option<&str>) {
         let (scheme, next_of_scheme) = match self.scheme_end {
             Some(end) => (Some(&s[..end.get()]), end.get() + 1),
             None => (None, 0),
@@ -64,6 +54,34 @@ impl<'a, S: Spec> RiReferenceComponents<'a, S> {
         };
         let path = &s[next_of_authority..end_of_path];
         (scheme, authority, path, query, fragment)
+    }
+}
+
+/// Components of an IRI reference.
+///
+/// See <https://tools.ietf.org/html/rfc3986#section-5.2.2>.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct RiReferenceComponents<'a, S: Spec> {
+    /// Original complete string.
+    pub(crate) iri: &'a RiReferenceStr<S>,
+    /// Positions to split the IRI into components.
+    pub(crate) splitter: Splitter,
+}
+
+impl<'a, S: Spec> RiReferenceComponents<'a, S> {
+    /// Returns five major components: scheme, authority, path, query, and fragment.
+    #[inline]
+    #[must_use]
+    pub(crate) fn to_major(
+        self,
+    ) -> (
+        Option<&'a str>,
+        Option<&'a str>,
+        &'a str,
+        Option<&'a str>,
+        Option<&'a str>,
+    ) {
+        self.splitter.split_into_major(self.iri.as_str())
     }
 
     /// Returns the IRI reference.
