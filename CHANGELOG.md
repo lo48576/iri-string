@@ -5,6 +5,7 @@
 * Add `new_unchecked()` methods to string types.
 * Move `template::VarName` type into `template::context` module and deprecate the old name.
 * Add `template::context::VarName::new()` method.
+* Add component getters to `resolve::FixedBaseResolver`.
 
 ### Added
 * Add `new_unchecked()` methods to string types.
@@ -24,6 +25,14 @@
         - `types::RiStr::new_unchecked()`
         - `types::RiString::new_unchecked()`
 * Add `template::context::VarName::new()` method.
+* Add component getters to `resolve::FixedBaseResolver`.
+    + List of added methods:
+        - `resolve::FixedBaseResolver::scheme_str()`
+        - `resolve::FixedBaseResolver::authority_str()`
+        - `resolve::FixedBaseResolver::path_str()`
+        - `resolve::FixedBaseResolver::query()`
+        - `resolve::FixedBaseResolver::query_str()`
+        - `resolve::FixedBaseResolver::fragment_str()`
 
 ### Changed (non-breaking)
 * Move `template::VarName` type into `template::context` module and deprecate the old name.
