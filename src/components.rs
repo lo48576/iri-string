@@ -81,7 +81,7 @@ impl Splitter {
     /// Returns the range for the scheme part.
     #[inline]
     #[must_use]
-    pub(crate) fn scheme_range(self) -> Option<RangeTo<usize>> {
+    fn scheme_range(self) -> Option<RangeTo<usize>> {
         self.scheme_end.map(|end| ..end.get())
     }
 
@@ -102,7 +102,7 @@ impl Splitter {
     /// Returns the range for the authority part.
     #[inline]
     #[must_use]
-    pub(crate) fn authority_range(self) -> Option<Range<usize>> {
+    fn authority_range(self) -> Option<Range<usize>> {
         let end = self.authority_end?.get();
         // 2: "//".len()
         // +3: "://".len()
@@ -127,7 +127,7 @@ impl Splitter {
     /// Returns the range for the path part.
     #[inline]
     #[must_use]
-    pub(crate) fn path_range(self, full_len: usize) -> Range<usize> {
+    fn path_range(self, full_len: usize) -> Range<usize> {
         // -1: "?".len() and "#".len()
         let end = self
             .query_start
@@ -159,7 +159,7 @@ impl Splitter {
     /// Returns the range for the query part excluding a prefix `?`.
     #[inline]
     #[must_use]
-    pub(crate) fn query_range(self, full_len: usize) -> Option<Range<usize>> {
+    fn query_range(self, full_len: usize) -> Option<Range<usize>> {
         let start = self.query_start?.get();
         // -1: "#".len()
         let end = self.fragment_start.map_or(full_len, |v| v.get() - 1);
@@ -228,6 +228,34 @@ impl<'a, S: Spec> RiReferenceComponents<'a, S> {
     #[must_use]
     pub(crate) fn iri(&self) -> &'a RiReferenceStr<S> {
         self.iri
+    }
+
+    /// Returns the scheme as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn scheme_str(&self) -> Option<&str> {
+        self.splitter.scheme_str(self.iri.as_str())
+    }
+
+    /// Returns the authority as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn authority_str(&self) -> Option<&str> {
+        self.splitter.authority_str(self.iri.as_str())
+    }
+
+    /// Returns the path as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn path_str(&self) -> &str {
+        self.splitter.path_str(self.iri.as_str())
+    }
+
+    /// Returns the query as a string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn query_str(&self) -> Option<&str> {
+        self.splitter.query_str(self.iri.as_str())
     }
 }
 

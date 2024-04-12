@@ -168,12 +168,9 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[inline]
     #[must_use]
     pub fn scheme_str(&self) -> &str {
-        let range = self
-            .base_components
-            .splitter
-            .scheme_range()
-            .expect("[validity] absolute IRI should have the scheme part");
-        &self.base_components.iri().as_str()[range]
+        self.base_components
+            .scheme_str()
+            .expect("[validity] absolute IRI should have the scheme part")
     }
 
     /// Returns the authority.
@@ -194,10 +191,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// assert_eq!(base.authority_str(), Some("user:pass@example.com"));
     /// # Ok::<_, Error>(())
     /// ```
+    #[inline]
     #[must_use]
     pub fn authority_str(&self) -> Option<&str> {
-        let range = self.base_components.splitter.authority_range()?;
-        Some(&self.base_components.iri().as_str()[range])
+        self.base_components.authority_str()
     }
 
     /// Returns the path.
@@ -216,11 +213,10 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     /// assert_eq!(base.path_str(), "/base/");
     /// # Ok::<_, Error>(())
     /// ```
+    #[inline]
     #[must_use]
     pub fn path_str(&self) -> &str {
-        let iri = self.base_components.iri();
-        let range = self.base_components.splitter.path_range(iri.len());
-        &iri.as_str()[range]
+        self.base_components.path_str()
     }
 
     /// Returns the query.
@@ -272,9 +268,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
     #[inline]
     #[must_use]
     pub fn query_str(&self) -> Option<&str> {
-        let iri = self.base_components.iri.as_str();
-        let range = self.base_components.splitter.query_range(iri.len())?;
-        Some(&iri[range])
+        self.base_components.query_str()
     }
 }
 
