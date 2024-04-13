@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+* Fix a bug that some abnormal IRIs that have no authority and end with `/.`
+  resulted in wrong normalization that generate unintentional authorities.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
+
+### Fixed
+* Fix a bug that some abnormal IRIs that have no authority and end with `/.`
+  resulted in wrong normalization that generate unintentional authorities.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
+    + IRI resolution and normalization had this bug, but only for IRIs without authority.
+    + This happened when the resolution and normalization result should not contain
+      an authority but the path part resulted in `//.`.
+        - For example, `a:/.//.` and `a:/bar/..//.` should be normalized to `a:/.//`,
+          but the actual result was `a://` due to this bug.
+
 ## [0.7.1]
 
 * Add `new_unchecked()` methods to string types.
