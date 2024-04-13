@@ -130,4 +130,37 @@ mod issue_36 {
             );
         }
     }
+
+    #[test]
+    fn abnormal_normalization2() {
+        {
+            let uri = UriAbsoluteStr::new("a:/bar//.").expect("valid absolute URI");
+            assert_eq_display!(uri.normalize(), "a:/bar//");
+        }
+        {
+            let uri = UriAbsoluteStr::new("a:/bar/..//.").expect("valid absolute URI");
+            assert_eq_display!(
+                uri.normalize(),
+                "a:/.//",
+                "normalization result will be modified using serialization by WHATWG URL Standard"
+            );
+        }
+        {
+            let uri = UriAbsoluteStr::new("a:/.//bar/.").expect("valid absolute URI");
+            assert_eq_display!(
+                uri.normalize(),
+                "a:/.//bar/",
+                "normalization result will be modified using serialization by WHATWG URL Standard"
+            );
+        }
+        {
+            let uri = UriAbsoluteStr::new("a:/././././././foo/./.././././././././././/.")
+                .expect("valid absolute URI");
+            assert_eq_display!(
+                uri.normalize(),
+                "a:/.//",
+                "normalization result will be modified using serialization by WHATWG URL Standard"
+            );
+        }
+    }
 }
