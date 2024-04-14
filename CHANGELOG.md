@@ -5,6 +5,9 @@
 * Fix a bug that some abnormal IRIs that have no authority and end with `/.`
   resulted in wrong normalization that generate unintentional authorities.
     + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
+* Fix a bug that the normalization incorrectly omits percent-encoded triplets
+  partially if they constitute invalid UTF-8 byte sequence.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36#issuecomment-2053688909).
 
 ### Fixed
 * Fix a bug that some abnormal IRIs that have no authority and end with `/.`
@@ -15,6 +18,11 @@
       an authority but the path part resulted in `//.`.
         - For example, `a:/.//.` and `a:/bar/..//.` should be normalized to `a:/.//`,
           but the actual result was `a://` due to this bug.
+* Fix a bug that the normalization incorrectly omits percent-encoded triplets
+  partially if they constitute invalid UTF-8 byte sequence.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36#issuecomment-2053688909).
+    + URIs and IRIs that only contains the percent-encoded triplets for valid UTF-8 byte
+      sequences won't be affected.
 
 ## [0.7.1]
 

@@ -1528,4 +1528,244 @@ pub static TEST_CASES: &[TestCase<'static>] = test_cases![
         normalized_uri: "scheme:/.//c",
         normalized_iri: "scheme:/.//c",
     },
+    {
+        name: "redundant UTF-8 encoding (1 byte inflated to 2 bytes)",
+        composed: "scheme:/%C0%AE",
+        components: {
+            scheme: "scheme",
+            path: "/%C0%AE",
+        },
+        normalized_uri: "scheme:/%C0%AE",
+        normalized_iri: "scheme:/%C0%AE",
+    },
+    {
+        name: "redundant UTF-8 encoding (1 byte inflated to 3 bytes)",
+        composed: "scheme:/%E0%80%AE",
+        components: {
+            scheme: "scheme",
+            path: "/%E0%80%AE",
+        },
+        normalized_uri: "scheme:/%E0%80%AE",
+        normalized_iri: "scheme:/%E0%80%AE",
+    },
+    {
+        name: "redundant UTF-8 encoding (1 byte inflated to 4 bytes)",
+        composed: "scheme:/%F0%80%80%AE",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%80%80%AE",
+        },
+        normalized_uri: "scheme:/%F0%80%80%AE",
+        normalized_iri: "scheme:/%F0%80%80%AE",
+    },
+    {
+        name: "redundant UTF-8 encoding (2 byte inflated to 3 bytes)",
+        composed: "scheme:/%E0%8E%B1",
+        components: {
+            scheme: "scheme",
+            path: "/%E0%8E%B1",
+        },
+        normalized_uri: "scheme:/%E0%8E%B1",
+        normalized_iri: "scheme:/%E0%8E%B1",
+    },
+    {
+        name: "redundant UTF-8 encoding (2 byte inflated to 4 bytes)",
+        composed: "scheme:/%F0%80%8E%B1",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%80%8E%B1",
+        },
+        normalized_uri: "scheme:/%F0%80%8E%B1",
+        normalized_iri: "scheme:/%F0%80%8E%B1",
+    },
+    {
+        name: "redundant UTF-8 encoding (3 byte inflated to 4 bytes)",
+        composed: "scheme:/%F0%83%82%A4",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%83%82%A4",
+        },
+        normalized_uri: "scheme:/%F0%83%82%A4",
+        normalized_iri: "scheme:/%F0%83%82%A4",
+    },
+    {
+        name: "non-UTF-8 percent encoding (starts with invaild byte)",
+        composed: "scheme:/%FF",
+        components: {
+            scheme: "scheme",
+            path: "/%FF",
+        },
+        normalized_uri: "scheme:/%FF",
+        normalized_iri: "scheme:/%FF",
+    },
+    {
+        name: "non-UTF-8 percent encoding (starts with continue byte)",
+        composed: "scheme:/%BF%BF",
+        components: {
+            scheme: "scheme",
+            path: "/%BF%BF",
+        },
+        normalized_uri: "scheme:/%BF%BF",
+        normalized_iri: "scheme:/%BF%BF",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 2 bytes, invalid at 2nd byte)",
+        composed: "scheme:/%CE%FF",
+        components: {
+            scheme: "scheme",
+            path: "/%CE%FF",
+        },
+        normalized_uri: "scheme:/%CE%FF",
+        normalized_iri: "scheme:/%CE%FF",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 2 bytes, starts again at 2nd byte)",
+        composed: "scheme:/%CE%CE%B1",
+        components: {
+            scheme: "scheme",
+            path: "/%CE%CE%B1",
+        },
+        normalized_uri: "scheme:/%CE%CE%B1",
+        normalized_iri: "scheme:/%CE\u{03B1}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 3 bytes, invalid at 2nd byte)",
+        composed: "scheme:/%E3%FF%A4",
+        components: {
+            scheme: "scheme",
+            path: "/%E3%FF%A4",
+        },
+        normalized_uri: "scheme:/%E3%FF%A4",
+        normalized_iri: "scheme:/%E3%FF%A4",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 3 bytes, starts again at 2nd byte)",
+        composed: "scheme:/%E3%E3%82%A4",
+        components: {
+            scheme: "scheme",
+            path: "/%E3%E3%82%A4",
+        },
+        normalized_uri: "scheme:/%E3%E3%82%A4",
+        normalized_iri: "scheme:/%E3\u{30A4}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 3 bytes, invalid at 3rd byte)",
+        composed: "scheme:/%E3%82%FF",
+        components: {
+            scheme: "scheme",
+            path: "/%E3%82%FF",
+        },
+        normalized_uri: "scheme:/%E3%82%FF",
+        normalized_iri: "scheme:/%E3%82%FF",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 3 bytes, starts again at 3rd byte)",
+        composed: "scheme:/%E3%82%E3%82%A4",
+        components: {
+            scheme: "scheme",
+            path: "/%E3%82%E3%82%A4",
+        },
+        normalized_uri: "scheme:/%E3%82%E3%82%A4",
+        normalized_iri: "scheme:/%E3%82\u{30A4}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, invalid at 2nd byte)",
+        composed: "scheme:/%F0%FF%8D%A3",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%FF%8D%A3",
+        },
+        normalized_uri: "scheme:/%F0%FF%8D%A3",
+        normalized_iri: "scheme:/%F0%FF%8D%A3",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, starts again at 2nd byte)",
+        composed: "scheme:/%F0%F0%9F%8D%A3",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%F0%9F%8D%A3",
+        },
+        normalized_uri: "scheme:/%F0%F0%9F%8D%A3",
+        normalized_iri: "scheme:/%F0\u{1F363}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, invalid at 3rd byte)",
+        composed: "scheme:/%F0%9F%FF%A3",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%9F%FF%A3",
+        },
+        normalized_uri: "scheme:/%F0%9F%FF%A3",
+        normalized_iri: "scheme:/%F0%9F%FF%A3",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, starts again at 3rd byte)",
+        composed: "scheme:/%F0%9F%F0%9F%8D%A3",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%9F%F0%9F%8D%A3",
+        },
+        normalized_uri: "scheme:/%F0%9F%F0%9F%8D%A3",
+        normalized_iri: "scheme:/%F0%9F\u{1F363}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, invalid at 4th byte)",
+        composed: "scheme:/%F0%9F%8D%FF",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%9F%8D%FF",
+        },
+        normalized_uri: "scheme:/%F0%9F%8D%FF",
+        normalized_iri: "scheme:/%F0%9F%8D%FF",
+    },
+    {
+        name: "non-UTF-8 percent encoding (expected 4 bytes, starts again at 4th byte)",
+        composed: "scheme:/%F0%9F%8D%F0%9F%8D%A3",
+        components: {
+            scheme: "scheme",
+            path: "/%F0%9F%8D%F0%9F%8D%A3",
+        },
+        normalized_uri: "scheme:/%F0%9F%8D%F0%9F%8D%A3",
+        normalized_iri: "scheme:/%F0%9F%8D\u{1F363}",
+    },
+    {
+        name: "non-UTF-8 percent encoding (high-surrogate)",
+        composed: "scheme:/%ED%A0%A0",
+        components: {
+            scheme: "scheme",
+            path: "/%ED%A0%A0",
+        },
+        normalized_uri: "scheme:/%ED%A0%A0",
+        normalized_iri: "scheme:/%ED%A0%A0",
+    },
+    {
+        name: "non-UTF-8 percent encoding (out of range, larger than U+10FFFF)",
+        composed: "scheme:/%F4%90%80%80",
+        components: {
+            scheme: "scheme",
+            path: "/%F4%90%80%80",
+        },
+        normalized_uri: "scheme:/%F4%90%80%80",
+        normalized_iri: "scheme:/%F4%90%80%80",
+    },
+    {
+        name: "non-UTF-8 percent encoding, followed by valid pct encoding",
+        composed: "scheme:/%CE%2E%2E",
+        components: {
+            scheme: "scheme",
+            path: "/%CE%2E%2E",
+        },
+        normalized_uri: "scheme:/%CE..",
+        normalized_iri: "scheme:/%CE..",
+    },
+    {
+        name: "non-UTF-8 percent encoding, followed by valid pct encoding",
+        composed: "scheme:/%CE%FF%2E",
+        components: {
+            scheme: "scheme",
+            path: "/%CE%FF%2E",
+        },
+        normalized_uri: "scheme:/%CE%FF.",
+        normalized_iri: "scheme:/%CE%FF.",
+    },
 ];

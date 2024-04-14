@@ -163,4 +163,12 @@ mod issue_36 {
             );
         }
     }
+
+    #[test]
+    fn normalization_pct_triplet_loss() {
+        let uri = UriAbsoluteStr::new("a://%92%99").expect("valid absolute URI");
+        assert_eq_display!(uri.normalize(), "a://%92%99");
+        // Other problems are found during fixing this bug. The test cases for
+        // them have been added to generic test case data source.
+    }
 }
