@@ -218,7 +218,14 @@ impl PathToNormalize<'_> {
                 if rest.is_empty() {
                     // Finished with a dot segment.
                     // The last `/.` or `/..` should be replaced to `/`.
-                    f.write_char('/')?;
+                    if !authority_is_present && (only_a_slash_is_written == Some(true)) {
+                        // Insert a dot segment to break the prefix `//`.
+                        // Without this, the path starts with `//` and it may
+                        // be confused with the prefix of an authority.
+                        f.write_str(".//")?;
+                    } else {
+                        f.write_char('/')?;
+                    }
                     break;
                 }
             }
