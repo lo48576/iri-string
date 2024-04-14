@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.2]
+
 * Fix a bug that some abnormal IRIs that have no authority and end with `/.`
   resulted in wrong normalization that generate unintentional authorities.
     + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
@@ -935,7 +937,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.2...develop>
+[0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
 [0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
 [0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
 [0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.6.0>
