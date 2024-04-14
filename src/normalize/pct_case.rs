@@ -64,8 +64,8 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
             // Write the string before the percent-encoded triplet.
             f.write_str(prefix)?;
             // Decode the percent-encoded triplet.
-            let (first_decoded, after_triplet) = take_xdigits2(after_percent);
-            rest = after_triplet;
+            let (first_decoded, after_first_triplet) = take_xdigits2(after_percent);
+            rest = after_first_triplet;
 
             if first_decoded.is_ascii() {
                 if is_ascii_unreserved(first_decoded) {
@@ -86,7 +86,6 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
 
             // Get continue bytes.
             let c_buf = &mut [first_decoded, 0, 0, 0][..expected_char_len];
-            let before_pct_seqs = rest;
             for (i, buf_dest) in c_buf[1..].iter_mut().enumerate() {
                 match take_first_char(rest) {
                     Some(('%', after_percent)) => {
@@ -145,18 +144,47 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                     }
                 }
                 Err(e) => {
-                    // The read triplets so far cannot be decoded into a valid
-                    // UTF-8 bytes sequence. However, the current byte can start
-                    // a valid UTF-8 byte sequence. So, do not take the whole
-                    // triplets unconditionally away.
+                    // Skip decoding of the entire sequence of pct-encoded triplets loaded
+                    // in `c_buf`. This is valid from the reasons below.
+                    //
+                    // * The first byte in `c_buf` is valid as the first byte, and it tells the
+                    //   expected number of bytes for a code unit. The cases the bytes being too
+                    //   short and the sequence being incomplete have already been handled, and
+                    //   the execution does not reach here then.
+                    // * All of the non-first bytes are checked if they are valid as UTF8 continue
+                    //   bytes by `is_utf8_byte_continue()`. If they're not, the decoding of
+                    //   that codepoint is aborted and the bytes in the buffer are immediately
+                    //   emitted as pct-encoded, and the execution does not reach here. This
+                    //   means that the bytes in the current `c_buf` have passed these tests.
+                    // * Since all of the the non-first bytes are UTF8 continue bytes, any of
+                    //   them cannot start the new valid UTF-8 byte sequence. This means that
+                    //   if the bytes in the buffer does not consitute a valid UTF-8 bytes
+                    //   sequence, the whole buffer can immediately be emmitted as pct-encoded.
 
-                    let undecodable_len = e.error_len().unwrap_or(expected_char_len);
-                    debug_assert!(
-                        undecodable_len > 0,
-                        "[validity] decoding cannot fail without undecodable prefix bytes"
+                    assert_eq!(
+                        e.valid_up_to(),
+                        0,
+                        "[consistency] preceding valid bytes must have already been stripped"
                     );
-                    rest = &before_pct_seqs[(3 * undecodable_len)..];
-                    c_buf[0..undecodable_len]
+                    // Since the number of bytes in the buffer is enough, `e.error_len()`
+                    // won't return `None`, which indicates that the input is incomplete.
+                    assert!(
+                        e.error_len() > Some(0),
+                        "[consistency] decoding cannot fail without undecodable prefix bytes"
+                    );
+
+                    debug_assert!(
+                        c_buf[1..expected_char_len]
+                            .iter()
+                            .copied()
+                            .all(is_utf8_byte_continue),
+                        "[consistency] all non-first bytes have been \
+                         confirmed that they are UTF-8 continue bytes"
+                    );
+                    // Note that the first pct-encoded triplet is stripped from
+                    // `after_first_triplet`.
+                    rest = &after_first_triplet[((expected_char_len - 1) * 3)..];
+                    c_buf[0..expected_char_len]
                         .iter()
                         .try_for_each(|b| write!(f, "%{:02X}", b))?;
                 }

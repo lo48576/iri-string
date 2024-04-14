@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [0.7.2]
+
+* Fix a bug that some abnormal IRIs that have no authority and end with `/.`
+  resulted in wrong normalization that generate unintentional authorities.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
+* Fix a bug that the normalization incorrectly omits percent-encoded triplets
+  partially if they constitute invalid UTF-8 byte sequence.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36#issuecomment-2053688909).
+
+### Fixed
+* Fix a bug that some abnormal IRIs that have no authority and end with `/.`
+  resulted in wrong normalization that generate unintentional authorities.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36).
+    + IRI resolution and normalization had this bug, but only for IRIs without authority.
+    + This happened when the resolution and normalization result should not contain
+      an authority but the path part resulted in `//.`.
+        - For example, `a:/.//.` and `a:/bar/..//.` should be normalized to `a:/.//`,
+          but the actual result was `a://` due to this bug.
+* Fix a bug that the normalization incorrectly omits percent-encoded triplets
+  partially if they constitute invalid UTF-8 byte sequence.
+    + Reported at [#36](https://github.com/lo48576/iri-string/issues/36#issuecomment-2053688909).
+    + URIs and IRIs that only contains the percent-encoded triplets for valid UTF-8 byte
+      sequences won't be affected.
+
 ## [0.7.1]
 
 * Add `new_unchecked()` methods to string types.
@@ -913,7 +937,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.1...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.2...develop>
+[0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
 [0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
 [0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
 [0.6.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.6.0>
