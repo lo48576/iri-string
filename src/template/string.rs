@@ -79,7 +79,6 @@ mod owned;
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UriTemplateStr {
     /// The raw string.
@@ -413,7 +412,6 @@ mod __serde_slice {
 
     // About `'de` and `'a`, see
     // <https://serde.rs/lifetimes.html#the-deserializede-lifetime>.
-    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<'a, 'de: 'a> Deserialize<'de> for &'a UriTemplateStr {
         #[inline]
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

@@ -31,7 +31,6 @@ pub type IriAbsoluteStr = RiAbsoluteStr<IriSpec>;
 
 /// A type alias for [`RiAbsoluteString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriAbsoluteString = RiAbsoluteString<IriSpec>;
 
 /// A type alias for [`RiFragmentStr`]`<`[`IriSpec`]`>`.
@@ -39,7 +38,6 @@ pub type IriFragmentStr = RiFragmentStr<IriSpec>;
 
 /// A type alias for [`RiFragmentString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriFragmentString = RiFragmentString<IriSpec>;
 
 /// A type alias for [`RiStr`]`<`[`IriSpec`]`>`.
@@ -47,7 +45,6 @@ pub type IriStr = RiStr<IriSpec>;
 
 /// A type alias for [`RiString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriString = RiString<IriSpec>;
 
 /// A type alias for [`RiReferenceStr`]`<`[`IriSpec`]`>`.
@@ -55,7 +52,6 @@ pub type IriReferenceStr = RiReferenceStr<IriSpec>;
 
 /// A type alias for [`RiReferenceString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriReferenceString = RiReferenceString<IriSpec>;
 
 /// A type alias for [`RiRelativeStr`]`<`[`IriSpec`]`>`.
@@ -63,7 +59,6 @@ pub type IriRelativeStr = RiRelativeStr<IriSpec>;
 
 /// A type alias for [`RiRelativeString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriRelativeString = RiRelativeString<IriSpec>;
 
 /// A type alias for [`RiQueryStr`]`<`[`IriSpec`]`>`.
@@ -71,7 +66,6 @@ pub type IriQueryStr = RiQueryStr<IriSpec>;
 
 /// A type alias for [`RiQueryString`]`<`[`IriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type IriQueryString = RiQueryString<IriSpec>;
 
 /// Implements the conversion from an IRI into a URI.
@@ -152,7 +146,6 @@ macro_rules! impl_conversion_between_uri {
 
         /// Conversion from an IRI into a URI.
         #[cfg(feature = "alloc")]
-        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
         impl $ty_owned_iri {
             /// Percent-encodes the IRI into a valid URI that identifies the equivalent resource.
             ///

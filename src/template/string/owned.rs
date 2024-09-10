@@ -32,7 +32,6 @@ use crate::template::string::UriTemplateStr;
 // a chance that they are implemented in future.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UriTemplateString {
     /// Inner data.
@@ -285,7 +284,6 @@ mod __serde_owned {
         }
     }
 
-    #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
     impl<'de> Deserialize<'de> for UriTemplateString {
         #[inline]
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

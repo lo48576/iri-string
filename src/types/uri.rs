@@ -17,7 +17,6 @@ pub type UriAbsoluteStr = RiAbsoluteStr<UriSpec>;
 
 /// A type alias for [`RiAbsoluteString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriAbsoluteString = RiAbsoluteString<UriSpec>;
 
 /// A type alias for [`RiFragmentStr`]`<`[`UriSpec`]`>`.
@@ -25,7 +24,6 @@ pub type UriFragmentStr = RiFragmentStr<UriSpec>;
 
 /// A type alias for [`RiFragmentString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriFragmentString = RiFragmentString<UriSpec>;
 
 /// A type alias for [`RiStr`]`<`[`UriSpec`]`>`.
@@ -33,7 +31,6 @@ pub type UriStr = RiStr<UriSpec>;
 
 /// A type alias for [`RiString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriString = RiString<UriSpec>;
 
 /// A type alias for [`RiReferenceStr`]`<`[`UriSpec`]`>`.
@@ -41,7 +38,6 @@ pub type UriReferenceStr = RiReferenceStr<UriSpec>;
 
 /// A type alias for [`RiReferenceString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriReferenceString = RiReferenceString<UriSpec>;
 
 /// A type alias for [`RiRelativeStr`]`<`[`UriSpec`]`>`.
@@ -49,7 +45,6 @@ pub type UriRelativeStr = RiRelativeStr<UriSpec>;
 
 /// A type alias for [`RiRelativeString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriRelativeString = RiRelativeString<UriSpec>;
 
 /// A type alias for [`RiQueryStr`]`<`[`UriSpec`]`>`.
@@ -57,7 +52,6 @@ pub type UriQueryStr = RiQueryStr<UriSpec>;
 
 /// A type alias for [`RiQueryString`]`<`[`UriSpec`]`>`.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub type UriQueryString = RiQueryString<UriSpec>;
 
 /// Implements the trivial conversions between a URI and an IRI.

@@ -116,7 +116,6 @@ mod error;
 mod expand;
 mod parser;
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod simple_context;
 mod string;
 

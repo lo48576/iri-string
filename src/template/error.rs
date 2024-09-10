@@ -77,13 +77,11 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl error::Error for Error {}
 
 /// Error on conversion into a URI template type.
 // TODO: Unifiable to `types::CreationError`?
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub struct CreationError<T> {
     /// Soruce data.
     source: T,
@@ -140,5 +138,4 @@ impl<T> fmt::Display for CreationError<T> {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<T: fmt::Debug> error::Error for CreationError<T> {}

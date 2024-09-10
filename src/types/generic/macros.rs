@@ -12,7 +12,6 @@ macro_rules! impl_from_slice_into_smartptr {
         mutability: $mut:ident,
     ) => {
         #[cfg(feature = "alloc")]
-        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
         impl<S: crate::spec::Spec> From<&$ty<S>> for $($smartptr)::* <$ty<S>> {
             fn from(s: &$ty<S>) -> Self {
                 let inner: &str = s.as_str();
@@ -425,7 +424,6 @@ macro_rules! define_custom_string_slice {
 
             // About `'de` and `'a`, see
             // <https://serde.rs/lifetimes.html#the-deserializede-lifetime>.
-            #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
             impl<'de: 'a, 'a, S: 'de + crate::spec::Spec> Deserialize<'de> for &'a $ty<S> {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -526,7 +524,6 @@ macro_rules! define_custom_string_owned {
         #[cfg_attr(all(feature = "serde", feature = "alloc"), derive(serde::Serialize))]
         #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(bound = "S: crate::spec::Spec"))]
         #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(transparent))]
-        #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
         pub struct $ty<S> {
             /// Spec.
             #[cfg_attr(all(feature = "serde", feature = "alloc"), serde(skip))]
@@ -888,7 +885,6 @@ macro_rules! define_custom_string_owned {
                 }
             }
 
-            #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
             impl<'de, S: crate::spec::Spec> Deserialize<'de> for $ty<S> {
                 #[inline]
                 fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
