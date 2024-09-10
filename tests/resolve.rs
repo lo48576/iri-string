@@ -3,7 +3,6 @@
 mod components;
 #[macro_use]
 mod utils;
-#[cfg(feature = "alloc")]
 mod resolve_refimpl;
 
 use iri_string::format::write_to_slice;

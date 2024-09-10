@@ -31,16 +31,10 @@
 #     + `serde` feature.
 #     + Up-to-date deps.
 # * `feat-serde-alloc`
-#     + `serde-alloc` feature.
+#     + `serde` and `alloc` features.
 #     + Up-to-date deps.
 # * `feat-serde-std`
-#     + `serde-std` feature.
-#     + Up-to-date deps.
-# * `feat-serde-alloc-independent`
-#     + `serde,alloc` features, without `serde-alloc`.
-#     + Up-to-date deps.
-# * `feat-serde-std-independent`
-#     + `serde,std` features, without `serde-std`.
+#     + `serde` and `std` features.
 #     + Up-to-date deps.
 # * `feat-all`
 #     + All features.
