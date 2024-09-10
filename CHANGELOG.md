@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.3]
+
 * Add easy conversion from an expanded template into IRI/URI string types.
 
 ### Added
@@ -948,7 +950,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.2...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.3...develop>
+[0.7.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.3>
 [0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
 [0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
 [0.7.0]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.0>
