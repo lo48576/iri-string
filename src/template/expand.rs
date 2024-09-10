@@ -94,7 +94,7 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
         })
     }
 
-    /// Checks the types of variables are allowed for the corresponding expressions in the template.
+    /// Checks if the types of variables are allowed for the corresponding expressions in the template.
     fn typecheck_context(template: &UriTemplateStr, context: &C) -> Result<(), Error> {
         let mut pos = 0;
         for chunk in Chunks::new(template) {
