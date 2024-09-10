@@ -5,6 +5,9 @@ use core::marker::PhantomData;
 use core::mem;
 use core::ops::ControlFlow;
 
+#[cfg(feature = "alloc")]
+use alloc::string::{String, ToString};
+
 use crate::parser::str::{find_split, find_split_hole};
 use crate::parser::str::{process_percent_encoded_best_effort, PctEncodedFragments};
 use crate::percent_encode::PercentEncoded;
@@ -15,6 +18,8 @@ use crate::template::context::{
 };
 use crate::template::error::{Error, ErrorKind};
 use crate::template::{UriTemplateStr, ValueType};
+#[cfg(feature = "alloc")]
+use crate::types;
 
 /// A chunk in a template string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,7 +94,7 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
         })
     }
 
-    /// Checks the types of variables are allowed for the corresponding expressions in the template.
+    /// Checks if the types of variables are allowed for the corresponding expressions in the template.
     fn typecheck_context(template: &UriTemplateStr, context: &C) -> Result<(), Error> {
         let mut pos = 0;
         for chunk in Chunks::new(template) {
@@ -135,6 +140,38 @@ impl<S: Spec, C: Context> fmt::Display for Expanded<'_, S, C> {
         Ok(())
     }
 }
+
+/// Implement `TryFrom<Expanded<...>> for SomeUriStringType`.
+macro_rules! impl_try_from_expanded {
+    ($ty_outer:ident) => {
+        #[cfg(feature = "alloc")]
+        impl<S: Spec, C: Context> TryFrom<Expanded<'_, S, C>> for types::$ty_outer<S> {
+            type Error = types::CreationError<String>;
+
+            #[inline]
+            fn try_from(v: Expanded<'_, S, C>) -> Result<Self, Self::Error> {
+                Self::try_from(v.to_string())
+            }
+        }
+    };
+}
+
+// Not implementing `TryFrom<Expand<...>>` for query and fragment strings
+// since they cannot behave as a query or a fragment only by themselves.
+// Query strings in practical starts with `?` prefix but `RiQueryStr{,ing}`
+// strips that, and so do fragment strings (but `#` instead of `?`).
+// Because of this, query and fragment string types won't be used to represent
+// a relative IRIs without combining the prefix.
+//
+// In contrast, RFC 6570 URI Template expects that the users are constructing a
+// "working" IRIs, including the necessary prefixes for syntax components.
+// For example, fragment expansion `{#var}`, where `var` is "hello", expands to
+// `#hello`, including the prefix `#`. This means that a URI template will be
+// used to generate neither `RiQueryStr{,ing}` nor `RiFragmentStr{,ing}` strings.
+impl_try_from_expanded!(RiAbsoluteString);
+impl_try_from_expanded!(RiReferenceString);
+impl_try_from_expanded!(RiRelativeString);
+impl_try_from_expanded!(RiString);
 
 /// Properties of an operator.
 ///

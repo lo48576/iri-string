@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "iri-string"
-version = "0.7.2"
+version = "0.7.3"
 authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.60"

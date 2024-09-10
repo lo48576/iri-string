@@ -24,7 +24,7 @@ macro_rules! define_tests {
                 let s = <$slice>::new(raw).expect("Should not fail: valid string");
                 assert_tokens(&s, &[Token::BorrowedStr(raw)]);
 
-                #[cfg(any(feature = "serde-alloc", feature = "serde-std"))]
+                #[cfg(all(feature = "serde", feature = "alloc"))]
                 {
                     let s = s.to_owned();
                     assert_tokens(&s, &[Token::BorrowedStr(raw)]);
