@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+* Add easy conversion from an expanded template into IRI/URI string types.
+
+### Added
+
+* Add easy conversion from an expanded template into IRI/URI string types.
+    + List of added conversions:
+        - `TryFrom<template::Expanded<'_, S, C>> for types::RiAbsoluteString<S>`
+        - `TryFrom<template::Expanded<'_, S, C>> for types::RiReferenceString<S>`
+        - `TryFrom<template::Expanded<'_, S, C>> for types::RiRelativeString<S>`
+        - `TryFrom<template::Expanded<'_, S, C>> for types::RiString<S>`
+
 ## [0.7.2]
 
 * Fix a bug that some abnormal IRIs that have no authority and end with `/.`
