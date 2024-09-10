@@ -105,7 +105,7 @@ where
     fn output_as_undecodable(&mut self, len_undecodable: u8) -> fmt::Result {
         let len_written = usize::from(len_undecodable);
         let frag = core::str::from_utf8(&self.buf[..len_written])
-            .expect("[validity] `PctTripletsBuffer` writes a valid ASCII string");
+            .expect("[validity] `DecoderBuffer` writes a valid ASCII string");
         let len_incomplete = len_written % 3;
         let len_complete = len_written - len_incomplete;
         self.result = (self.f)(PctEncodedFragments::InvalidUtf8PctTriplets(
@@ -170,7 +170,7 @@ where
                 PushResult::Decoded(len_written, c) => {
                     let len_written = usize::from(len_written.get());
                     let frag = core::str::from_utf8(&self.buf[..len_written])
-                        .expect("[validity] `PctTripletsBuffer` writes a valid ASCII string");
+                        .expect("[validity] `DecoderBuffer` writes a valid ASCII string");
                     self.result = (self.f)(PctEncodedFragments::Char(frag, c));
                     self.result_continue_or_err()?;
                 }
@@ -187,7 +187,7 @@ where
     }
 }
 
-/// A type for result of feeding data to [`PctTripletsBuffer`].
+/// A type for result of feeding data to [`DecoderBuffer`].
 #[derive(Debug, Clone, Copy)]
 enum PushResult {
     /// Input is still incomplete, needs more bytes to get the decoding result.
