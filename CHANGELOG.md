@@ -5,6 +5,13 @@
 * Fix calculation of template expansion error location.
     + Currently this just appears in an error message but not exposed through
       any other public API.
+* Add an iterator of variables that appears in a URI template.
+
+### Added
+* Add an iterator of variables that appears in a URI template.
+    + List of added items:
+        - `template::UriTemplateStr::variables()` method
+        - `template::UriTemplateVariables<'_>` iterator type
 
 ### Fixed
 * Fix calculation of template expansion error location.

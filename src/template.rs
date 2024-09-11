@@ -124,9 +124,9 @@ pub use self::context::Context;
 pub use self::error::CreationError;
 pub use self::error::Error;
 pub use self::expand::Expanded;
-pub use self::string::UriTemplateStr;
 #[cfg(feature = "alloc")]
 pub use self::string::UriTemplateString;
+pub use self::string::{UriTemplateStr, UriTemplateVariables};
 
 /// Deprecated old name of [`template::context::VarName`].
 ///

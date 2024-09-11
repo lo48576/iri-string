@@ -12,9 +12,10 @@ use alloc::rc::Rc;
 use alloc::sync::Arc;
 
 use crate::spec::Spec;
+use crate::template::components::{VarListIter, VarName};
 use crate::template::context::Context;
 use crate::template::error::{Error, ErrorKind};
-use crate::template::expand::Expanded;
+use crate::template::expand::{Chunk, Chunks, Expanded};
 use crate::template::parser::validate_template_str;
 
 #[cfg(feature = "alloc")]
@@ -256,6 +257,28 @@ impl UriTemplateStr {
     ) -> Result<Expanded<'a, S, C>, Error> {
         Expanded::new(self, context)
     }
+
+    /// Returns an iterator of variables in the template.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::template::Error;
+    /// use iri_string::template::UriTemplateStr;
+    ///
+    /// let template = UriTemplateStr::new("foo{/bar*,baz:4}{?qux}{&bar*}")?;
+    /// let mut vars = template.variables();
+    /// assert_eq!(vars.next().map(|var| var.as_str()), Some("bar"));
+    /// assert_eq!(vars.next().map(|var| var.as_str()), Some("baz"));
+    /// assert_eq!(vars.next().map(|var| var.as_str()), Some("qux"));
+    /// assert_eq!(vars.next().map(|var| var.as_str()), Some("bar"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn variables(&self) -> UriTemplateVariables<'_> {
+        UriTemplateVariables::new(self)
+    }
 }
 
 impl fmt::Debug for UriTemplateStr {
@@ -419,6 +442,50 @@ mod __serde_slice {
             D: Deserializer<'de>,
         {
             deserializer.deserialize_string(CustomStrVisitor)
+        }
+    }
+}
+
+/// An iterator of variables in a URI template.
+#[derive(Debug, Clone)]
+pub struct UriTemplateVariables<'a> {
+    /// Chunks iterator.
+    chunks: Chunks<'a>,
+    /// Variables in the last chunk.
+    vars_in_chunk: Option<VarListIter<'a>>,
+}
+
+impl<'a> UriTemplateVariables<'a> {
+    /// Creates a variables iterator from the URI template.
+    #[inline]
+    #[must_use]
+    fn new(template: &'a UriTemplateStr) -> Self {
+        Self {
+            chunks: Chunks::new(template),
+            vars_in_chunk: None,
+        }
+    }
+}
+
+impl<'a> Iterator for UriTemplateVariables<'a> {
+    type Item = VarName<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(vars) = &mut self.vars_in_chunk {
+                match vars.next() {
+                    Some((_len, spec)) => return Some(spec.name()),
+                    None => self.vars_in_chunk = None,
+                }
+            }
+            let expr = self.chunks.find_map(|chunk| match chunk {
+                Chunk::Literal(_) => None,
+                Chunk::Expr(v) => Some(v),
+            });
+            self.vars_in_chunk = match expr {
+                Some(expr) => Some(expr.decompose().1.into_iter()),
+                None => return None,
+            }
         }
     }
 }
