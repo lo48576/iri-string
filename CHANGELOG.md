@@ -17,7 +17,6 @@
 * Add easy conversion from an expanded template into IRI/URI string types.
 
 ### Added
-
 * Add easy conversion from an expanded template into IRI/URI string types.
     + List of added conversions:
         - `TryFrom<template::Expanded<'_, S, C>> for types::RiAbsoluteString<S>`
