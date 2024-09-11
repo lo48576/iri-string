@@ -23,7 +23,7 @@ use crate::types;
 
 /// A chunk in a template string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Chunk<'a> {
+pub(super) enum Chunk<'a> {
     /// Literal.
     Literal(&'a str),
     /// Expression excluding the wrapping braces.
@@ -32,7 +32,7 @@ enum Chunk<'a> {
 
 /// Iterator of template chunks.
 #[derive(Debug, Clone)]
-struct Chunks<'a> {
+pub(super) struct Chunks<'a> {
     /// Template.
     template: &'a str,
 }
@@ -41,7 +41,7 @@ impl<'a> Chunks<'a> {
     /// Creates a new iterator.
     #[inline]
     #[must_use]
-    fn new(template: &'a UriTemplateStr) -> Self {
+    pub(super) fn new(template: &'a UriTemplateStr) -> Self {
         Self {
             template: template.as_str(),
         }
