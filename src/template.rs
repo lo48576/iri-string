@@ -5,7 +5,12 @@
 //! # Usage
 //!
 //! 1. Prepare a template.
-//!     * Template type is [`UriTemplateStr`] (borrowed) and [`UriTemplateString`] (owned).
+//!     * You can create a template as [`UriTemplateStr`]
+#![cfg_attr(
+    feature = "alloc",
+    doc = "      type (borrowed) or [`UriTemplateString`] type (owned)."
+)]
+#![cfg_attr(not(feature = "alloc"), doc = "      type.")]
 //! 2. Prepare a context.
 //!     * Create a value of type that implements [`Context`] trait.
 #![cfg_attr(
