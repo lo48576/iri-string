@@ -34,7 +34,8 @@
 //! IRI or the relative IRI contains authorities.
 //!
 //! If you want this kind of abnormal IRI resolution to succeed and to be
-//! idempotent, use WHATWG variation of resolution and normalization.
+//! idempotent, check the resolution result using
+//! [`Normalized::ensure_rfc3986_normalizable`] (see the section below).
 //!
 //! ## WHATWG serialization
 //!
