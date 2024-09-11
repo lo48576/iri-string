@@ -14,7 +14,7 @@ use crate::percent_encode::PercentEncoded;
 use crate::spec::Spec;
 use crate::template::components::{ExprBody, Modifier, Operator, VarName, VarSpec};
 use crate::template::context::{
-    private::Sealed as VisitorSealed, AssocVisitor, Context, ListVisitor, Visitor,
+    private::Sealed as VisitorSealed, AssocVisitor, Context, ListVisitor, VisitPurpose, Visitor,
 };
 use crate::template::error::{Error, ErrorKind};
 use crate::template::{UriTemplateStr, ValueType};
@@ -589,6 +589,11 @@ impl<'a, 'b, S: Spec> Visitor for ValueVisitor<'a, 'b, S> {
         self.varspec.name()
     }
 
+    #[inline]
+    fn purpose(&self) -> VisitPurpose {
+        VisitPurpose::Expand
+    }
+
     /// Visits an undefined variable, i.e. indicates that the requested variable is unavailable.
     #[inline]
     fn visit_undefined(self) -> Self::Result {
@@ -876,6 +881,10 @@ impl<'a> Visitor for TypeVisitor<'a> {
     #[inline]
     fn var_name(&self) -> VarName<'a> {
         self.var_name
+    }
+    #[inline]
+    fn purpose(&self) -> VisitPurpose {
+        VisitPurpose::Typecheck
     }
     #[inline]
     fn visit_undefined(self) -> Self::Result {

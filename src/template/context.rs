@@ -66,6 +66,20 @@ pub trait Context: Sized {
     fn visit<V: Visitor>(&self, visitor: V) -> V::Result;
 }
 
+/// A purpose of a visit.
+///
+/// This enum is nonexhaustive since this partially exposes the internal
+/// implementation of the template expansion, and thus this is subject to
+/// change.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum VisitPurpose {
+    /// A visit for type checking.
+    Typecheck,
+    /// A visit for template expansion to retrieve the value.
+    Expand,
+}
+
 /// Variable visitor.
 ///
 /// See [the module documentation][self] for usage.
@@ -81,6 +95,20 @@ pub trait Visitor: Sized + private::Sealed {
     /// Returns the name of the variable to visit.
     #[must_use]
     fn var_name(&self) -> VarName<'_>;
+    /// Returns the purpose of the visit.
+    ///
+    /// The template expansion algorithm checks the types for some variables
+    /// depending on its usage. To get the usage count correctly, you should
+    /// only count visits with [`VisitPurpose::Expand`].
+    ///
+    /// If you need to know whether the variable is accessed and does not
+    /// need dynamic context generation or access counts, consider using
+    /// [`UriTemplateStr::variables`] method to iterate the variables in the
+    /// URI template.
+    ///
+    /// [`UriTemplateStr::variables`]: `crate::template::UriTemplateStr::variables`
+    #[must_use]
+    fn purpose(&self) -> VisitPurpose;
     /// Visits an undefined variable, i.e. indicates that the requested variable is unavailable.
     #[must_use]
     fn visit_undefined(self) -> Self::Result;
