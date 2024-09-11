@@ -98,14 +98,18 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
     fn typecheck_context(template: &UriTemplateStr, context: &C) -> Result<(), Error> {
         let mut pos = 0;
         for chunk in Chunks::new(template) {
-            let (_op, varlist) = match chunk {
-                Chunk::Expr(expr_body) => expr_body.decompose(),
+            let (expr_len, (op, varlist)) = match chunk {
+                Chunk::Expr(expr_body) => (expr_body.as_str().len(), expr_body.decompose()),
                 Chunk::Literal(lit) => {
                     pos += lit.len();
                     continue;
                 }
             };
-            for varspec in varlist {
+            // +2: wrapping braces (`{` and `}`).
+            let chunk_end_pos = pos + expr_len + 2;
+            // +1: opening brace `{`.
+            pos += op.len() + 1;
+            for (varspec_len, varspec) in varlist {
                 let ty = context.visit(TypeVisitor::new(varspec.name()));
                 let modifier = varspec.modifier();
 
@@ -118,7 +122,11 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
                     // --- [RFC 6570 Section 2.4.1. Prefix](https://www.rfc-editor.org/rfc/rfc6570.html#section-2.4.1)
                     return Err(Error::new(ErrorKind::UnexpectedValueType, pos));
                 }
+
+                // +1: A trailing comman (`,`) or a closing brace (`}`).
+                pos += varspec_len + 1;
             }
+            assert_eq!(pos, chunk_end_pos);
         }
         Ok(())
     }
@@ -286,7 +294,7 @@ fn expand<S: Spec, C: Context>(
     let (op, varlist) = expr.decompose();
 
     let mut is_first_varspec = true;
-    for varspec in varlist {
+    for (_varspec_len, varspec) in varlist {
         let visitor = ValueVisitor::<S>::new(f, varspec, op, &mut is_first_varspec);
         let token = context.visit(visitor)?;
         let formatter_ptr = token.formatter_ptr();

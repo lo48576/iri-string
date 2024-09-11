@@ -7,6 +7,8 @@ use crate::template::error::Error;
 use crate::template::parser::validate as validate_parser;
 
 /// Expression body.
+///
+/// This does not contain the wrapping braces (`{` and `}`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct ExprBody<'a>(&'a str);
 
@@ -51,6 +53,13 @@ impl<'a> ExprBody<'a> {
             });
             (op, VarListStr::new(&self.0[1..]))
         }
+    }
+
+    /// Returns the raw expression in a string slice.
+    #[inline]
+    #[must_use]
+    pub(super) fn as_str(&self) -> &'a str {
+        self.0
     }
 }
 
@@ -178,7 +187,7 @@ impl<'a> VarListStr<'a> {
 
 impl<'a> IntoIterator for VarListStr<'a> {
     type IntoIter = VarListIter<'a>;
-    type Item = VarSpec<'a>;
+    type Item = (usize, VarSpec<'a>);
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
@@ -194,19 +203,23 @@ pub(super) struct VarListIter<'a> {
 }
 
 impl<'a> Iterator for VarListIter<'a> {
-    type Item = VarSpec<'a>;
+    /// A pair of the length of the varspec and the varspec itself.
+    type Item = (usize, VarSpec<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
         match find_split_hole(self.rest, b',') {
             Some((prefix, new_rest)) => {
                 self.rest = new_rest;
-                Some(VarSpec::parse_trusted(prefix))
+                Some((prefix.len(), VarSpec::parse_trusted(prefix)))
             }
             None => {
                 if self.rest.is_empty() {
                     None
                 } else {
-                    Some(VarSpec::parse_trusted(mem::take(&mut self.rest)))
+                    Some((
+                        self.rest.len(),
+                        VarSpec::parse_trusted(mem::take(&mut self.rest)),
+                    ))
                 }
             }
         }
@@ -288,6 +301,17 @@ impl Operator {
             b'?' => Some(Self::FormQuery),
             b'&' => Some(Self::FormQueryCont),
             _ => None,
+        }
+    }
+
+    /// Returns the string length of the operator.
+    #[inline]
+    #[must_use]
+    pub(super) const fn len(self) -> usize {
+        if matches!(self, Self::String) {
+            0
+        } else {
+            1
         }
     }
 }
