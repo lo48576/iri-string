@@ -14,7 +14,8 @@ use crate::percent_encode::PercentEncoded;
 use crate::spec::Spec;
 use crate::template::components::{ExprBody, Modifier, Operator, VarName, VarSpec};
 use crate::template::context::{
-    private::Sealed as VisitorSealed, AssocVisitor, Context, ListVisitor, Visitor,
+    private::Sealed as VisitorSealed, AssocVisitor, Context, DynamicContext, ListVisitor,
+    VisitPurpose, Visitor,
 };
 use crate::template::error::{Error, ErrorKind};
 use crate::template::{UriTemplateStr, ValueType};
@@ -23,7 +24,7 @@ use crate::types;
 
 /// A chunk in a template string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Chunk<'a> {
+pub(super) enum Chunk<'a> {
     /// Literal.
     Literal(&'a str),
     /// Expression excluding the wrapping braces.
@@ -32,7 +33,7 @@ enum Chunk<'a> {
 
 /// Iterator of template chunks.
 #[derive(Debug, Clone)]
-struct Chunks<'a> {
+pub(super) struct Chunks<'a> {
     /// Template.
     template: &'a str,
 }
@@ -41,7 +42,7 @@ impl<'a> Chunks<'a> {
     /// Creates a new iterator.
     #[inline]
     #[must_use]
-    fn new(template: &'a UriTemplateStr) -> Self {
+    pub(super) fn new(template: &'a UriTemplateStr) -> Self {
         Self {
             template: template.as_str(),
         }
@@ -98,14 +99,18 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
     fn typecheck_context(template: &UriTemplateStr, context: &C) -> Result<(), Error> {
         let mut pos = 0;
         for chunk in Chunks::new(template) {
-            let (_op, varlist) = match chunk {
-                Chunk::Expr(expr_body) => expr_body.decompose(),
+            let (expr_len, (op, varlist)) = match chunk {
+                Chunk::Expr(expr_body) => (expr_body.as_str().len(), expr_body.decompose()),
                 Chunk::Literal(lit) => {
                     pos += lit.len();
                     continue;
                 }
             };
-            for varspec in varlist {
+            // +2: wrapping braces (`{` and `}`).
+            let chunk_end_pos = pos + expr_len + 2;
+            // +1: opening brace `{`.
+            pos += op.len() + 1;
+            for (varspec_len, varspec) in varlist {
                 let ty = context.visit(TypeVisitor::new(varspec.name()));
                 let modifier = varspec.modifier();
 
@@ -118,7 +123,11 @@ impl<'a, S: Spec, C: Context> Expanded<'a, S, C> {
                     // --- [RFC 6570 Section 2.4.1. Prefix](https://www.rfc-editor.org/rfc/rfc6570.html#section-2.4.1)
                     return Err(Error::new(ErrorKind::UnexpectedValueType, pos));
                 }
+
+                // +1: A trailing comman (`,`) or a closing brace (`}`).
+                pos += varspec_len + 1;
             }
+            assert_eq!(pos, chunk_end_pos);
         }
         Ok(())
     }
@@ -172,6 +181,79 @@ impl_try_from_expanded!(RiAbsoluteString);
 impl_try_from_expanded!(RiReferenceString);
 impl_try_from_expanded!(RiRelativeString);
 impl_try_from_expanded!(RiString);
+
+/// Expands the whole template with the dynamic context.
+pub(super) fn expand_whole_dynamic<S: Spec, W: fmt::Write, C: DynamicContext>(
+    template: &UriTemplateStr,
+    writer: &mut W,
+    context: &mut C,
+) -> Result<(), Error> {
+    let mut pos = 0;
+    for chunk in Chunks::new(template) {
+        let expr = match chunk {
+            Chunk::Literal(lit) => {
+                writer
+                    .write_str(lit)
+                    .map_err(|_| Error::new(ErrorKind::WriteFailed, pos))?;
+                pos += lit.len();
+                continue;
+            }
+            Chunk::Expr(body) => body,
+        };
+        expand_expr_mut::<S, _, _>(writer, &mut pos, expr, context)?;
+    }
+
+    Ok(())
+}
+
+/// Expands the expression using the given operator and the dynamic context.
+fn expand_expr_mut<S: Spec, W: fmt::Write, C: DynamicContext>(
+    writer: &mut W,
+    pos: &mut usize,
+    expr: ExprBody<'_>,
+    context: &mut C,
+) -> Result<(), Error> {
+    let (op, varlist) = expr.decompose();
+
+    let mut is_first_varspec = true;
+    // +2: wrapping braces (`{` and `}`).
+    let chunk_end_pos = *pos + expr.as_str().len() + 2;
+    // +1: opening brace `{`.
+    *pos += op.len() + 1;
+    for (varspec_len, varspec) in varlist {
+        // Check the type before the actual expansion.
+        let ty = context.visit_dynamic(TypeVisitor::new(varspec.name()));
+        let modifier = varspec.modifier();
+
+        if matches!(modifier, Modifier::MaxLen(_))
+            && matches!(ty, ValueType::List | ValueType::Assoc)
+        {
+            // > Prefix modifiers are not applicable to variables that
+            // > have composite values.
+            //
+            // --- [RFC 6570 Section 2.4.1. Prefix](https://www.rfc-editor.org/rfc/rfc6570.html#section-2.4.1)
+            return Err(Error::new(ErrorKind::UnexpectedValueType, *pos));
+        }
+
+        // Typecheck passed. Expand.
+        let visitor = ValueVisitor::<S, _>::new(writer, varspec, op, &mut is_first_varspec);
+        let token = context
+            .visit_dynamic(visitor)
+            .map_err(|_| Error::new(ErrorKind::WriteFailed, *pos))?;
+        let writer_ptr = token.writer_ptr();
+        if writer_ptr != writer as *mut _ {
+            // Invalid `VisitDoneToken` was returned. This cannot usually happen
+            // without intentional unnatural usage.
+            panic!("invalid `VisitDoneToken` was returned");
+        }
+
+        // +1: A trailing comman (`,`) or a closing brace (`}`).
+        *pos += varspec_len + 1;
+    }
+    assert_eq!(*pos, chunk_end_pos);
+
+    Ok(())
+}
 
 /// Properties of an operator.
 ///
@@ -286,11 +368,11 @@ fn expand<S: Spec, C: Context>(
     let (op, varlist) = expr.decompose();
 
     let mut is_first_varspec = true;
-    for varspec in varlist {
-        let visitor = ValueVisitor::<S>::new(f, varspec, op, &mut is_first_varspec);
+    for (_varspec_len, varspec) in varlist {
+        let visitor = ValueVisitor::<S, _>::new(f, varspec, op, &mut is_first_varspec);
         let token = context.visit(visitor)?;
-        let formatter_ptr = token.formatter_ptr();
-        if formatter_ptr != f as *mut _ {
+        let writer_ptr = token.writer_ptr();
+        if writer_ptr != f as *mut _ {
             // Invalid `VisitDoneToken` was returned. This cannot usually happen
             // without intentional unnatural usage.
             panic!("invalid `VisitDoneToken` was returned");
@@ -302,18 +384,18 @@ fn expand<S: Spec, C: Context>(
 
 /// Escapes the given value and writes it.
 #[inline]
-fn escape_write<S: Spec, T: fmt::Display>(
-    f: &mut fmt::Formatter<'_>,
+fn escape_write<S: Spec, T: fmt::Display, W: fmt::Write>(
+    f: &mut W,
     v: T,
     allow_reserved: bool,
 ) -> fmt::Result {
-    use core::fmt::Display;
-
     if allow_reserved {
         let result = process_percent_encoded_best_effort(v, |frag| {
             let result = match frag {
                 PctEncodedFragments::Char(s, _) => f.write_str(s),
-                PctEncodedFragments::NoPctStr(s) => PercentEncoded::<_, S>::characters(s).fmt(f),
+                PctEncodedFragments::NoPctStr(s) => {
+                    write!(f, "{}", PercentEncoded::<_, S>::characters(s))
+                }
                 PctEncodedFragments::StrayPercent => f.write_str("%25"),
                 PctEncodedFragments::InvalidUtf8PctTriplets(s) => f.write_str(s),
             };
@@ -328,19 +410,19 @@ fn escape_write<S: Spec, T: fmt::Display>(
         }
     } else {
         /// Writer that escapes the unreserved characters and writes them.
-        struct UnreservePercentEncodeWriter<'a, 'b, S> {
+        struct UnreservePercentEncodeWriter<'a, S, W> {
             /// Inner writer.
-            writer: &'a mut fmt::Formatter<'b>,
+            writer: &'a mut W,
             /// Spec.
             _spec: PhantomData<fn() -> S>,
         }
-        impl<S: Spec> fmt::Write for UnreservePercentEncodeWriter<'_, '_, S> {
+        impl<S: Spec, W: fmt::Write> fmt::Write for UnreservePercentEncodeWriter<'_, S, W> {
             #[inline]
             fn write_str(&mut self, s: &str) -> fmt::Result {
-                fmt::Display::fmt(&PercentEncoded::<_, S>::unreserve(s), self.writer)
+                write!(self.writer, "{}", PercentEncoded::<_, S>::unreserve(s))
             }
         }
-        let mut writer = UnreservePercentEncodeWriter::<S> {
+        let mut writer = UnreservePercentEncodeWriter::<S, W> {
             writer: f,
             _spec: PhantomData,
         };
@@ -349,8 +431,8 @@ fn escape_write<S: Spec, T: fmt::Display>(
 }
 
 /// Truncates the given value as a string, escapes the value, and writes it.
-fn escape_write_with_maxlen<S: Spec, T: fmt::Display>(
-    writer: &mut PrefixOnceWriter<'_, '_>,
+fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
+    writer: &mut PrefixOnceWriter<'_, W>,
     v: T,
     allow_reserved: bool,
     max_len: Option<u16>,
@@ -450,18 +532,18 @@ impl<S: Spec, W: fmt::Write> fmt::Write for TruncatePercentEncodeWriter<'_, S, W
 }
 
 /// A writer that writes a prefix only once if and only if some value is written.
-struct PrefixOnceWriter<'a, 'b> {
+struct PrefixOnceWriter<'a, W> {
     /// Inner writer.
-    inner: &'a mut fmt::Formatter<'b>,
+    inner: &'a mut W,
     /// Prefix to write.
     prefix: Option<&'a str>,
 }
 
-impl<'a, 'b> PrefixOnceWriter<'a, 'b> {
+impl<'a, W: fmt::Write> PrefixOnceWriter<'a, W> {
     /// Creates a new writer with no prefix.
     #[inline]
     #[must_use]
-    fn new(inner: &'a mut fmt::Formatter<'b>) -> Self {
+    fn new(inner: &'a mut W) -> Self {
         Self {
             inner,
             prefix: None,
@@ -471,7 +553,7 @@ impl<'a, 'b> PrefixOnceWriter<'a, 'b> {
     /// Creates a new writer with a prefix.
     #[inline]
     #[must_use]
-    fn with_prefix(inner: &'a mut fmt::Formatter<'b>, prefix: &'a str) -> Self {
+    fn with_prefix(inner: &'a mut W, prefix: &'a str) -> Self {
         Self {
             inner,
             prefix: Some(prefix),
@@ -486,7 +568,7 @@ impl<'a, 'b> PrefixOnceWriter<'a, 'b> {
     }
 }
 
-impl fmt::Write for PrefixOnceWriter<'_, '_> {
+impl<W: fmt::Write> fmt::Write for PrefixOnceWriter<'_, W> {
     #[inline]
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if let Some(prefix) = self.prefix.take() {
@@ -499,25 +581,25 @@ impl fmt::Write for PrefixOnceWriter<'_, '_> {
 /// An opaque token value that proves some variable is visited.
 // This should not be able to be created by any means other than `VarVisitor::visit_foo()`.
 // Do not derive any traits that allows the value to be generated or cloned.
-struct VisitDoneToken<'a, 'b, S>(ValueVisitor<'a, 'b, S>);
+struct VisitDoneToken<'a, S, W>(ValueVisitor<'a, S, W>);
 
-impl<'a, 'b, S: Spec> VisitDoneToken<'a, 'b, S> {
+impl<'a, S: Spec, W: fmt::Write> VisitDoneToken<'a, S, W> {
     /// Creates a new token.
     #[inline]
     #[must_use]
-    fn new(visitor: ValueVisitor<'a, 'b, S>) -> Self {
+    fn new(visitor: ValueVisitor<'a, S, W>) -> Self {
         Self(visitor)
     }
 
     /// Returns the raw pointer to the backend formatter.
     #[inline]
     #[must_use]
-    fn formatter_ptr(&self) -> *const fmt::Formatter<'b> {
-        self.0.formatter_ptr()
+    fn writer_ptr(&self) -> *const W {
+        self.0.writer_ptr()
     }
 }
 
-impl<S: Spec> fmt::Debug for VisitDoneToken<'_, '_, S> {
+impl<S: Spec, W: fmt::Write> fmt::Debug for VisitDoneToken<'_, S, W> {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("VisitDoneToken")
@@ -527,9 +609,9 @@ impl<S: Spec> fmt::Debug for VisitDoneToken<'_, '_, S> {
 /// Visitor to retrieve a variable value.
 // Single `ValueVisitor` should be used for single expansion.
 // Do not derive any traits that allows the value to be generated or cloned.
-struct ValueVisitor<'a, 'b, S> {
+struct ValueVisitor<'a, S, W> {
     /// Formatter.
-    f: &'a mut fmt::Formatter<'b>,
+    writer: &'a mut W,
     /// Varspec.
     varspec: VarSpec<'a>,
     /// Operator.
@@ -540,18 +622,18 @@ struct ValueVisitor<'a, 'b, S> {
     _spec: PhantomData<fn() -> S>,
 }
 
-impl<'a, 'b, S: Spec> ValueVisitor<'a, 'b, S> {
+impl<'a, S: Spec, W: fmt::Write> ValueVisitor<'a, S, W> {
     /// Creates a visitor.
     #[inline]
     #[must_use]
     fn new(
-        f: &'a mut fmt::Formatter<'b>,
+        f: &'a mut W,
         varspec: VarSpec<'a>,
         op: Operator,
         is_first_varspec: &'a mut bool,
     ) -> Self {
         Self {
-            f,
+            writer: f,
             varspec,
             op,
             is_first_varspec,
@@ -562,23 +644,28 @@ impl<'a, 'b, S: Spec> ValueVisitor<'a, 'b, S> {
     /// Returns the raw pointer to the backend formatter.
     #[inline]
     #[must_use]
-    fn formatter_ptr(&self) -> *const fmt::Formatter<'b> {
-        self.f as &_ as *const _
+    fn writer_ptr(&self) -> *const W {
+        self.writer as &_ as *const _
     }
 }
 
-impl<S: Spec> VisitorSealed for ValueVisitor<'_, '_, S> {}
+impl<S: Spec, W: fmt::Write> VisitorSealed for ValueVisitor<'_, S, W> {}
 
-impl<'a, 'b, S: Spec> Visitor for ValueVisitor<'a, 'b, S> {
-    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
-    type ListVisitor = ListValueVisitor<'a, 'b, S>;
-    type AssocVisitor = AssocValueVisitor<'a, 'b, S>;
+impl<'a, S: Spec, W: fmt::Write> Visitor for ValueVisitor<'a, S, W> {
+    type Result = Result<VisitDoneToken<'a, S, W>, fmt::Error>;
+    type ListVisitor = ListValueVisitor<'a, S, W>;
+    type AssocVisitor = AssocValueVisitor<'a, S, W>;
 
     /// Returns the name of the variable to visit.
     #[inline]
     #[must_use]
     fn var_name(&self) -> VarName<'a> {
         self.varspec.name()
+    }
+
+    #[inline]
+    fn purpose(&self) -> VisitPurpose {
+        VisitPurpose::Expand
     }
 
     /// Visits an undefined variable, i.e. indicates that the requested variable is unavailable.
@@ -593,24 +680,24 @@ impl<'a, 'b, S: Spec> Visitor for ValueVisitor<'a, 'b, S> {
         let oppr = OpProps::from_op(self.op);
 
         if mem::replace(self.is_first_varspec, false) {
-            self.f.write_str(oppr.first)?;
+            self.writer.write_str(oppr.first)?;
         } else {
-            self.f.write_str(oppr.sep)?;
+            self.writer.write_str(oppr.sep)?;
         }
         let mut writer = if oppr.named {
-            self.f.write_str(self.varspec.name().as_str())?;
-            PrefixOnceWriter::with_prefix(self.f, "=")
+            self.writer.write_str(self.varspec.name().as_str())?;
+            PrefixOnceWriter::with_prefix(self.writer, "=")
         } else {
-            PrefixOnceWriter::new(self.f)
+            PrefixOnceWriter::new(self.writer)
         };
 
         let max_len = match self.varspec.modifier() {
             Modifier::None | Modifier::Explode => None,
             Modifier::MaxLen(max_len) => Some(max_len),
         };
-        escape_write_with_maxlen::<S, T>(&mut writer, v, oppr.allow_reserved, max_len)?;
+        escape_write_with_maxlen::<S, T, W>(&mut writer, v, oppr.allow_reserved, max_len)?;
         if writer.has_unwritten_prefix() {
-            self.f.write_str(oppr.ifemp)?;
+            self.writer.write_str(oppr.ifemp)?;
         }
         Ok(VisitDoneToken::new(self))
     }
@@ -651,16 +738,16 @@ impl<'a, 'b, S: Spec> Visitor for ValueVisitor<'a, 'b, S> {
 //
 // Single variable visitor should be used for single expansion.
 // Do not derive any traits that allows the value to be generated or cloned.
-struct ListValueVisitor<'a, 'b, S> {
+struct ListValueVisitor<'a, S, W> {
     /// Visitor.
-    visitor: ValueVisitor<'a, 'b, S>,
+    visitor: ValueVisitor<'a, S, W>,
     /// Number of already emitted elements.
     num_elems: usize,
     /// Operator props.
     oppr: &'static OpProps,
 }
 
-impl<'a, 'b, S: Spec> ListValueVisitor<'a, 'b, S> {
+impl<'a, S: Spec, W: fmt::Write> ListValueVisitor<'a, S, W> {
     /// Visits an item.
     fn visit_item_impl<T: fmt::Display>(&mut self, item: T) -> fmt::Result {
         let modifier = self.visitor.varspec.modifier();
@@ -676,44 +763,44 @@ impl<'a, 'b, S: Spec> ListValueVisitor<'a, 'b, S> {
         // Write prefix for each variable.
         if self.num_elems == 0 {
             if mem::replace(self.visitor.is_first_varspec, false) {
-                self.visitor.f.write_str(self.oppr.first)?;
+                self.visitor.writer.write_str(self.oppr.first)?;
             } else {
-                self.visitor.f.write_str(self.oppr.sep)?;
+                self.visitor.writer.write_str(self.oppr.sep)?;
             }
             if self.oppr.named {
                 self.visitor
-                    .f
+                    .writer
                     .write_str(self.visitor.varspec.name().as_str())?;
-                self.visitor.f.write_char('=')?;
+                self.visitor.writer.write_char('=')?;
             }
         } else {
             // Write prefix for the non-first item.
             match (self.oppr.named, is_explode) {
-                (_, false) => self.visitor.f.write_char(',')?,
-                (false, true) => self.visitor.f.write_str(self.oppr.sep)?,
+                (_, false) => self.visitor.writer.write_char(',')?,
+                (false, true) => self.visitor.writer.write_str(self.oppr.sep)?,
                 (true, true) => {
-                    self.visitor.f.write_str(self.oppr.sep)?;
-                    escape_write::<S, _>(
-                        self.visitor.f,
+                    self.visitor.writer.write_str(self.oppr.sep)?;
+                    escape_write::<S, _, _>(
+                        self.visitor.writer,
                         self.visitor.varspec.name().as_str(),
                         self.oppr.allow_reserved,
                     )?;
-                    self.visitor.f.write_char('=')?;
+                    self.visitor.writer.write_char('=')?;
                 }
             }
         }
 
-        escape_write::<S, _>(self.visitor.f, item, self.oppr.allow_reserved)?;
+        escape_write::<S, _, _>(self.visitor.writer, item, self.oppr.allow_reserved)?;
 
         self.num_elems += 1;
         Ok(())
     }
 }
 
-impl<S: Spec> VisitorSealed for ListValueVisitor<'_, '_, S> {}
+impl<S: Spec, W: fmt::Write> VisitorSealed for ListValueVisitor<'_, S, W> {}
 
-impl<'a, 'b, S: Spec> ListVisitor for ListValueVisitor<'a, 'b, S> {
-    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
+impl<'a, S: Spec, W: fmt::Write> ListVisitor for ListValueVisitor<'a, S, W> {
+    type Result = Result<VisitDoneToken<'a, S, W>, fmt::Error>;
 
     /// Visits an item.
     #[inline]
@@ -742,16 +829,16 @@ impl<'a, 'b, S: Spec> ListVisitor for ListValueVisitor<'a, 'b, S> {
 //
 // Single variable visitor should be used for single expansion.
 // Do not derive any traits that allows the value to be generated or cloned.
-struct AssocValueVisitor<'a, 'b, S> {
+struct AssocValueVisitor<'a, S, W> {
     /// Visitor.
-    visitor: ValueVisitor<'a, 'b, S>,
+    visitor: ValueVisitor<'a, S, W>,
     /// Number of already emitted elements.
     num_elems: usize,
     /// Operator props.
     oppr: &'static OpProps,
 }
 
-impl<'a, 'b, S: Spec> AssocValueVisitor<'a, 'b, S> {
+impl<'a, S: Spec, W: fmt::Write> AssocValueVisitor<'a, S, W> {
     /// Visits an entry.
     fn visit_entry_impl<K: fmt::Display, V: fmt::Display>(
         &mut self,
@@ -771,57 +858,57 @@ impl<'a, 'b, S: Spec> AssocValueVisitor<'a, 'b, S> {
         // Write prefix for each variable.
         if self.num_elems == 0 {
             if mem::replace(self.visitor.is_first_varspec, false) {
-                self.visitor.f.write_str(self.oppr.first)?;
+                self.visitor.writer.write_str(self.oppr.first)?;
             } else {
-                self.visitor.f.write_str(self.oppr.sep)?;
+                self.visitor.writer.write_str(self.oppr.sep)?;
             }
             if is_explode {
-                escape_write::<S, _>(self.visitor.f, key, self.oppr.allow_reserved)?;
-                self.visitor.f.write_char('=')?;
+                escape_write::<S, _, _>(self.visitor.writer, key, self.oppr.allow_reserved)?;
+                self.visitor.writer.write_char('=')?;
             } else {
                 if self.oppr.named {
-                    escape_write::<S, _>(
-                        self.visitor.f,
+                    escape_write::<S, _, _>(
+                        self.visitor.writer,
                         self.visitor.varspec.name().as_str(),
                         self.oppr.allow_reserved,
                     )?;
-                    self.visitor.f.write_char('=')?;
+                    self.visitor.writer.write_char('=')?;
                 }
-                escape_write::<S, _>(self.visitor.f, key, self.oppr.allow_reserved)?;
-                self.visitor.f.write_char(',')?;
+                escape_write::<S, _, _>(self.visitor.writer, key, self.oppr.allow_reserved)?;
+                self.visitor.writer.write_char(',')?;
             }
         } else {
             // Write prefix for the non-first item.
             match (self.oppr.named, is_explode) {
                 (_, false) => {
-                    self.visitor.f.write_char(',')?;
-                    escape_write::<S, _>(self.visitor.f, key, self.oppr.allow_reserved)?;
-                    self.visitor.f.write_char(',')?;
+                    self.visitor.writer.write_char(',')?;
+                    escape_write::<S, _, _>(self.visitor.writer, key, self.oppr.allow_reserved)?;
+                    self.visitor.writer.write_char(',')?;
                 }
                 (false, true) => {
-                    self.visitor.f.write_str(self.oppr.sep)?;
-                    escape_write::<S, _>(self.visitor.f, key, self.oppr.allow_reserved)?;
-                    self.visitor.f.write_char('=')?;
+                    self.visitor.writer.write_str(self.oppr.sep)?;
+                    escape_write::<S, _, _>(self.visitor.writer, key, self.oppr.allow_reserved)?;
+                    self.visitor.writer.write_char('=')?;
                 }
                 (true, true) => {
-                    self.visitor.f.write_str(self.oppr.sep)?;
-                    escape_write::<S, _>(self.visitor.f, key, self.oppr.allow_reserved)?;
-                    self.visitor.f.write_char('=')?;
+                    self.visitor.writer.write_str(self.oppr.sep)?;
+                    escape_write::<S, _, _>(self.visitor.writer, key, self.oppr.allow_reserved)?;
+                    self.visitor.writer.write_char('=')?;
                 }
             }
         }
 
-        escape_write::<S, _>(self.visitor.f, value, self.oppr.allow_reserved)?;
+        escape_write::<S, _, _>(self.visitor.writer, value, self.oppr.allow_reserved)?;
 
         self.num_elems += 1;
         Ok(())
     }
 }
 
-impl<S: Spec> VisitorSealed for AssocValueVisitor<'_, '_, S> {}
+impl<S: Spec, W: fmt::Write> VisitorSealed for AssocValueVisitor<'_, S, W> {}
 
-impl<'a, 'b, S: Spec> AssocVisitor for AssocValueVisitor<'a, 'b, S> {
-    type Result = Result<VisitDoneToken<'a, 'b, S>, fmt::Error>;
+impl<'a, S: Spec, W: fmt::Write> AssocVisitor for AssocValueVisitor<'a, S, W> {
+    type Result = Result<VisitDoneToken<'a, S, W>, fmt::Error>;
 
     /// Visits an entry.
     #[inline]
@@ -868,6 +955,10 @@ impl<'a> Visitor for TypeVisitor<'a> {
     #[inline]
     fn var_name(&self) -> VarName<'a> {
         self.var_name
+    }
+    #[inline]
+    fn purpose(&self) -> VisitPurpose {
+        VisitPurpose::Typecheck
     }
     #[inline]
     fn visit_undefined(self) -> Self::Result {

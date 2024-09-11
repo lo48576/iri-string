@@ -92,7 +92,6 @@ impl fmt::Write for StringWriter<'_> {
 /// When allocation failure happens, incompletely appended strings won't be
 /// stripped. Callers are responsible to clean up the destination if necessary.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub fn try_append_to_string<T: fmt::Display>(
     dest: &mut String,
     value: &T,
@@ -149,7 +148,6 @@ impl core::fmt::Debug for Censored {
 
 /// [`ToString`][`alloc::string::ToString`], but without panic.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub trait ToStringFallible: alloc::string::ToString {
     /// [`ToString::to_string`][`alloc::string::ToString::to_string`], but without panic on OOM.
     fn try_to_string(&self) -> Result<String, TryReserveError>;
@@ -168,7 +166,6 @@ impl<T: fmt::Display> ToStringFallible for T {
 
 /// A trait for types that can be converted to a dedicated allocated string types.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub trait ToDedicatedString {
     /// Conversion target type.
     type Target;

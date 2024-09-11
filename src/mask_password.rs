@@ -229,8 +229,11 @@ impl_mask!(RiRelativeStr, RiRelativeString);
 /// [`RiStr::mask_password`]).
 ///
 /// Note that the result might be invalid as an IRI since arbitrary string can
-/// go to the place of the password. Because of this, [`ToDedicatedString`]
-/// trait is not implemented for this type.
+/// go to the place of the password.
+#[cfg_attr(
+    feature = "alloc",
+    doc = "Because of this, [`ToDedicatedString`] trait is not implemented for this type."
+)]
 ///
 /// [`PasswordMasked::replace_password`]: `PasswordMasked::replace_password`
 pub struct PasswordReplaced<'a, T: ?Sized, D> {

@@ -8,6 +8,8 @@ use std::error;
 /// Template construction and expansion error kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ErrorKind {
+    /// Cannot write to the backend.
+    WriteFailed,
     /// Expression is not closed.
     ExpressionNotClosed,
     /// Invalid character.
@@ -29,6 +31,7 @@ impl ErrorKind {
     #[must_use]
     fn as_str(self) -> &'static str {
         match self {
+            Self::WriteFailed => "failed to write to the backend writer",
             Self::ExpressionNotClosed => "expression not closed",
             Self::InvalidCharacter => "invalid character",
             Self::InvalidExpression => "invalid expression",
@@ -62,6 +65,16 @@ impl Error {
     pub(super) fn new(kind: ErrorKind, location: usize) -> Self {
         Self { kind, location }
     }
+
+    /// Returns the byte position the error is detected.
+    ///
+    /// NOTE: This is not a part of the public API since the value to be
+    /// returned (i.e., the definition of the "position" of an error) is not
+    /// guaranteed to be stable.
+    #[cfg(test)]
+    pub(super) fn location(&self) -> usize {
+        self.location
+    }
 }
 
 impl fmt::Display for Error {
@@ -77,13 +90,11 @@ impl fmt::Display for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl error::Error for Error {}
 
 /// Error on conversion into a URI template type.
 // TODO: Unifiable to `types::CreationError`?
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub struct CreationError<T> {
     /// Soruce data.
     source: T,
@@ -140,5 +151,4 @@ impl<T> fmt::Display for CreationError<T> {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl<T: fmt::Debug> error::Error for CreationError<T> {}

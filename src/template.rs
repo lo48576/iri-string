@@ -5,7 +5,12 @@
 //! # Usage
 //!
 //! 1. Prepare a template.
-//!     * Template type is [`UriTemplateStr`] (borrowed) and [`UriTemplateString`] (owned).
+//!     * You can create a template as [`UriTemplateStr`]
+#![cfg_attr(
+    feature = "alloc",
+    doc = "      type (borrowed) or [`UriTemplateString`] type (owned)."
+)]
+#![cfg_attr(not(feature = "alloc"), doc = "      type.")]
 //! 2. Prepare a context.
 //!     * Create a value of type that implements [`Context`] trait.
 #![cfg_attr(
@@ -116,18 +121,17 @@ mod error;
 mod expand;
 mod parser;
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod simple_context;
 mod string;
 
-pub use self::context::Context;
+pub use self::context::{Context, DynamicContext};
 #[cfg(feature = "alloc")]
 pub use self::error::CreationError;
 pub use self::error::Error;
 pub use self::expand::Expanded;
-pub use self::string::UriTemplateStr;
 #[cfg(feature = "alloc")]
 pub use self::string::UriTemplateString;
+pub use self::string::{UriTemplateStr, UriTemplateVariables};
 
 /// Deprecated old name of [`template::context::VarName`].
 ///

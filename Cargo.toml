@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "iri-string"
-version = "0.7.3"
+version = "0.7.4"
 authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.60"
@@ -19,13 +19,14 @@ keywords = ["IRI", "URI"]
 
 [package.metadata.docs.rs]
 all-features = true
+# Use unstable toolchain feature on document generation on docs.rs.
 # See <https://docs.rs/about/builds>.
 #
-# Didn't create `docsrs` feature, since this (`#[doc(cfg(feature = ...))]`)
-# depends on nightly feature and it prevents `cargo doc --all-features` from
-# running with stable rust toolchain.
-# See <https://doc.rust-lang.org/rustdoc/unstable-features.html#extensions-to-the-doc-attribute>
-# for unstable `#[doc(cfg(...))]` attribute.
+# Didn't create `docsrs` feature, since Rustdoc feature `doc_auto_cfg` depends
+# on nightly toolchain and it prevents `cargo doc --all-features` from running
+# with stable Rust toolchain.
+# See <https://doc.rust-lang.org/rustdoc/unstable-features.html#doc_auto_cfg-automatically-generate-doccfg>
+# for unstable `doc_auto_cfg` feature.
 rustdoc-args = ["--cfg", "docsrs"]
 
 [lib]

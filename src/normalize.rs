@@ -26,6 +26,9 @@
 //! failure. Currently no cases are known to fail when at least one of the base
 //! IRI or the relative IRI contains authorities.
 //!
+//! To know what will happen on resolution failure, see the module documentation
+//! for [`resolve`][`crate::resolve`].
+//!
 //! ## Examples
 //!
 //! ### Normalization failure

@@ -2,12 +2,38 @@
 
 ## [Unreleased]
 
+## [0.7.4]
+
+* Fix calculation of template expansion error location.
+    + Currently this just appears in an error message but not exposed through
+      any other public API.
+* Add an iterator of variables that appears in a URI template.
+* Support URI template expansion with a mutable context.
+
+### Added
+* Add an iterator of variables that appears in a URI template.
+    + List of added items:
+        - `template::UriTemplateStr::variables()` method
+        - `template::UriTemplateVariables<'_>` iterator type
+* Support URI template expansion with a mutable context.
+    + Add methods `template::UriTemplateStr::expand_dynamic()` and
+      `template::UriTemplateStr::expand_dynamic_to_string()`.
+    + Add `template::context::DynamicContext` trait for mutable context.
+    + Add `template::context::Visitor::purpose()` method and
+      `template::context::VisitPurpose` type to enable users to know for what
+      purpose the variable is being visited.
+
+### Fixed
+* Fix calculation of template expansion error location.
+    + Currently this error location info just appears in an error message (from
+      `<template::Error as std::fmt::Display>::fmt`), but not exposed through
+      any other public API.
+
 ## [0.7.3]
 
 * Add easy conversion from an expanded template into IRI/URI string types.
 
 ### Added
-
 * Add easy conversion from an expanded template into IRI/URI string types.
     + List of added conversions:
         - `TryFrom<template::Expanded<'_, S, C>> for types::RiAbsoluteString<S>`
@@ -950,7 +976,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.4...develop>
+[0.7.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.4>
 [0.7.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.3>
 [0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
 [0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>

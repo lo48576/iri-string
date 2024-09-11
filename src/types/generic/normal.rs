@@ -393,6 +393,17 @@ impl<S: Spec> RiStr<S> {
 
     /// Returns the normalized IRI.
     ///
+    /// # Notes
+    ///
+    /// For some abnormal IRIs, the normalization can produce semantically
+    /// incorrect string that looks syntactically valid. To avoid security
+    /// issues by this trap, the normalization algorithm by this crate
+    /// automatically applies the workaround.
+    ///
+    /// If you worry about this, test by [`RiStr::ensure_rfc3986_normalizable`]
+    /// method or [`Normalized::ensure_rfc3986_normalizable`] before using the
+    /// result string.
+    ///
     /// # Examples
     ///
     /// ```
