@@ -62,6 +62,16 @@ impl Error {
     pub(super) fn new(kind: ErrorKind, location: usize) -> Self {
         Self { kind, location }
     }
+
+    /// Returns the byte position the error is detected.
+    ///
+    /// NOTE: This is not a part of the public API since the value to be
+    /// returned (i.e., the definition of the "position" of an error) is not
+    /// guaranteed to be stable.
+    #[cfg(test)]
+    pub(super) fn location(&self) -> usize {
+        self.location
+    }
 }
 
 impl fmt::Display for Error {
