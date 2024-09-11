@@ -13,9 +13,9 @@ use alloc::sync::Arc;
 
 use crate::spec::Spec;
 use crate::template::components::{VarListIter, VarName};
-use crate::template::context::Context;
+use crate::template::context::{Context, DynamicContext};
 use crate::template::error::{Error, ErrorKind};
-use crate::template::expand::{Chunk, Chunks, Expanded};
+use crate::template::expand::{expand_whole_dynamic, Chunk, Chunks, Expanded};
 use crate::template::parser::validate_template_str;
 
 #[cfg(feature = "alloc")]
@@ -256,6 +256,17 @@ impl UriTemplateStr {
         context: &'a C,
     ) -> Result<Expanded<'a, S, C>, Error> {
         Expanded::new(self, context)
+    }
+
+    /// Expands the template with the given dynamic context.
+    ///
+    /// See the documentation for [`DynamicContext`] for usage.
+    pub fn expand_dynamic<S: Spec, W: fmt::Write, C: DynamicContext>(
+        &self,
+        writer: &mut W,
+        context: &mut C,
+    ) -> Result<(), Error> {
+        expand_whole_dynamic::<S, _, _>(self, writer, context)
     }
 
     /// Returns an iterator of variables in the template.

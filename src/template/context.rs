@@ -57,13 +57,137 @@ use core::ops::ControlFlow;
 
 pub use crate::template::components::VarName;
 
-/// A trait for types that can behave as a URI template expansion context.
+/// A trait for types that can behave as a static URI template expansion context.
 pub trait Context: Sized {
     /// Visits a variable.
     ///
     /// To get variable name, use [`Visitor::var_name()`].
     #[must_use]
     fn visit<V: Visitor>(&self, visitor: V) -> V::Result;
+}
+
+/// A trait for types that can behave as a dynamic (mutable) URI template expansion context.
+///
+/// This type is for use with [`UriTemplateStr::expand_dynamic`] method and its
+/// family.
+///
+/// Note that "dynamic" here does not mean that the value of variables can
+/// change during a template expansion. The value should be fixed and consistent
+/// during each expansion, but the context is allowed to mutate itself if it
+/// does not break this rule.
+///
+/// # Exmaples
+///
+/// ```
+/// # #[cfg(feature = "alloc")]
+/// # extern crate alloc;
+/// # use iri_string::template::Error;
+/// # #[cfg(feature = "alloc")] {
+/// # use alloc::string::String;
+/// use iri_string::template::UriTemplateStr;
+/// use iri_string::template::context::{DynamicContext, Visitor, VisitPurpose};
+/// use iri_string::spec::UriSpec;
+///
+/// struct MyContext<'a> {
+///     /// Target path.
+///     target: &'a str,
+///     /// Username.
+///     username: Option<&'a str>,
+///     /// A flag to remember whether the URI template
+///     /// attempted to use `username` variable.
+///     username_visited: bool,
+/// }
+///
+/// impl DynamicContext for MyContext<'_> {
+///     fn on_expansion_start(&mut self) {
+///         // Reset the state.
+///         self.username_visited = false;
+///     }
+///     fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+///         match visitor.var_name().as_str() {
+///             "target" => visitor.visit_string(self.target),
+///             "username" => {
+///                 if visitor.purpose() == VisitPurpose::Expand {
+///                     // The variable `username` is being used
+///                     // on the template expansion.
+///                     // Don't care whether `username` is defined or not.
+///                     self.username_visited = true;
+///                 }
+///                 if let Some(username) = &self.username {
+///                     visitor.visit_string(username)
+///                 } else {
+///                     visitor.visit_undefined()
+///                 }
+///             }
+///             _ => visitor.visit_undefined(),
+///         }
+///     }
+/// }
+///
+/// let mut context = MyContext {
+///     target: "/posts/1",
+///     username: Some("the_admin"),
+///     username_visited: false,
+/// };
+/// let mut buf = String::new();
+///
+/// // No access to the variable `username`.
+/// let template1 = UriTemplateStr::new("{+target}")?;
+/// template1.expand_dynamic::<UriSpec, _, _>(&mut buf, &mut context)?;
+/// assert_eq!(buf, "/posts/1");
+/// assert!(!context.username_visited);
+///
+/// buf.clear();
+/// // Will access to the variable `username`.
+/// let template2 = UriTemplateStr::new("{+target}{?username}")?;
+/// template2.expand_dynamic::<UriSpec, _, _>(&mut buf, &mut context)?;
+/// assert_eq!(buf, "/posts/1?username=the_admin");
+/// assert!(context.username_visited);
+///
+/// buf.clear();
+/// context.username = None;
+/// // Will access to the variable `username` but it is undefined.
+/// template2.expand_dynamic::<UriSpec, _, _>(&mut buf, &mut context)?;
+/// assert_eq!(buf, "/posts/1");
+/// assert!(
+///     context.username_visited,
+///     "`MyContext` can know and remember whether `visit_dynamic()` is called
+///      for `username`, even if its value is undefined"
+/// );
+/// # }
+/// # Ok::<_, Error>(())
+/// ```
+///
+/// [`UriTemplateStr::expand_dynamic`]: `crate::template::UriTemplateStr::expand_dynamic`
+pub trait DynamicContext: Sized {
+    /// Visits a variable.
+    ///
+    /// To get variable name, use [`Visitor::var_name()`].
+    ///
+    /// # Restriction
+    ///
+    /// The visit results should be consistent and unchanged between the last
+    /// time [`on_expansion_start`][`Self::on_expansion_start`] was called and
+    /// the next time [`on_expansion_end`][`Self::on_expansion_end`] will be
+    /// called. If this condition is violated, template expansion will produce
+    /// wrong result or may panic at worst.
+    #[must_use]
+    fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result;
+
+    /// A callback that is called before the expansion of a URI template.
+    #[inline]
+    fn on_expansion_start(&mut self) {}
+
+    /// A callback that is called after the expansion of a URI template.
+    #[inline]
+    fn on_expansion_end(&mut self) {}
+}
+
+impl<C: Context> DynamicContext for C {
+    #[inline]
+    fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+        self.visit(visitor)
+    }
 }
 
 /// A purpose of a visit.
