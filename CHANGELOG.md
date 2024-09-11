@@ -6,12 +6,20 @@
     + Currently this just appears in an error message but not exposed through
       any other public API.
 * Add an iterator of variables that appears in a URI template.
+* Support URI template expansion with a mutable context.
 
 ### Added
 * Add an iterator of variables that appears in a URI template.
     + List of added items:
         - `template::UriTemplateStr::variables()` method
         - `template::UriTemplateVariables<'_>` iterator type
+* Support URI template expansion with a mutable context.
+    + Add methods `template::UriTemplateStr::expand_dynamic()` and
+      `template::UriTemplateStr::expand_dynamic_to_string()`.
+    + Add `template::context::DynamicContext` trait for mutable context.
+    + Add `template::context::Visitor::purpose()` method and
+      `template::context::VisitPurpose` type to enable users to know for what
+      purpose the variable is being visited.
 
 ### Fixed
 * Fix calculation of template expansion error location.
