@@ -7,7 +7,7 @@
 //!     1. Get variable name by [`Visitor::var_name`] method.
 //!     2. Feed the corresponding value(s) by one of `Visitor::visit_*` methods.
 //!
-//! Note that users are required to consistent result across multiple visits for
+//! Note that contexts should return consistent result across multiple visits for
 //! the same variable. In other words, `Context::visit` should return the same
 //! result for the same `Visitor::var_name()` during the context is borrowed.
 //! If this condition is violated, the URI template processor can return
