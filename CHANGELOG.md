@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.4]
+
 * Fix calculation of template expansion error location.
     + Currently this just appears in an error message but not exposed through
       any other public API.
@@ -974,7 +976,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.3...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.4...develop>
+[0.7.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.4>
 [0.7.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.3>
 [0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
 [0.7.1]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.1>
