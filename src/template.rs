@@ -124,7 +124,7 @@ mod parser;
 pub mod simple_context;
 mod string;
 
-pub use self::context::Context;
+pub use self::context::{Context, DynamicContext};
 #[cfg(feature = "alloc")]
 pub use self::error::CreationError;
 pub use self::error::Error;

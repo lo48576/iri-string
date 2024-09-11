@@ -9,13 +9,15 @@ use alloc::boxed::Box;
 #[cfg(feature = "alloc")]
 use alloc::rc::Rc;
 #[cfg(feature = "alloc")]
+use alloc::string::String;
+#[cfg(feature = "alloc")]
 use alloc::sync::Arc;
 
 use crate::spec::Spec;
 use crate::template::components::{VarListIter, VarName};
-use crate::template::context::Context;
+use crate::template::context::{Context, DynamicContext};
 use crate::template::error::{Error, ErrorKind};
-use crate::template::expand::{Chunk, Chunks, Expanded};
+use crate::template::expand::{expand_whole_dynamic, Chunk, Chunks, Expanded};
 use crate::template::parser::validate_template_str;
 
 #[cfg(feature = "alloc")]
@@ -256,6 +258,105 @@ impl UriTemplateStr {
         context: &'a C,
     ) -> Result<Expanded<'a, S, C>, Error> {
         Expanded::new(self, context)
+    }
+
+    /// Expands the template with the given dynamic context.
+    ///
+    #[cfg_attr(
+        feature = "alloc",
+        doc = concat!(
+            "If you need the allocated [`String`], use",
+            "[`expand_dynamic_to_string`][`Self::expand_dynamic_to_string`]."
+        )
+    )]
+    ///
+    /// See the documentation for [`DynamicContext`] for usage.
+    pub fn expand_dynamic<S: Spec, W: fmt::Write, C: DynamicContext>(
+        &self,
+        writer: &mut W,
+        context: &mut C,
+    ) -> Result<(), Error> {
+        expand_whole_dynamic::<S, _, _>(self, writer, context)
+    }
+
+    /// Expands the template into a string, with the given dynamic context.
+    ///
+    /// This is basically [`expand_dynamic`][`Self::expand_dynamic`] method
+    /// that returns an owned string instead of writing to the given writer.
+    ///
+    /// See the documentation for [`DynamicContext`] for usage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "alloc")]
+    /// # extern crate alloc;
+    /// # use iri_string::template::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// # use alloc::string::String;
+    /// use iri_string::template::UriTemplateStr;
+    /// # use iri_string::template::context::{DynamicContext, Visitor, VisitPurpose};
+    /// use iri_string::spec::UriSpec;
+    ///
+    /// struct MyContext<'a> {
+    ///     // See the documentation for `DynamicContext`.
+    /// #     /// Target path.
+    /// #     target: &'a str,
+    /// #     /// Username.
+    /// #     username: Option<&'a str>,
+    /// #     /// A flag to remember whether the URI template
+    /// #     /// attempted to use `username` variable.
+    /// #     username_visited: bool,
+    /// }
+    /// #
+    /// # impl DynamicContext for MyContext<'_> {
+    /// #     fn on_expansion_start(&mut self) {
+    /// #         // Reset the state.
+    /// #         self.username_visited = false;
+    /// #     }
+    /// #     fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+    /// #         match visitor.var_name().as_str() {
+    /// #             "target" => visitor.visit_string(self.target),
+    /// #             "username" => {
+    /// #                 if visitor.purpose() == VisitPurpose::Expand {
+    /// #                     // The variable `username` is being used
+    /// #                     // on the template expansion.
+    /// #                     // Don't care whether `username` is defined or not.
+    /// #                     self.username_visited = true;
+    /// #                 }
+    /// #                 if let Some(username) = &self.username {
+    /// #                     visitor.visit_string(username)
+    /// #                 } else {
+    /// #                     visitor.visit_undefined()
+    /// #                 }
+    /// #             }
+    /// #             _ => visitor.visit_undefined(),
+    /// #         }
+    /// #     }
+    /// # }
+    ///
+    /// let mut context = MyContext {
+    ///     target: "/posts/1",
+    ///     username: Some("the_admin"),
+    ///     username_visited: false,
+    /// };
+    ///
+    /// // No access to the variable `username`.
+    /// let template = UriTemplateStr::new("{+target}{?username}")?;
+    /// let s = template.expand_dynamic_to_string::<UriSpec, _>(&mut context)?;
+    /// assert_eq!(s, "/posts/1?username=the_admin");
+    /// assert!(context.username_visited);
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn expand_dynamic_to_string<S: Spec, C: DynamicContext>(
+        &self,
+        context: &mut C,
+    ) -> Result<String, Error> {
+        let mut buf = String::new();
+        expand_whole_dynamic::<S, _, _>(self, &mut buf, context)?;
+        Ok(buf)
     }
 
     /// Returns an iterator of variables in the template.

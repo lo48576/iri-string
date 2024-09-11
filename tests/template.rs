@@ -226,6 +226,14 @@ fn prefix_modifier_for_percent_encoded_content() {
             .expect("must not have variable type error");
         assert_eq_display!(expanded, *expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+
+        let expanded_dynamic = template
+            .expand_dynamic_to_string::<UriSpec, _>(&mut context.clone())
+            .expect("must not have variable type error");
+        assert_eq!(
+            expanded_dynamic, *expected,
+            "dynamic, template={template:?}"
+        );
     }
 }
 
@@ -259,6 +267,14 @@ fn incomplete_percent_encode() {
             .expect("must not have variable type error");
         assert_eq_display!(expanded, *expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+
+        let expanded_dynamic = template
+            .expand_dynamic_to_string::<UriSpec, _>(&mut context.clone())
+            .expect("must not have variable type error");
+        assert_eq!(
+            expanded_dynamic, *expected,
+            "dynamic, template={template:?}"
+        );
     }
 }
 
@@ -266,6 +282,7 @@ fn incomplete_percent_encode() {
 fn fragmented_write() {
     use core::fmt;
 
+    #[derive(Clone)]
     enum Foo {
         Incomplete1,
         Incomplete2,
@@ -296,6 +313,8 @@ fn fragmented_write() {
             Ok(())
         }
     }
+
+    #[derive(Clone)]
     struct MyContext {
         incomplete1: Foo,
         incomplete2: Foo,
@@ -342,5 +361,13 @@ fn fragmented_write() {
             .expect("must not have variable type error");
         assert_eq_display!(expanded, *expected, "template={template:?}");
         assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+
+        let expanded_dynamic = template
+            .expand_dynamic_to_string::<UriSpec, _>(&mut context.clone())
+            .expect("must not have variable type error");
+        assert_eq!(
+            expanded_dynamic, *expected,
+            "dynamic, template={template:?}"
+        );
     }
 }

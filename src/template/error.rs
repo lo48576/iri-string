@@ -8,6 +8,8 @@ use std::error;
 /// Template construction and expansion error kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum ErrorKind {
+    /// Cannot write to the backend.
+    WriteFailed,
     /// Expression is not closed.
     ExpressionNotClosed,
     /// Invalid character.
@@ -29,6 +31,7 @@ impl ErrorKind {
     #[must_use]
     fn as_str(self) -> &'static str {
         match self {
+            Self::WriteFailed => "failed to write to the backend writer",
             Self::ExpressionNotClosed => "expression not closed",
             Self::InvalidCharacter => "invalid character",
             Self::InvalidExpression => "invalid expression",
