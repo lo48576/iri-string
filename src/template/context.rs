@@ -58,6 +58,12 @@ use core::ops::ControlFlow;
 pub use crate::template::components::VarName;
 
 /// A trait for types that can behave as a static URI template expansion context.
+///
+/// This type is for use with [`UriTemplateStr::expand`] method.
+///
+/// See [the module documentation][`crate::template`] for usage.
+///
+/// [`UriTemplateStr::expand`]: `crate::template::UriTemplateStr::expand`
 pub trait Context: Sized {
     /// Visits a variable.
     ///
