@@ -422,3 +422,57 @@ mod __serde_slice {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::spec::IriSpec;
+    use crate::template::context::{AssocVisitor, ListVisitor, Visitor};
+
+    struct TestContext;
+    impl Context for TestContext {
+        fn visit<V: Visitor>(&self, visitor: V) -> V::Result {
+            match visitor.var_name().as_str() {
+                "str" => visitor.visit_string("string"),
+                "list" => visitor
+                    .visit_list()
+                    .visit_items_and_finish(["item0", "item1", "item2"]),
+                "assoc" => visitor
+                    .visit_assoc()
+                    .visit_entries_and_finish([("key0", "value0"), ("key1", "value1")]),
+                _ => visitor.visit_undefined(),
+            }
+        }
+    }
+
+    #[test]
+    fn expand_error_pos() {
+        {
+            let e = UriTemplateStr::new("foo{list:4}")
+                .unwrap()
+                .expand::<IriSpec, _>(&TestContext)
+                .err()
+                .map(|e| e.location());
+            assert_eq!(e, Some("foo{".len()));
+        }
+
+        {
+            let e = UriTemplateStr::new("foo{/list*,list:4}")
+                .unwrap()
+                .expand::<IriSpec, _>(&TestContext)
+                .err()
+                .map(|e| e.location());
+            assert_eq!(e, Some("foo{/list*,".len()));
+        }
+
+        {
+            let e = UriTemplateStr::new("foo{/str:3,list*,assoc:4}")
+                .unwrap()
+                .expand::<IriSpec, _>(&TestContext)
+                .err()
+                .map(|e| e.location());
+            assert_eq!(e, Some("foo{/str:3,list*,".len()));
+        }
+    }
+}
