@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+* Fix calculation of template expansion error location.
+    + Currently this just appears in an error message but not exposed through
+      any other public API.
+
+### Fixed
+* Fix calculation of template expansion error location.
+    + Currently this error location info just appears in an error message (from
+      `<template::Error as std::fmt::Display>::fmt`), but not exposed through
+      any other public API.
+
 ## [0.7.3]
 
 * Add easy conversion from an expanded template into IRI/URI string types.
