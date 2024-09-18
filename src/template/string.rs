@@ -82,6 +82,7 @@ mod owned;
 /// ```
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
+#[repr(transparent)]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UriTemplateStr {
     /// The raw string.
