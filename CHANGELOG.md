@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.7.5]
+
+* Fix unsoundness of `template::UriTemplateStr`
+
+### Fixed
+* Fix unsoundness of `template::UriTemplateStr`
+    * The type should have `#[repr(transparent)]` to compile safely but did not.
+    * Any creations and uses of the value are undefined behavior without the
+      fix, while the current version of the Rust compiler seems to happen to
+      generate the expected binary (without any guarantee).
+
 ## [0.7.4]
 
 * Fix calculation of template expansion error location.
@@ -976,7 +987,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.4...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.5...develop>
+[0.7.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.5>
 [0.7.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.4>
 [0.7.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.3>
 [0.7.2]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.2>
