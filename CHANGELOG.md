@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Fix unsoundness of `template::UriTemplateStr`
+
+### Fixed
+* Fix unsoundness of `template::UriTemplateStr`
+    * The type should have `#[repr(transparent)]` to compile safely but did not.
+    * Any creations and uses of the value are undefined behavior without the
+      fix, while the current version of the Rust compiler seems to happen to
+      generate the expected binary (without any guarantee).
+
 ## [0.7.4]
 
 * Fix calculation of template expansion error location.
