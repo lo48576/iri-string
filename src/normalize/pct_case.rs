@@ -19,6 +19,43 @@ pub(crate) fn is_pct_case_normalized<S: Spec>(s: &str) -> bool {
     eq_str_display(s, &PctCaseNormalized::<S>::new(s))
 }
 
+/// Returns a character for the slice.
+///
+/// Essentially equivalent to `core::str::from_utf8(bytes).unwrap().and_then(|s| s.get(0))`,
+/// but this function fully trusts that the input is a valid UTF-8 string with
+/// only one character.
+fn into_char_trusted(bytes: &[u8]) -> Result<char, ()> {
+    /// The bit mask to get the content part in a continue byte.
+    const CONTINUE_BYTE_MASK: u8 = 0b_0011_1111;
+    /// Minimum valid values for a code point in a UTF-8 sequence of 2, 3, and 4 bytes.
+    const MIN: [u32; 3] = [0x80, 0x800, 0x1_0000];
+
+    let len = bytes.len();
+    let c: u32 = match len {
+        2 => (u32::from(bytes[0] & 0b_0001_1111) << 6) | u32::from(bytes[1] & CONTINUE_BYTE_MASK),
+        3 => {
+            (u32::from(bytes[0] & 0b_0000_1111) << 12)
+                | (u32::from(bytes[1] & CONTINUE_BYTE_MASK) << 6)
+                | u32::from(bytes[2] & CONTINUE_BYTE_MASK)
+        }
+        4 => {
+            (u32::from(bytes[0] & 0b_0000_0111) << 18)
+                | (u32::from(bytes[1] & CONTINUE_BYTE_MASK) << 12)
+                | (u32::from(bytes[2] & CONTINUE_BYTE_MASK) << 6)
+                | u32::from(bytes[3] & CONTINUE_BYTE_MASK)
+        }
+        len => unreachable!(
+            "[consistency] expected 2, 3, or 4 bytes for a character, but got {len} as the length"
+        ),
+    };
+    if c < MIN[len - 2] {
+        // Redundant UTF-8 encoding.
+        return Err(());
+    }
+    // Can be an invalid Unicode code point.
+    char::from_u32(c).ok_or(())
+}
+
 /// Writable as a normalized path segment percent-encoding IRI.
 ///
 /// This wrapper does the things below when being formatted:
@@ -77,6 +114,12 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                 continue 'outer_loop;
             }
 
+            // Continue byte cannot be the first byte of a character.
+            if is_utf8_byte_continue(first_decoded) {
+                write!(f, "%{:02X}", first_decoded)?;
+                continue 'outer_loop;
+            }
+
             // Get the expected length of decoded char.
             let expected_char_len = match (first_decoded & 0xf0).cmp(&0b1110_0000) {
                 Ordering::Less => 2,
@@ -128,12 +171,8 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
             }
 
             // Decode the bytes into a character.
-            match core::str::from_utf8(&c_buf[..expected_char_len]) {
-                Ok(decoded_s) => {
-                    let decoded_c = decoded_s
-                        .chars()
-                        .next()
-                        .expect("[precondition] non-empty string must have characters");
+            match into_char_trusted(&c_buf[..expected_char_len]) {
+                Ok(decoded_c) => {
                     if is_unreserved::<S>(decoded_c) {
                         // Unreserved. Print the decoded.
                         f.write_char(decoded_c)?;
@@ -143,7 +182,7 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                             .try_for_each(|b| write!(f, "%{:02X}", b))?;
                     }
                 }
-                Err(e) => {
+                Err(_) => {
                     // Skip decoding of the entire sequence of pct-encoded triplets loaded
                     // in `c_buf`. This is valid from the reasons below.
                     //
@@ -160,18 +199,6 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                     //   them cannot start the new valid UTF-8 byte sequence. This means that
                     //   if the bytes in the buffer does not consitute a valid UTF-8 bytes
                     //   sequence, the whole buffer can immediately be emmitted as pct-encoded.
-
-                    assert_eq!(
-                        e.valid_up_to(),
-                        0,
-                        "[consistency] preceding valid bytes must have already been stripped"
-                    );
-                    // Since the number of bytes in the buffer is enough, `e.error_len()`
-                    // won't return `None`, which indicates that the input is incomplete.
-                    assert!(
-                        e.error_len() > Some(0),
-                        "[consistency] decoding cannot fail without undecodable prefix bytes"
-                    );
 
                     debug_assert!(
                         c_buf[1..expected_char_len]
