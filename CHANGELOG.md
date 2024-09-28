@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Add `fragment_str()` methods that returns a fragment in a raw string slice.
+
+### Added
+* Add `fragment_str()` methods that returns a fragment in a raw string slice.
+    + List of added methods:
+        + `RiStr::fragment_str()`
+        + `RiReferenceStr::fragment_str()`
+        + `RiRelativeStr::fragment_str()`
+
 ## [0.7.5]
 
 * Fix unsoundness of `template::UriTemplateStr`
