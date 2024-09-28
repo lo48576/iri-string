@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.7.6]
+
+* Add `fragment_str()` methods that returns a fragment in a raw string slice.
+
+### Added
+* Add `fragment_str()` methods that returns a fragment in a raw string slice.
+    + List of added methods:
+        + `RiStr::fragment_str()`
+        + `RiReferenceStr::fragment_str()`
+        + `RiRelativeStr::fragment_str()`
+
 ## [0.7.5]
 
 * Fix unsoundness of `template::UriTemplateStr`
@@ -987,7 +998,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.5...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.6...develop>
+[0.7.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.6>
 [0.7.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.5>
 [0.7.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.4>
 [0.7.3]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.3>

@@ -680,6 +680,38 @@ impl<S: Spec> RiStr<S> {
         AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
     }
 
+    /// Returns the fragment part as a raw string slice if exists.
+    ///
+    /// A leading `#` character is truncated if the fragment part exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#corge")?;
+    /// assert_eq!(iri.fragment_str(), Some("corge"));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux#")?;
+    /// assert_eq!(iri.fragment_str(), Some(""));
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::{spec::IriSpec, types::IriStr, validate::Error};
+    /// let iri = IriStr::new("foo://bar/baz?qux=quux")?;
+    /// assert_eq!(iri.fragment_str(), None);
+    /// # Ok::<_, Error>(())
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn fragment_str(&self) -> Option<&str> {
+        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment_str()
+    }
+
     /// Returns the authority components.
     ///
     /// # Examples
