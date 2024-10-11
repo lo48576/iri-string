@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+* Fix URI template expansion with `template::DynamicContext` to call
+  the methods `on_expansion_start` and `on_expansion_end`.
+
+### Fixed
+* Fix URI template expansion with `template::DynamicContext` to call
+  the methods `on_expansion_start` and `on_expansion_end`.
+
 ## [0.7.6]
 
 * Add `fragment_str()` methods that returns a fragment in a raw string slice.
