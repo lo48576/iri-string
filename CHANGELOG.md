@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.7.7]
+
+* Fix URI template expansion with `template::DynamicContext` to call
+  the methods `on_expansion_start` and `on_expansion_end`.
+
+### Fixed
+* Fix URI template expansion with `template::DynamicContext` to call
+  the methods `on_expansion_start` and `on_expansion_end`.
+
 ## [0.7.6]
 
 * Add `fragment_str()` methods that returns a fragment in a raw string slice.
@@ -998,7 +1007,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.6...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.7...develop>
+[0.7.7]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.7>
 [0.7.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.6>
 [0.7.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.5>
 [0.7.4]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.4>

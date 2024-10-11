@@ -188,6 +188,20 @@ pub(super) fn expand_whole_dynamic<S: Spec, W: fmt::Write, C: DynamicContext>(
     writer: &mut W,
     context: &mut C,
 ) -> Result<(), Error> {
+    context.on_expansion_start();
+    let result = expand_whole_dynamic_impl::<S, W, C>(template, writer, context);
+    context.on_expansion_end();
+    result
+}
+
+/// Expands the whole template with the dynamic context.
+///
+/// Note that the caller is responsible to set up or finalize the `context`.
+fn expand_whole_dynamic_impl<S: Spec, W: fmt::Write, C: DynamicContext>(
+    template: &UriTemplateStr,
+    writer: &mut W,
+    context: &mut C,
+) -> Result<(), Error> {
     let mut pos = 0;
     for chunk in Chunks::new(template) {
         let expr = match chunk {
