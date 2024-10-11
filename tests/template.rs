@@ -4,8 +4,10 @@
 #[macro_use]
 mod utils;
 
+use std::cell::Cell;
+
 use iri_string::spec::UriSpec;
-use iri_string::template::context::{Context, Visitor};
+use iri_string::template::context::{Context, DynamicContext, Visitor};
 use iri_string::template::simple_context::{SimpleContext, Value};
 use iri_string::template::UriTemplateStr;
 
@@ -370,4 +372,33 @@ fn fragmented_write() {
             "dynamic, template={template:?}"
         );
     }
+}
+
+#[test]
+fn github_issue_39() {
+    #[derive(Default)]
+    struct MyContext {
+        on_expansion_start_called: Cell<bool>,
+        on_expansion_end_called: Cell<bool>,
+    }
+    impl DynamicContext for MyContext {
+        fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+            visitor.visit_undefined()
+        }
+        fn on_expansion_start(&mut self) {
+            self.on_expansion_start_called.set(true);
+        }
+        fn on_expansion_end(&mut self) {
+            self.on_expansion_end_called.set(true);
+        }
+    }
+
+    let mut dyctx = MyContext::default();
+    let template = UriTemplateStr::new("hello/{world}").expect("valid template string");
+    let s = template
+        .expand_dynamic_to_string::<UriSpec, _>(&mut dyctx)
+        .expect("must not have variable type error");
+    assert_eq!(s, "hello/");
+    assert!(dyctx.on_expansion_start_called.get());
+    assert!(dyctx.on_expansion_end_called.get());
 }
