@@ -591,7 +591,7 @@ impl<S: Spec> RiReferenceString<S> {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(iri::<S>(&self.inner).is_ok());
+        debug_assert!(iri_reference::<S>(&self.inner).is_ok());
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.

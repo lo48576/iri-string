@@ -14,7 +14,6 @@ use crate::spec::Spec;
 use crate::types::RiReferenceString;
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiStr};
 #[cfg(feature = "alloc")]
-use crate::validate::iri;
 use crate::validate::relative_ref;
 
 define_custom_string_slice! {
@@ -422,7 +421,7 @@ impl<S: Spec> RiRelativeString<S> {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(iri::<S>(&self.inner).is_ok());
+        debug_assert!(relative_ref::<S>(&self.inner).is_ok());
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
