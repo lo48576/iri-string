@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* Fix unconditional failure at `RiReferenceStr::set_fragment()`
+
+### Fixed
+* Fix unconditional failure at `RiReferenceStr::set_fragment()`
+
 ## [0.7.7]
 
 * Fix URI template expansion with `template::DynamicContext` to call
