@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.8]
+
 * Fix unconditional failure at `RiReferenceStr::set_fragment()`
 
 ### Fixed
@@ -1012,7 +1014,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.7...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.8...develop>
+[0.7.8]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.8>
 [0.7.7]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.7>
 [0.7.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.6>
 [0.7.5]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.5>
