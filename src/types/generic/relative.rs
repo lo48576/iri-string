@@ -418,6 +418,44 @@ impl<S: Spec> RiRelativeString<S> {
     /// Sets the fragment part to the given string.
     ///
     /// Removes fragment part (and following `#` character) if `None` is given.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::{IriFragmentStr, IriRelativeString};
+    ///
+    /// let mut iri = IriRelativeString::try_from("//user:password@example.com/path?query#frag.old")?;
+    /// assert_eq!(iri.fragment_str(), Some("frag.old"));
+    ///
+    /// iri.set_fragment(None);
+    /// assert_eq!(iri.fragment(), None);
+    ///
+    /// let frag_new = IriFragmentStr::new("frag-new")?;
+    /// iri.set_fragment(Some(frag_new));
+    /// assert_eq!(iri.fragment_str(), Some("frag-new"));
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
+    ///
+    /// Fragment can be empty, and it is distinguished from the absense of a fragment.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// # #[cfg(feature = "alloc")] {
+    /// use iri_string::types::IriRelativeString;
+    ///
+    /// let mut iri = IriRelativeString::try_from("/path#")?;
+    /// assert_eq!(iri, "/path#");
+    /// assert_eq!(iri.fragment_str(), Some(""), "Fragment is present and empty");
+    ///
+    /// iri.set_fragment(None);
+    /// assert_eq!(iri, "/path", "Note that # is now removed");
+    /// assert_eq!(iri.fragment_str(), None, "Fragment is absent");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
         debug_assert!(relative_ref::<S>(&self.inner).is_ok());
