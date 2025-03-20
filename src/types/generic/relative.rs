@@ -13,7 +13,6 @@ use crate::spec::Spec;
 #[cfg(feature = "alloc")]
 use crate::types::RiReferenceString;
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiReferenceStr, RiStr};
-#[cfg(feature = "alloc")]
 use crate::validate::relative_ref;
 
 define_custom_string_slice! {
