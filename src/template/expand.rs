@@ -761,7 +761,7 @@ struct ListValueVisitor<'a, S, W> {
     oppr: &'static OpProps,
 }
 
-impl<'a, S: Spec, W: fmt::Write> ListValueVisitor<'a, S, W> {
+impl<S: Spec, W: fmt::Write> ListValueVisitor<'_, S, W> {
     /// Visits an item.
     fn visit_item_impl<T: fmt::Display>(&mut self, item: T) -> fmt::Result {
         let modifier = self.visitor.varspec.modifier();
@@ -852,7 +852,7 @@ struct AssocValueVisitor<'a, S, W> {
     oppr: &'static OpProps,
 }
 
-impl<'a, S: Spec, W: fmt::Write> AssocValueVisitor<'a, S, W> {
+impl<S: Spec, W: fmt::Write> AssocValueVisitor<'_, S, W> {
     /// Visits an entry.
     fn visit_entry_impl<K: fmt::Display, V: fmt::Display>(
         &mut self,
