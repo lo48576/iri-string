@@ -88,7 +88,7 @@ struct DecomposeWriter<'a, F, B> {
     /// Dummy field for the type parameter of the return type of the function `f`.
     _r: PhantomData<fn() -> B>,
 }
-impl<'a, F, B> DecomposeWriter<'a, F, B>
+impl<F, B> DecomposeWriter<'_, F, B>
 where
     F: FnMut(PctEncodedFragments<'_>) -> ControlFlow<B>,
 {
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<'a, F, B> fmt::Write for DecomposeWriter<'a, F, B>
+impl<F, B> fmt::Write for DecomposeWriter<'_, F, B>
 where
     F: FnMut(PctEncodedFragments<'_>) -> ControlFlow<B>,
 {

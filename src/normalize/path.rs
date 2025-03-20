@@ -584,7 +584,7 @@ impl<'a> PathSegmentsIter<'a> {
     }
 }
 
-impl<'a> Iterator for PathSegmentsIter<'a> {
+impl Iterator for PathSegmentsIter<'_> {
     type Item = PathSegment;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -258,7 +258,7 @@ mod __serde_owned {
     #[derive(Debug, Clone, Copy)]
     struct CustomStringVisitor;
 
-    impl<'de> Visitor<'de> for CustomStringVisitor {
+    impl Visitor<'_> for CustomStringVisitor {
         type Value = UriTemplateString;
 
         #[inline]

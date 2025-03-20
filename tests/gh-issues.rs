@@ -172,3 +172,26 @@ mod issue_36 {
         // them have been added to generic test case data source.
     }
 }
+
+/// <https://github.com/lo48576/iri-string/pull/46>
+#[cfg(feature = "alloc")]
+mod issue_46 {
+    use iri_string::types::{UriFragmentStr, UriRelativeString};
+
+    #[test]
+    fn set_fragment_to_relative() {
+        let mut uri =
+            UriRelativeString::try_from("//user:password@example.com/path?query#frag.old")
+                .expect("valid relative URI");
+        assert_eq!(uri, "//user:password@example.com/path?query#frag.old");
+        assert_eq!(uri.fragment_str(), Some("frag.old"));
+
+        uri.set_fragment(None);
+        assert_eq!(uri, "//user:password@example.com/path?query");
+        assert_eq!(uri.fragment(), None);
+
+        let frag_new = UriFragmentStr::new("frag-new").expect("valid URI fragment");
+        uri.set_fragment(Some(frag_new));
+        assert_eq!(uri.fragment_str(), Some("frag-new"));
+    }
+}

@@ -147,7 +147,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
 /// Components getters.
 ///
 /// These getters are more efficient than calling through the result of `.base()`.
-impl<'a, S: Spec> FixedBaseResolver<'a, S> {
+impl<S: Spec> FixedBaseResolver<'_, S> {
     /// Returns the scheme.
     ///
     /// The following colon is truncated.

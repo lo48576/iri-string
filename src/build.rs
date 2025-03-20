@@ -36,14 +36,14 @@ impl Default for PortBuilder<'_> {
     }
 }
 
-impl<'a> From<u8> for PortBuilder<'a> {
+impl From<u8> for PortBuilder<'_> {
     #[inline]
     fn from(v: u8) -> Self {
         Self(PortBuilderRepr::Integer(v.into()))
     }
 }
 
-impl<'a> From<u16> for PortBuilder<'a> {
+impl From<u16> for PortBuilder<'_> {
     #[inline]
     fn from(v: u16) -> Self {
         Self(PortBuilderRepr::Integer(v))
@@ -1063,7 +1063,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiReferenceStr<S> {
         })
     }
 }
-impl<'a, S: Spec> Buildable<'a> for RiReferenceStr<S> {}
+impl<S: Spec> Buildable<'_> for RiReferenceStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
@@ -1079,7 +1079,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
         })
     }
 }
-impl<'a, S: Spec> Buildable<'a> for RiStr<S> {}
+impl<S: Spec> Buildable<'_> for RiStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
@@ -1098,7 +1098,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
         })
     }
 }
-impl<'a, S: Spec> Buildable<'a> for RiAbsoluteStr<S> {}
+impl<S: Spec> Buildable<'_> for RiAbsoluteStr<S> {}
 
 impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
@@ -1114,7 +1114,7 @@ impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
         })
     }
 }
-impl<'a, S: Spec> Buildable<'a> for RiRelativeStr<S> {}
+impl<S: Spec> Buildable<'_> for RiRelativeStr<S> {}
 
 /// Checks whether the builder output is valid IRI reference.
 ///
