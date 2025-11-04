@@ -195,3 +195,21 @@ mod issue_46 {
         assert_eq!(uri.fragment_str(), Some("frag-new"));
     }
 }
+
+/// <https://github.com/lo48576/iri-string/issues/48>
+mod issue_48 {
+    use super::*;
+
+    use iri_string::types::IriStr;
+
+    #[test]
+    fn percent_decode_invalid_utf8() {
+        let s = "a:%F9%A8%8E%80";
+        let iri = IriStr::new(s).expect("valid URI with percent encoded invalid UTF-8 bytes");
+        assert_eq_display!(
+            iri.normalize(),
+            s,
+            "percent-encoded invalid UTF-8 bytes should be left as is without being decoded"
+        );
+    }
+}
