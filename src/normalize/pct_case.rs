@@ -1,6 +1,5 @@
 //! Percent-encoding normalization and case normalization.
 
-use core::cmp::Ordering;
 use core::fmt::{self, Write as _};
 use core::marker::PhantomData;
 
@@ -104,27 +103,30 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
             let (first_decoded, after_first_triplet) = take_xdigits2(after_percent);
             rest = after_first_triplet;
 
-            if first_decoded.is_ascii() {
-                if is_ascii_unreserved(first_decoded) {
-                    // Unreserved. Print the decoded.
-                    f.write_char(char::from(first_decoded))?;
-                } else {
-                    write!(f, "%{:02X}", first_decoded)?;
+            let expected_char_len = match first_decoded {
+                0x00..=0x7F => {
+                    // An ASCII character.
+                    debug_assert!(first_decoded.is_ascii());
+                    if is_ascii_unreserved(first_decoded) {
+                        // Unreserved. Print the decoded.
+                        f.write_char(char::from(first_decoded))?;
+                    } else {
+                        write!(f, "%{:02X}", first_decoded)?;
+                    }
+                    continue 'outer_loop;
                 }
-                continue 'outer_loop;
-            }
-
-            // Continue byte cannot be the first byte of a character.
-            if is_utf8_byte_continue(first_decoded) {
-                write!(f, "%{:02X}", first_decoded)?;
-                continue 'outer_loop;
-            }
-
-            // Get the expected length of decoded char.
-            let expected_char_len = match (first_decoded & 0xf0).cmp(&0b1110_0000) {
-                Ordering::Less => 2,
-                Ordering::Equal => 3,
-                Ordering::Greater => 4,
+                0xC2..=0xDF => 2,
+                0xE0..=0xEF => 3,
+                0xF0..=0xF4 => 4,
+                0x80..=0xC1 | 0xF5..=0xFF => {
+                    // Cannot appear as a first byte.
+                    //
+                    //  * 0x80..=0xBF: continue byte.
+                    //  * 0xC0..=0xC1: redundant encoding.
+                    //  * 0xF5..=0xFF: above the maximum value for U+10FFFF.
+                    write!(f, "%{:02X}", first_decoded)?;
+                    continue 'outer_loop;
+                }
             };
 
             // Get continue bytes.
