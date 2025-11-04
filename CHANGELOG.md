@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.9]
+
 * Fix decoding of percent-encoded invalid UTF-8 bytes.
 
 ### Fixed
@@ -1022,7 +1024,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.8...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.9...develop>
+[0.7.9]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.9>
 [0.7.8]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.8>
 [0.7.7]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.7>
 [0.7.6]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.6>
