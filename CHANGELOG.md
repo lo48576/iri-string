@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+* Fix decoding of percent-encoded invalid UTF-8 bytes.
+
+### Fixed
+* Fix decoding of percent-encoded invalid UTF-8 bytes.
+    + Reported at [#48](https://github.com/lo48576/iri-string/issues/48).
+    + Percent-encoded bytes starting with 0xF5 or above were wrongly handled as
+      a 4-bytes long valid UTF-8 sequence.
+
 ## [0.7.8]
 
 * Fix unconditional failure at `RiReferenceStr::set_fragment()`
