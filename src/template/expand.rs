@@ -255,7 +255,7 @@ fn expand_expr_mut<S: Spec, W: fmt::Write, C: DynamicContext>(
             .visit_dynamic(visitor)
             .map_err(|_| Error::new(ErrorKind::WriteFailed, *pos))?;
         let writer_ptr = token.writer_ptr();
-        if writer_ptr != writer as *mut _ {
+        if !core::ptr::eq(writer_ptr, writer) {
             // Invalid `VisitDoneToken` was returned. This cannot usually happen
             // without intentional unnatural usage.
             panic!("invalid `VisitDoneToken` was returned");
@@ -386,7 +386,7 @@ fn expand<S: Spec, C: Context>(
         let visitor = ValueVisitor::<S, _>::new(f, varspec, op, &mut is_first_varspec);
         let token = context.visit(visitor)?;
         let writer_ptr = token.writer_ptr();
-        if writer_ptr != f as *mut _ {
+        if !core::ptr::eq(writer_ptr, f) {
             // Invalid `VisitDoneToken` was returned. This cannot usually happen
             // without intentional unnatural usage.
             panic!("invalid `VisitDoneToken` was returned");
