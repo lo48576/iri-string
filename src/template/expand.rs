@@ -672,7 +672,6 @@ impl<'a, S: Spec, W: fmt::Write> Visitor for ValueVisitor<'a, S, W> {
 
     /// Returns the name of the variable to visit.
     #[inline]
-    #[must_use]
     fn var_name(&self) -> VarName<'a> {
         self.varspec.name()
     }
@@ -718,7 +717,6 @@ impl<'a, S: Spec, W: fmt::Write> Visitor for ValueVisitor<'a, S, W> {
 
     /// Visits a list variable.
     #[inline]
-    #[must_use]
     fn visit_list(self) -> Self::ListVisitor {
         let oppr = OpProps::from_op(self.op);
         ListValueVisitor {
@@ -730,7 +728,6 @@ impl<'a, S: Spec, W: fmt::Write> Visitor for ValueVisitor<'a, S, W> {
 
     /// Visits an associative array variable.
     #[inline]
-    #[must_use]
     fn visit_assoc(self) -> Self::AssocVisitor {
         let oppr = OpProps::from_op(self.op);
         AssocValueVisitor {
