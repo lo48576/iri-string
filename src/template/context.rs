@@ -268,7 +268,6 @@ pub trait ListVisitor: Sized + private::Sealed {
     ///
     /// To feed multiple items at once, do
     /// `items.into_iter().try_for_each(|item| self.visit_item(item))` for example.
-    #[must_use]
     fn visit_item<T: fmt::Display>(&mut self, item: T) -> ControlFlow<Self::Result>;
     /// Finishes visiting the list.
     #[must_use]
@@ -304,7 +303,6 @@ pub trait AssocVisitor: Sized + private::Sealed {
     /// To feed multiple items at once, do
     /// `entries.into_iter().try_for_each(|(key, value)| self.visit_entry(key, value))`
     /// for example.
-    #[must_use]
     fn visit_entry<K: fmt::Display, V: fmt::Display>(
         &mut self,
         key: K,
