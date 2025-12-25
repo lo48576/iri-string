@@ -43,6 +43,7 @@ std = ["alloc", "memchr?/std", "serde?/std"]
 
 [dependencies]
 memchr = { version = "2.4.1", default-features = false, optional = true }
+# NOTE: `workspace.dependencies` is not yet supported on MSRV (1.60).
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]
