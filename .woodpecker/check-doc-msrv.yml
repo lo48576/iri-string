@@ -8,6 +8,11 @@ variables:
   msrv_channel: &msrv_channel '1.60.0'
   # Docker image of the MSRV.
   rust_msrv_image: &rust_image 'library/rust:1.60.0-slim'
+  configure_toolchain_cmds: &configure_toolchain_cmds
+    - cp .woodpecker/cargo-config.toml $${CARGO_HOME}/config.toml
+      # Use the Rust toolchain(s) cached in the CI workspace directory.
+    - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
+    - rustc --version && cargo --version
 
 matrix:
   OPT_FEATURES:
@@ -38,13 +43,13 @@ steps:
   - name: doc
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
       - cargo doc --workspace --no-deps ${OPT_FEATURES}
 
   - name: doc private-items
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
       - cargo doc --workspace --no-deps ${OPT_FEATURES} --document-private-items

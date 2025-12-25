@@ -7,6 +7,11 @@ when:
 variables:
   # Docker image of the latest stable Rust.
   rust_image: &rust_image 'library/rust:slim'
+  configure_toolchain_cmds: &configure_toolchain_cmds
+    - cp .woodpecker/cargo-config.toml $${CARGO_HOME}/config.toml
+      # Use the Rust toolchain(s) cached in the CI workspace directory.
+    - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
+    - rustc --version && cargo --version
 
 clone:
   git:
@@ -29,13 +34,13 @@ steps:
   - name: doc
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
       - cargo doc --workspace --no-deps ${OPT_FEATURES}
 
   - name: doc private-items
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
       - cargo doc --workspace --no-deps ${OPT_FEATURES} --document-private-items

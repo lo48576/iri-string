@@ -11,6 +11,11 @@ variables:
   # Docker image of the latest stable Rust.
   rust_image: &rust_image 'library/rust:slim'
   rust_nightly_image: &rust_nightly_image 'rustlang/rust:nightly-slim'
+  configure_toolchain_cmds: &configure_toolchain_cmds
+    - cp .woodpecker/cargo-config.toml $${CARGO_HOME}/config.toml
+      # Use the Rust toolchain(s) cached in the CI workspace directory.
+    - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
+    - rustc --version && cargo --version
 
 matrix:
   RUST_CHANNEL:
@@ -63,8 +68,6 @@ steps:
     image: *rust_image
     commands:
       - .woodpecker/scripts/prepare-toolchain.sh $${RUST_CHANNEL}
-    environment:
-      RUST_CHANNEL: stable
 
   - name: prepare deps
     image: *rust_image
@@ -78,7 +81,7 @@ steps:
   - name: prepare deps
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - cargo update
     when:
       - matrix:
@@ -105,7 +108,7 @@ steps:
   - name: fetch deps
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - cargo fetch --locked
       - mkdir -p .cargo
       - cargo vendor --color=always --locked >> .cargo/config.toml
@@ -113,7 +116,7 @@ steps:
   - name: clippy (allow warning)
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - rustup component add clippy
       - cargo clippy --version
       # TODO: Deny warnings for all the workspace members once the MSRV and deps are bumped.
@@ -130,7 +133,7 @@ steps:
   - name: clippy
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - rustup component add clippy
       - cargo clippy --version
       # TODO: Deny warnings for all the workspace members once the MSRV and deps are bumped.
@@ -143,7 +146,7 @@ steps:
   - name: build
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       # TODO: Build all the workspace members once the MSRV and deps are bumped.
       #- cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
       - cargo build --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
@@ -151,7 +154,7 @@ steps:
   - name: run tests
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUST_BACKTRACE=1
       # TODO: Test all the workspace members once the MSRV and deps are bumped.
       #- cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
@@ -160,7 +163,7 @@ steps:
   - name: run doctests
     image: *rust_image
     commands:
-      - .woodpecker/scripts/configure-toolchain.sh
+      - <<: *configure_toolchain_cmds
       - export RUST_BACKTRACE=1
       # TODO: Test all the workspace members once the MSRV and deps are bumped.
       #- cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}

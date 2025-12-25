@@ -23,5 +23,3 @@ export RUSTUP_HOME=${CACHED_RUSTUP_HOME}
 rustup update --no-self-update ${RUST_CHANNEL} && rustup default ${RUST_CHANNEL}
 
 rustc --version && cargo --version
-
-set +x
