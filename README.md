@@ -2,7 +2,8 @@
 
 [![Latest version](https://img.shields.io/crates/v/iri-string.svg)](https://crates.io/crates/iri-string)
 [![Documentation](https://docs.rs/iri-string/badge.svg)](https://docs.rs/iri-string)
-![Minimum rustc version: 1.60](https://img.shields.io/badge/rustc-1.60+-lightgray.svg)
+
+* Minimum supported Rust version: 1.60
 
 String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
 Identifiers) and [URI](https://tools.ietf.org/html/rfc3986)s (Uniform Resource Identifiers).

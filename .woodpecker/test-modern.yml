@@ -1,0 +1,140 @@
+
+---
+# Lint, build, and test.
+# Clippy lint will make the subsequent build faster, and the result of the build
+# is necessary for the test.
+
+when:
+  - event: [manual, push, tag]
+
+variables:
+  # Docker image of the latest stable Rust.
+  rust_image: &rust_image 'library/rust:slim'
+  rust_nightly_image: &rust_nightly_image 'rustlang/rust:nightly-slim'
+
+matrix:
+  RUST_CHANNEL:
+    - stable
+  BUILD_PROFILE:
+    - dev # equivalent to no --release flag (debug build)
+    - release # equivalent to --release flag
+  OPT_FEATURES:
+    - --features= # no features
+    - --features=default
+    - --all-features
+  # `minimal`: minimal dependency versions
+  # `direct-minimal`: minimal direct dependency versions
+  # `default`: default dependency versions (just ensures `Cargo.lock` exists)
+  # `updated`: explicitly updated dependency versions (cargo update)
+  RUST_DEP_VERSIONS:
+    - direct-minimal
+    - default
+  include:
+    # To see if updated dependencies break something.
+    - RUST_CHANNEL: stable
+      BUILD_PROFILE: dev
+      OPT_FEATURES: --all-features
+      RUST_DEP_VERSIONS: updated
+
+    # To see if updated toolchain reject something.
+    - RUST_CHANNEL: beta
+      BUILD_PROFILE: dev
+      OPT_FEATURES: --all-features
+      RUST_DEP_VERSIONS: direct-minimal
+
+    # To see if updated toolchain and dependencies break something.
+    - RUST_CHANNEL: beta
+      BUILD_PROFILE: dev
+      OPT_FEATURES: --all-features
+      RUST_DEP_VERSIONS: updated
+
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      # Custom root CA certificate will be used in some local networks.
+      # The global environment variable WP_GIT_SKIP_VERIFY will be
+      # set to `true` in such environment.
+      skip-verify: ${WP_GIT_SKIP_VERIFY:-false}
+      lfs: false
+
+steps:
+  - name: install Rust toolchain
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/prepare-toolchain.sh $${RUST_CHANNEL}
+    environment:
+      RUST_CHANNEL: stable
+
+  - name: prepare deps
+    image: *rust_image
+    commands:
+      # Ensure `Cargo.lock` exists.
+      - if [ ! -f Cargo.lock ] ; then echo "Cargo.lock is missing" >&2 ; exit 1 ; fi
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: default
+
+  - name: prepare deps
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - cargo update --workspace
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: updated
+
+  - name: prepare deps
+    image: *rust_nightly_image
+    commands:
+      - rustc --version && cargo --version
+      - cargo update --workspace -Zminimal-versions
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: minimal
+
+  - name: prepare deps
+    image: *rust_nightly_image
+    commands:
+      - rustc --version && cargo --version
+      - cargo update --workspace -Zdirect-minimal-versions
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+
+  - name: fetch deps
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - cargo fetch --locked
+      - mkdir -p .cargo
+      - cargo vendor --color=always --locked >> .cargo/config.toml
+
+  - name: clippy
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - rustup component add clippy
+      - cargo clippy --version
+      - cargo clippy --color=always --frozen --workspace --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+
+  - name: build
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+
+  - name: run tests
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - export RUST_BACKTRACE=1
+      - cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+
+  # Enable when a library target is added.
+  #- name: run doctests
+  #  image: *rust_image
+  #  commands:
+  #    - .woodpecker/scripts/configure-toolchain.sh
+  #    - export RUST_BACKTRACE=1
+  #    - cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
