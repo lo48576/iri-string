@@ -106,12 +106,8 @@ steps:
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
-      - matrix:
-          RUST_DEP_VERSIONS: direct-minimal
-      - matrix:
-          RUST_DEP_VERSIONS: default
 
-  - name: clippy
+  - name: clippy (allow warning, allow failure)
     image: *rust_image
     commands:
       - .woodpecker/scripts/configure-toolchain.sh
@@ -119,8 +115,31 @@ steps:
       - cargo clippy --version
       # TODO: Deny warnings for all the workspace members once the MSRV and deps are bumped.
       #- cargo clippy --color=always --frozen --workspace --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
-      - cargo clippy --color=always --frozen --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+      - cargo clippy --color=always --frozen --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    # Build may fail because updated crates will have higher MSRV.
+    failure: ignore
     when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
+      - matrix:
+          RUST_DEP_VERSIONS: updated
+
+  - name: build (allow failure)
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      # TODO: Build all the workspace members once the MSRV and deps are bumped.
+      #- cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo build --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    # Build may fail because updated crates will have higher MSRV.
+    failure: ignore
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
       - matrix:
           RUST_DEP_VERSIONS: updated
 
@@ -131,6 +150,27 @@ steps:
       # TODO: Build all the workspace members once the MSRV and deps are bumped.
       #- cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
       - cargo build --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: minimal
+
+  - name: run tests (allow failure)
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - export RUST_BACKTRACE=1
+      # TODO: Test all the workspace members once the MSRV and deps are bumped.
+      #- cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo test --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    # Build may fail because updated crates will have higher MSRV.
+    failure: ignore
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
+      - matrix:
+          RUST_DEP_VERSIONS: updated
 
   - name: run tests
     image: *rust_image
@@ -140,6 +180,27 @@ steps:
       # TODO: Test all the workspace members once the MSRV and deps are bumped.
       #- cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
       - cargo test --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: minimal
+
+  - name: run doctests (allow failure)
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - export RUST_BACKTRACE=1
+      # TODO: Test all the workspace members once the MSRV and deps are bumped.
+      #- cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo test --color=always --frozen --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    # Build may fail because updated crates will have higher MSRV.
+    failure: ignore
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
+      - matrix:
+          RUST_DEP_VERSIONS: updated
 
   - name: run doctests
     image: *rust_image
@@ -149,3 +210,6 @@ steps:
       # TODO: Test all the workspace members once the MSRV and deps are bumped.
       #- cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
       - cargo test --color=always --frozen --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: minimal
