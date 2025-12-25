@@ -63,7 +63,7 @@ steps:
     image: *rust_image
     commands:
       - .woodpecker/scripts/configure-toolchain.sh
-      - cargo update --workspace
+      - cargo update
     when:
       - matrix:
           RUST_DEP_VERSIONS: updated
@@ -81,7 +81,7 @@ steps:
     image: *rust_nightly_image
     commands:
       - rustc --version && cargo --version
-      - cargo update --workspace -Zdirect-minimal-versions
+      - cargo update -Zdirect-minimal-versions
     when:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
@@ -94,31 +94,58 @@ steps:
       - mkdir -p .cargo
       - cargo vendor --color=always --locked >> .cargo/config.toml
 
+  - name: clippy (allow warning)
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - rustup component add clippy
+      - cargo clippy --version
+      # TODO: Deny warnings for all the workspace members once the MSRV and deps are bumped.
+      #- cargo clippy --color=always --frozen --workspace --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+      - cargo clippy --color=always --frozen --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: minimal
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
+
   - name: clippy
     image: *rust_image
     commands:
       - .woodpecker/scripts/configure-toolchain.sh
       - rustup component add clippy
       - cargo clippy --version
-      - cargo clippy --color=always --frozen --workspace --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+      # TODO: Deny warnings for all the workspace members once the MSRV and deps are bumped.
+      #- cargo clippy --color=always --frozen --workspace --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+      - cargo clippy --color=always --frozen --all-targets --no-deps --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES} -- --deny warnings
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: updated
 
   - name: build
     image: *rust_image
     commands:
       - .woodpecker/scripts/configure-toolchain.sh
-      - cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      # TODO: Build all the workspace members once the MSRV and deps are bumped.
+      #- cargo build --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo build --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
 
   - name: run tests
     image: *rust_image
     commands:
       - .woodpecker/scripts/configure-toolchain.sh
       - export RUST_BACKTRACE=1
-      - cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      # TODO: Test all the workspace members once the MSRV and deps are bumped.
+      #- cargo test --color=always --frozen --workspace --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo test --color=always --frozen --all-targets --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
 
-  # Enable when a library target is added.
-  #- name: run doctests
-  #  image: *rust_image
-  #  commands:
-  #    - .woodpecker/scripts/configure-toolchain.sh
-  #    - export RUST_BACKTRACE=1
-  #    - cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+  - name: run doctests
+    image: *rust_image
+    commands:
+      - .woodpecker/scripts/configure-toolchain.sh
+      - export RUST_BACKTRACE=1
+      # TODO: Test all the workspace members once the MSRV and deps are bumped.
+      #- cargo test --color=always --frozen --workspace --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
+      - cargo test --color=always --frozen --doc --profile=${BUILD_PROFILE} --no-default-features ${OPT_FEATURES}
