@@ -368,7 +368,9 @@ macro_rules! define_custom_string_slice {
 
             #[inline]
             fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
+                let s = core::str::from_utf8(bytes).map_err(|_| {
+                    crate::validate::Error::with_kind(crate::validate::ErrorKind::InvalidUtf8)
+                })?;
                 match $validate::<S>(s) {
                     // SAFETY: just checked `s` is valid as `$ty`.
                     Ok(()) => Ok(unsafe { $ty::new_always_unchecked(s) }),
@@ -779,7 +781,9 @@ macro_rules! define_custom_string_owned {
 
             #[inline]
             fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-                let s = core::str::from_utf8(bytes).map_err(|_| crate::validate::Error::new())?;
+                let s = core::str::from_utf8(bytes).map_err(|_| {
+                    crate::validate::Error::with_kind(crate::validate::ErrorKind::InvalidUtf8)
+                })?;
                 <&$slice<S>>::try_from(s).map(Into::into)
             }
         }

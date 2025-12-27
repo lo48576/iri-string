@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+* Put detailed info into `validate::Error` type.
+
+### Changed (non-breaking)
+* Put detailed info into `validate::Error` type.
+    + Now `validate::Error` type will provide a little more detailed error info
+      through `Display` and `ToString`.
+    + Note that the messages or the categorization is not guaranteed to be
+      stable. For now this is purely hint for human, and that is why the error
+      kind is not a public type.
+
 ## [0.7.9]
 
 * Fix decoding of percent-encoded invalid UTF-8 bytes.

@@ -1,9 +1,7 @@
 //! Query string.
 
-use crate::{
-    spec::Spec,
-    validate::{query, Error},
-};
+use crate::spec::Spec;
+use crate::validate::{query, Error, ErrorKind};
 
 define_custom_string_slice! {
     /// A borrowed slice of an IRI query (i.e. after the first `?` and before the first `#`).
@@ -128,7 +126,7 @@ impl<S: Spec> RiQueryStr<S> {
     /// ```
     pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
         if !s.starts_with('?') {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidQuery));
         }
         TryFrom::try_from(&s[1..])
     }

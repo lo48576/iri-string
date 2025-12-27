@@ -1,9 +1,7 @@
 //! Fragment string.
 
-use crate::{
-    spec::Spec,
-    validate::{fragment, Error},
-};
+use crate::spec::Spec;
+use crate::validate::{fragment, Error, ErrorKind};
 
 define_custom_string_slice! {
     /// A borrowed slice of an IRI fragment (i.e. after the first `#` character).
@@ -101,7 +99,7 @@ impl<S: Spec> RiFragmentStr<S> {
     /// ```
     pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
         if !s.starts_with('#') {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidFragment));
         }
         TryFrom::try_from(&s[1..])
     }

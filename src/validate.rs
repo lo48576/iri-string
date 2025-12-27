@@ -13,28 +13,84 @@ use crate::spec::Spec;
 // To return additional non-`Copy` data as an error, use wrapper type
 // (as `std::string::FromUtf8Error` contains `std::str::Utf8Error`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(());
+pub struct Error {
+    /// Error kind.
+    kind: ErrorKind,
+}
 
 impl Error {
-    /// Creates a new `Error`.
-    ///
-    /// For internal use.
+    /// Creates a new `Error` from the given error kind.
     #[inline]
     #[must_use]
-    pub(crate) fn new() -> Self {
-        Error(())
+    pub(crate) fn with_kind(kind: ErrorKind) -> Self {
+        Self { kind }
     }
 }
 
 impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Invalid IRI")
+        write!(f, "invalid IRI: {}", self.kind.description())
     }
 }
 
 #[cfg(feature = "std")]
 impl error::Error for Error {}
+
+/// Error kind.
+///
+/// This type may be reorganized between minor version bumps, so users should
+/// not expect specific error kind (or specific error message) to be returned
+/// for a specific error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub(crate) enum ErrorKind {
+    /// Empty scheme.
+    EmptyScheme,
+    /// Invalid scheme.
+    InvalidScheme,
+    /// Invalid userinfo.
+    InvalidUserInfo,
+    /// Invalid host.
+    InvalidHost,
+    /// Invalid port.
+    InvalidPort,
+    /// Invalid path character.
+    InvalidPath,
+    /// Invalid query.
+    InvalidQuery,
+    /// Invalid fragment.
+    InvalidFragment,
+    /// Got an unexpected fragment.
+    UnexpectedFragment,
+    /// Expected a relative IRI but got an absolute IRI.
+    UnexpectedAbsolute,
+    /// Expected an absolute IRI but got a relative IRI.
+    UnexpectedRelative,
+    /// Invalid UTF-8 bytes.
+    InvalidUtf8,
+}
+
+impl ErrorKind {
+    /// Returns the human-friendly description for the error kind.
+    #[must_use]
+    fn description(self) -> &'static str {
+        match self {
+            Self::EmptyScheme => "empty scheme",
+            Self::InvalidScheme => "invalid scheme",
+            Self::InvalidUserInfo => "invalid userinfo",
+            Self::InvalidHost => "invalid host",
+            Self::InvalidPort => "invalid port",
+            Self::InvalidPath => "invalid path",
+            Self::InvalidQuery => "invalid query",
+            Self::InvalidFragment => "invalid fragment",
+            Self::UnexpectedFragment => "unexpected fragment",
+            Self::UnexpectedAbsolute => "expected a relative IRI but got an absolute IRI",
+            Self::UnexpectedRelative => "expected an absolute IRI but got a relative IRI",
+            Self::InvalidUtf8 => "invalid utf-8 bytes",
+        }
+    }
+}
 
 /// Validates [IRI][uri].
 ///
