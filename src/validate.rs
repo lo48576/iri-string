@@ -48,8 +48,6 @@ impl error::Error for Error {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub(crate) enum ErrorKind {
-    /// Empty scheme.
-    EmptyScheme,
     /// Invalid scheme.
     InvalidScheme,
     /// Invalid userinfo.
@@ -79,7 +77,6 @@ impl ErrorKind {
     #[must_use]
     fn description(self) -> &'static str {
         match self {
-            Self::EmptyScheme => "empty scheme",
             Self::InvalidScheme => "invalid scheme",
             Self::InvalidUserInfo => "invalid userinfo",
             Self::InvalidHost => "invalid host",

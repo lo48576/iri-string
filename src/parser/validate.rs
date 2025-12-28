@@ -19,12 +19,9 @@ use self::path::{
 
 /// Returns `Ok(_)` if the string matches `scheme`.
 pub(crate) fn validate_scheme(i: &str) -> Result<(), Error> {
-    if i.is_empty() {
-        return Err(Error::with_kind(ErrorKind::EmptyScheme));
-    }
-
     let bytes = i.as_bytes();
-    if bytes[0].is_ascii_alphabetic()
+    if !i.is_empty()
+        && bytes[0].is_ascii_alphabetic()
         && bytes[1..]
             .iter()
             .all(|&b| b.is_ascii() && char::is_ascii_scheme_continue(b))
@@ -121,7 +118,6 @@ fn validate_uri_reference_common<S: Spec>(
                 return Err(Error::with_kind(ErrorKind::UnexpectedRelative));
             }
         }
-        Some(("", _)) => return Err(Error::with_kind(ErrorKind::EmptyScheme)),
         Some((maybe_scheme, rest)) => {
             if validate_scheme(maybe_scheme).is_err() {
                 // The string before the first colon is not a scheme.
