@@ -48,11 +48,21 @@ See the [documentation](https://docs.rs/iri-string) for details.
 
 ## CI
 
-CI must pass on `develop` and `master` branches.
-No automated online CI is set up (since they consumes credit too fast), so run
-`cargo make manual-ci-all` locally before committing to these branches.
-On other branches, tests and some lints (such as `dead_code`) are allowed to
-fail, but all commits must be successfully compilable and must be formatted.
+CI is running on the main author's private instance of
+[Woodpecker CI](https://woodpecker-ci.org/), and CI runs should pass on
+`master` and `develop` branches.
+
+While the instance is not public, anyone can run the CI tests if you have (or
+they deploy) their own Woodpecker CI instance.
+
+The reason not to use free CI services are:
+
+* Running tests for multiple combinations of feature flags and toolchain
+  versions can cause service credits to be consumed very quickly,
+* I (the main author) don't like to depend on proprietary services, and
+* I'm not using git repository hosting services (including GitHub and GitLab) as
+  a primary remote, and don't like to depend on CI runners tied to them even if
+  they are free software.
 
 ## License
 
