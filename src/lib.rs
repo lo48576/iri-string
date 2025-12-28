@@ -3,7 +3,7 @@
 //!
 //! Note that this crate does not have any extra knowledge about protocols.
 //! Comparisons between IRI strings by `PartialEq` and `Eq` is implemented as [simple string
-//! comparison](https://tools.ietf.org/html/rfc3986#section-6.2.1).
+//! comparison](https://www.rfc-editor.org/rfc/rfc3986.html#section-6.2.1).
 //! You should implement by yourself or use another crate to use such extra knowledge to compare
 //! IRIs / URIs.
 //!
@@ -95,13 +95,13 @@
 //! > character. When authority is not present, the path cannot begin with two slash characters
 //! > ("//").
 //! >
-//! > --- [RFC 3986, section 3. Syntax Components](https://tools.ietf.org/html/rfc3986#section-3).
+//! > --- [RFC 3986, section 3. Syntax Components](https://www.rfc-editor.org/rfc/rfc3986.html#section-3).
 //!
 //! > If a URI contains an authority component, then the path component must either be empty or
 //! > begin with a slash ("/") character. If a URI does not contain an authority component, then the
 //! > path cannot begin with two slash characters ("//").
 //! >
-//! > --- [RFC 3986, section 3.3. Path](https://tools.ietf.org/html/rfc3986#section-3.3)
+//! > --- [RFC 3986, section 3.3. Path](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3)
 //!
 //! We should interpret them as "if `authority` rule is completely unused (i.e. does not match any
 //! strings **including empty string**), path cannot start with `//`".
@@ -129,8 +129,8 @@
 //!
 //! For details, see the documentation of [`normalize`] module.
 //!
-//! [RFC 3986]: https://tools.ietf.org/html/rfc3986
-//! [RFC 3987]: https://tools.ietf.org/html/rfc3987
+//! [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+//! [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
 //! [`RiReferenceStr::resolve_against()`]: `types::RiReferenceStr::resolve_against`
 //! [`RiRelativeStr::resolve_against()`]: `types::RiRelativeStr::resolve_against`
 #![warn(missing_docs)]

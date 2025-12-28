@@ -5,8 +5,8 @@
 
 * Minimum supported Rust version: 1.60
 
-String types for [IRI](https://tools.ietf.org/html/rfc3987)s (Internationalized Resource
-Identifiers) and [URI](https://tools.ietf.org/html/rfc3986)s (Uniform Resource Identifiers).
+String types for [IRI](https://www.rfc-editor.org/rfc/rfc3987.html)s (Internationalized Resource
+Identifiers) and [URI](https://www.rfc-editor.org/rfc/rfc3986.html)s (Uniform Resource Identifiers).
 
 See the [documentation](https://docs.rs/iri-string) for details.
 

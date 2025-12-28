@@ -17,7 +17,7 @@ pub trait Spec: internal::Sealed + Copy + fmt::Debug {}
 ///
 /// About IRI, see [RFC 3987].
 ///
-/// [RFC 3987]: https://tools.ietf.org/html/rfc3987
+/// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IriSpec {}
 
@@ -27,7 +27,7 @@ impl Spec for IriSpec {}
 ///
 /// About URI, see [RFC 3986].
 ///
-/// [RFC 3986]: https://tools.ietf.org/html/rfc3986
+/// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UriSpec {}
 

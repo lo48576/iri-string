@@ -144,7 +144,7 @@ impl ErrorKind {
 /// assert!(iri::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [uri]: https://tools.ietf.org/html/rfc3986#section-3
+/// [uri]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3
 /// [`RiStr`]: ../types/struct.RiStr.html
 /// [`RiString`]: ../types/struct.RiString.html
 pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
@@ -190,7 +190,7 @@ pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(iri_reference::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [uri-reference]: https://tools.ietf.org/html/rfc3986#section-4.1
+/// [uri-reference]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.1
 /// [`RiReferenceStr`]: ../types/struct.RiReferenceStr.html
 /// [`RiReferenceString`]: ../types/struct.RiReferenceString.html
 pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
@@ -254,7 +254,7 @@ pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(absolute_iri::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [absolute-uri]: https://tools.ietf.org/html/rfc3986#section-4.3
+/// [absolute-uri]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3
 /// [`RiAbsoluteStr`]: ../types/struct.RiAbsoluteStr.html
 /// [`RiAbsoluteString`]: ../types/struct.RiAbsoluteString.html
 pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
@@ -311,7 +311,7 @@ pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(relative_ref::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [relative-ref]: https://tools.ietf.org/html/rfc3986#section-4.2
+/// [relative-ref]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.2
 /// [`RiRelativeStr`]: ../types/struct.RiRelativeStr.html
 /// [`RiRelativeString`]: ../types/struct.RiRelativeString.html
 pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error> {
@@ -320,7 +320,7 @@ pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error> {
 
 /// Validates [IRI path][path].
 ///
-/// [path]: https://tools.ietf.org/html/rfc3986#section-3.3
+/// [path]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
 pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_path::<S>(s)
 }
@@ -363,7 +363,7 @@ pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(query::<UriSpec>("#hash").is_err());
 /// ```
 ///
-/// [query]: https://tools.ietf.org/html/rfc3986#section-3.4
+/// [query]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4
 /// [`RiQueryStr`]: ../types/struct.RiQueryStr.html
 /// [`RiQueryString`]: ../types/struct.RiQueryString.html
 pub fn query<S: Spec>(s: &str) -> Result<(), Error> {
@@ -406,7 +406,7 @@ pub fn query<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(fragment::<UriSpec>("#hash").is_err());
 /// ```
 ///
-/// [fragment]: https://tools.ietf.org/html/rfc3986#section-3.5
+/// [fragment]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.5
 /// [`RiFragmentStr`]: ../types/struct.RiFragmentStr.html
 /// [`RiFragmentString`]: ../types/struct.RiFragmentString.html
 pub fn fragment<S: Spec>(s: &str) -> Result<(), Error> {

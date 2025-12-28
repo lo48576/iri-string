@@ -38,10 +38,10 @@ define_custom_string_slice! {
     /// assert!(IriFragmentStr::new("#hash").is_err());
     /// ```
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`fragment` rule]: https://tools.ietf.org/html/rfc3986#section-3.5
-    /// [`ifragment` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`fragment` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.5
+    /// [`ifragment` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
     struct RiFragmentStr {
         validator = fragment,
         expecting_msg = "IRI fragment string",
@@ -59,10 +59,10 @@ define_custom_string_owned! {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`fragment` rule]: https://tools.ietf.org/html/rfc3986#section-3.5
-    /// [`ifragment` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`fragment` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.5
+    /// [`ifragment` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
     /// [`RiFragmentStr`]: struct.RiFragmentStr.html
     struct RiFragmentString {
         validator = fragment,

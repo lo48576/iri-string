@@ -68,10 +68,10 @@ define_custom_string_slice! {
     /// assert!(IriRelativeStr::new("%GG").is_err());
     /// ```
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`irelative-ref` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`relative-ref` rule]: https://tools.ietf.org/html/rfc3986#section-4.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`irelative-ref` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`relative-ref` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.2
     struct RiRelativeStr {
         validator = relative_ref,
         expecting_msg = "Relative IRI reference string",
@@ -90,10 +90,10 @@ define_custom_string_owned! {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`irelative-ref` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`relative-ref` rule]: https://tools.ietf.org/html/rfc3986#section-4.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`irelative-ref` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`relative-ref` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.2
     /// [`RiRelativeString`]: struct.RiRelativeString.html
     struct RiRelativeString {
         validator = relative_ref,
@@ -120,10 +120,10 @@ impl<S: Spec> RiRelativeStr<S> {
     /// > Some parsers allow the scheme name to be present in a relative
     /// > reference if it is the same as the base URI scheme. This is considered
     /// > to be a loophole in prior specifications of partial URI
-    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
+    /// > [RFC1630](https://www.rfc-editor.org/rfc/rfc1630.html). Its use should be
     /// > avoided but is allowed for backward compatibility.
     /// >
-    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+    /// > --- <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4.2>
     ///
     /// # Failures
     ///
@@ -133,8 +133,8 @@ impl<S: Spec> RiRelativeStr<S> {
     /// To see examples of such unresolvable IRIs, visit the documentation
     /// for [`normalize`][`crate::normalize`] module.
     ///
-    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
-    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
+    /// [RFC 3986 section 5.4]: https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4
+    /// [RFC 3986 section 5.4.2]: https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4.2
     pub fn resolve_against<'a>(&'a self, base: &'a RiAbsoluteStr<S>) -> Normalized<'a, RiStr<S>> {
         FixedBaseResolver::new(base).resolve(self.as_ref())
     }

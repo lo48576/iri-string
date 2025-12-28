@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * Put detailed info into `validate::Error` type.
+* Update links to IETF RFC documents.
 
 ### Changed (non-breaking)
 * Put detailed info into `validate::Error` type.
@@ -11,6 +12,14 @@
     + Note that the messages or the categorization is not guaranteed to be
       stable. For now this is purely hint for human, and that is why the error
       kind is not a public type.
+
+### Fixed
+* Update links to IETF RFC documents.
+    + Links to the old domain `tools.ietf.org` has redirect, but the redirection
+      truncates the fragment, so the links to the specific sections of documents
+      had not been working as expected.
+    + Now such links are updated to point to `www.rfc-editor.org`, so the links
+      in the documents and comments must be working as expected.
 
 ## [0.7.9]
 
