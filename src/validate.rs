@@ -1,4 +1,7 @@
 //! Validators.
+//!
+//! Validators are functions that receive the string and checks if the entire
+//! string is syntactically valid.
 
 use core::fmt;
 
