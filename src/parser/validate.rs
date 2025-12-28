@@ -10,9 +10,8 @@ use crate::parser::str::{
 use crate::spec::Spec;
 use crate::validate::{Error, ErrorKind};
 
-use self::authority::validate_authority;
-pub(crate) use self::authority::{validate_host, validate_userinfo};
-pub(crate) use self::path::validate_path;
+pub(crate) use self::authority::{validate_authority, validate_host, validate_userinfo};
+pub(crate) use self::path::{validate_path, validate_path_segment};
 use self::path::{
     validate_path_abempty, validate_path_absolute_authority_absent,
     validate_path_relative_authority_absent,
@@ -20,7 +19,10 @@ use self::path::{
 
 /// Returns `Ok(_)` if the string matches `scheme`.
 pub(crate) fn validate_scheme(i: &str) -> Result<(), Error> {
-    debug_assert!(!i.is_empty());
+    if i.is_empty() {
+        return Err(Error::with_kind(ErrorKind::EmptyScheme));
+    }
+
     let bytes = i.as_bytes();
     if bytes[0].is_ascii_alphabetic()
         && bytes[1..]

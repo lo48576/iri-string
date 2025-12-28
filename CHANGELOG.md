@@ -2,9 +2,22 @@
 
 ## [Unreleased]
 
+* Add syntax checkers for more components of URIs/IRIs.
 * Put detailed info into `validate::Error` type.
 * Fix `validate::path()` function to accept paths starting with `//`.
 * Update links to IETF RFC documents.
+
+### Added
+* Add syntax checkers for more components of URIs/IRIs.
+    + List of added functions:
+        + `validate::scheme()`
+        + `validate::authority()`
+        + `validate::host()`
+        + `validate::port()`
+        + `validate::userinfo()`
+        + `validate::path_segment()`
+    + Note that functions for `path`, `query`, and `fragment` components have
+      already been provided.
 
 ### Changed (non-breaking)
 * Put detailed info into `validate::Error` type.
