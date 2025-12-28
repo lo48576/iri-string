@@ -86,3 +86,14 @@ pub(crate) fn validate_path<S: Spec>(i: &str) -> Result<(), Error> {
         Err(Error::with_kind(ErrorKind::InvalidPath))
     }
 }
+
+/// Returns `Ok(_)` if the string matches `segment`/`isegment` rules.
+pub(crate) fn validate_path_segment<S: Spec>(i: &str) -> Result<(), Error> {
+    let is_valid =
+        satisfy_chars_with_pct_encoded(i, char::is_ascii_pchar, S::is_nonascii_char_unreserved);
+    if is_valid {
+        Ok(())
+    } else {
+        Err(Error::with_kind(ErrorKind::InvalidPath))
+    }
+}

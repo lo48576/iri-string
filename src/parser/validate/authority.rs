@@ -173,7 +173,7 @@ fn validate_ipv6address(mut i: &str) -> Result<(), Error> {
 }
 
 /// Returns `Ok(_)` if the string matches `authority` or `iauthority`.
-pub(super) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
+pub(crate) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
     // Strip and validate `userinfo`.
     let (i, _userinfo) = match find_split_hole(i, b'@') {
         Some((maybe_userinfo, i)) => {

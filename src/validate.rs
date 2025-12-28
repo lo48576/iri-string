@@ -321,11 +321,65 @@ pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_relative_ref::<S>(s)
 }
 
+/// Validates [IRI scheme][scheme].
+///
+/// Note that the syntax of the scheme is common between RFC 3986 (URIs) and
+/// RFC 3987 (IRIs).
+///
+/// [scheme]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.1
+pub fn scheme(s: &str) -> Result<(), Error> {
+    parser::validate_scheme(s)
+}
+
+/// Validates [IRI authority][authority].
+///
+/// [authority]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2
+pub fn authority<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_authority::<S>(s)
+}
+
+/// Validates [IRI host][host].
+///
+/// [host]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2
+pub fn host<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_host::<S>(s)
+}
+
+/// Validates [IRI port][port].
+///
+/// Note that the syntax of the port is common between RFC 3986 (URIs) and
+/// RFC 3987 (IRIs).
+///
+/// Also note that this function does not accept a leading colon.
+///
+/// [host]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3
+pub fn port(s: &str) -> Result<(), Error> {
+    if s.bytes().all(|b| b.is_ascii_digit()) {
+        Ok(())
+    } else {
+        Err(Error::with_kind(ErrorKind::InvalidPort))
+    }
+}
+
+/// Validates [IRI userinfo][userinfo].
+///
+/// [authority]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.1
+pub fn userinfo<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_userinfo::<S>(s)
+}
+
 /// Validates [IRI path][path].
 ///
 /// [path]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
 pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_path::<S>(s)
+}
+
+/// Validates [IRI path segment][segment].
+///
+/// [segment]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
+pub fn path_segment<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_path_segment::<S>(s)
 }
 
 /// Validates [IRI query][query].
