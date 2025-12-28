@@ -20,7 +20,10 @@ use self::path::{
 
 /// Returns `Ok(_)` if the string matches `scheme`.
 pub(crate) fn validate_scheme(i: &str) -> Result<(), Error> {
-    debug_assert!(!i.is_empty());
+    if i.is_empty() {
+        return Err(Error::with_kind(ErrorKind::EmptyScheme));
+    }
+
     let bytes = i.as_bytes();
     if bytes[0].is_ascii_alphabetic()
         && bytes[1..]
