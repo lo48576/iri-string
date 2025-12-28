@@ -75,9 +75,6 @@ pub(super) fn validate_path_relative_authority_absent<S: Spec>(i: &str) -> Resul
 
 /// Returns `Ok(_)` if the string matches `path`/`ipath` rules.
 pub(crate) fn validate_path<S: Spec>(i: &str) -> Result<(), Error> {
-    if i.starts_with("//") {
-        return Err(Error::with_kind(ErrorKind::InvalidPath));
-    }
     let is_valid = satisfy_chars_with_pct_encoded(
         i,
         char::is_ascii_pchar_slash,

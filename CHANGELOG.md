@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 * Put detailed info into `validate::Error` type.
+* Fix `validate::path()` function to accept paths starting with `//`.
 * Update links to IETF RFC documents.
 
 ### Changed (non-breaking)
@@ -14,6 +15,9 @@
       kind is not a public type.
 
 ### Fixed
+* Fix `validate::path()` function to accept paths starting with `//`.
+    + Paths such as `//foo/bar` are valid although they cannot be used in some
+      contexts.
 * Update links to IETF RFC documents.
     + Links to the old domain `tools.ietf.org` has redirect, but the redirection
       truncates the fragment, so the links to the specific sections of documents
