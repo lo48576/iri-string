@@ -546,7 +546,12 @@ impl<S: Spec> RiAbsoluteStr<S> {
             // the query part of an IRI (including the leading `?` character),
             // and the returned string consists of allowed characters since it
             // is a substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "[validity] query in a valid absolute IRI must also be valid",
+                )
+            }
         })
     }
 
@@ -653,8 +658,9 @@ impl<S: Spec> RiAbsoluteString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiAbsoluteStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -705,8 +711,9 @@ impl<S: Spec> RiAbsoluteString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiAbsoluteStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }

@@ -257,7 +257,12 @@ impl<S: Spec> RiRelativeStr<S> {
             // SAFETY: `extract_query` returns the query part of an IRI, and the
             // returned string should have only valid characters since is the
             // substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "[validity] query in a valid relative IRI reference must also be valid",
+                )
+            }
         })
     }
 
@@ -334,7 +339,17 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| {
+            // SAFETY: `extract_fragment` returns the fragment part of an IRI,
+            // and the returned string should have only valid characters since
+            // is the substring of the source IRI.
+            unsafe {
+                RiFragmentStr::new_unchecked_justified(
+                    fragment,
+                    "[validity] fragment in a valid relative IRI reference must also be valid",
+                )
+            }
+        })
     }
 
     /// Returns the fragment part as a raw string slice if exists.
@@ -378,7 +393,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment_str(&self) -> Option<&str> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment_str()
+        trusted_parser::extract_fragment(self.as_str())
     }
 
     /// Returns the authority components.
@@ -458,7 +473,7 @@ impl<S: Spec> RiRelativeString<S> {
     /// ```
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(relative_ref::<S>(&self.inner).is_ok());
+        debug_assert_eq!(Self::validate(&self.inner), Ok(()));
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
@@ -501,8 +516,9 @@ impl<S: Spec> RiRelativeString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiRelativeStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -554,8 +570,9 @@ impl<S: Spec> RiRelativeString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiRelativeStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component \
                  is replaced with the empty password"
             );

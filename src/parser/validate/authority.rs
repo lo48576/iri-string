@@ -259,7 +259,7 @@ mod tests {
             $({
                 let input = $input;
                 let input: &str = input.as_ref();
-                assert!($parser(input).is_ok(), "input={:?}", input);
+                assert_eq!($parser(input), Ok(()), "input={:?}", input);
             })*
         }};
     }

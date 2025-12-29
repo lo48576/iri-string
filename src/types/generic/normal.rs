@@ -152,10 +152,20 @@ impl<S: Spec> RiStr<S> {
     pub fn to_absolute_and_fragment(&self) -> (&RiAbsoluteStr<S>, Option<&RiFragmentStr<S>>) {
         let (prefix, fragment) = trusted_parser::split_fragment(self.as_str());
         // SAFETY: an IRI without fragment part is also an absolute IRI.
-        let prefix = unsafe { RiAbsoluteStr::new_maybe_unchecked(prefix) };
+        let prefix = unsafe {
+            RiAbsoluteStr::new_unchecked_justified(
+                prefix,
+                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+            )
+        };
         let fragment = fragment.map(|fragment| {
             // SAFETY: `trusted_parser::split_fragment()` must return a valid fragment component.
-            unsafe { RiFragmentStr::new_maybe_unchecked(fragment) }
+            unsafe {
+                RiFragmentStr::new_unchecked_justified(
+                    fragment,
+                    "[validity] fragment in a valid IRI must also be valid",
+                )
+            }
         });
 
         (prefix, fragment)
@@ -185,7 +195,12 @@ impl<S: Spec> RiStr<S> {
         let prefix_len = trusted_parser::split_fragment(self.as_str()).0.len();
         // SAFETY: IRI without the fragment part (including a leading `#` character)
         // is also an absolute IRI.
-        unsafe { RiAbsoluteStr::new_maybe_unchecked(&self.as_str()[..prefix_len]) }
+        unsafe {
+            RiAbsoluteStr::new_unchecked_justified(
+                &self.as_str()[..prefix_len],
+                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+            )
+        }
     }
 
     /// Returns Ok`(())` if the IRI is normalizable by the RFC 3986 algorithm.
@@ -790,11 +805,21 @@ impl<S: Spec> RiString<S> {
     pub fn into_absolute_and_fragment(self) -> (RiAbsoluteString<S>, Option<RiFragmentString<S>>) {
         let (prefix, fragment) = raw::split_fragment_owned(self.into());
         // SAFETY: an IRI without fragment part is also an absolute IRI.
-        let prefix = unsafe { RiAbsoluteString::new_maybe_unchecked(prefix) };
+        let prefix = unsafe {
+            RiAbsoluteString::new_unchecked_justified(
+                prefix,
+                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+            )
+        };
         let fragment = fragment.map(|fragment| {
             // SAFETY: the string returned by `raw::split_fragment_owned()` must
             // be the fragment part, and must also be a substring of the source IRI.
-            unsafe { RiFragmentString::new_maybe_unchecked(fragment) }
+            unsafe {
+                RiFragmentString::new_unchecked_justified(
+                    fragment,
+                    "[validity] fragment in a valid IRI must also be valid",
+                )
+            }
         });
 
         (prefix, fragment)
@@ -824,7 +849,12 @@ impl<S: Spec> RiString<S> {
         let mut s: String = self.into();
         raw::remove_fragment(&mut s);
         // SAFETY: an IRI without fragment part is also an absolute IRI.
-        unsafe { RiAbsoluteString::new_maybe_unchecked(s) }
+        unsafe {
+            RiAbsoluteString::new_unchecked_justified(
+                s,
+                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+            )
+        }
     }
 
     /// Sets the fragment part to the given string.
@@ -832,7 +862,7 @@ impl<S: Spec> RiString<S> {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(iri::<S>(&self.inner).is_ok());
+        debug_assert_eq!(Self::validate(&self.inner), Ok(()));
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
@@ -875,8 +905,9 @@ impl<S: Spec> RiString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -928,8 +959,9 @@ impl<S: Spec> RiString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }

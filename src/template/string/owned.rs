@@ -52,6 +52,25 @@ impl UriTemplateString {
     #[inline]
     #[must_use]
     pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
+        // SAFETY: `new_unchecked` requires the same precondition
+        // as `new_always_unchecked`.
+        unsafe { Self::new_always_unchecked(s) }
+    }
+
+    /// Creates a new string without any validation.
+    ///
+    /// This does not validate the given string at any time.
+    ///
+    /// Intended for internal use.
+    ///
+    /// # Safety
+    ///
+    /// The given string must be syntactically valid as `Self` type.
+    /// If not, any use of the returned value or the call of this
+    /// function itself may result in undefined behavior.
+    #[inline]
+    #[must_use]
+    pub(super) unsafe fn new_always_unchecked(s: alloc::string::String) -> Self {
         // The construction itself can be written in safe Rust, but
         // every other place including unsafe functions expects
         // `self.inner` to be syntactically valid as `Self`. In order to
@@ -59,6 +78,11 @@ impl UriTemplateString {
         // or at least should require users to validate the value by
         // making the function `unsafe`.
         Self { inner: s }
+    }
+
+    /// Checks if the given string content is valid as `Self`.
+    pub(super) fn validate(s: &str) -> Result<(), Error> {
+        validate_template_str(s)
     }
 
     /// Shrinks the capacity of the inner buffer to match its length.
@@ -87,7 +111,7 @@ impl UriTemplateString {
     #[inline]
     pub fn append(&mut self, other: &UriTemplateStr) {
         self.inner.push_str(other.as_str());
-        debug_assert!(validate_template_str(self.as_str()).is_ok());
+        debug_assert_eq!(Self::validate(self.as_str()), Ok(()));
     }
 }
 

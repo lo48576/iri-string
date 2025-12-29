@@ -16,8 +16,6 @@ use crate::spec::Spec;
 use crate::types::{RiAbsoluteStr, RiFragmentStr, RiQueryStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiRelativeString, RiString};
-#[cfg(feature = "alloc")]
-use crate::validate::iri;
 use crate::validate::iri_reference;
 
 define_custom_string_slice! {
@@ -118,11 +116,30 @@ impl<S: Spec> RiReferenceStr<S> {
         // >
         // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
 
-        <&RiStr<S>>::try_from(self.as_str()).map_err(|_| {
-            // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
+        let s = self.as_str();
+        // TODO: Just checking `scheme:` is enough.
+        if trusted_parser::extract_scheme(s).is_some() {
+            // Has a scheme followed by a colon. An IRI.
+            // SAFETY: an IRI reference with scheme is an absolute IRI.
             // See the RFC 3987 syntax rule `IRI-reference = IRI / irelative-ref`.
-            unsafe { RiRelativeStr::new_maybe_unchecked(self.as_str()) }
-        })
+            Ok(unsafe {
+                RiStr::<S>::new_unchecked_justified(
+                    s,
+                    "[validity] an IRI reference with a scheme must be a valid non-relative IRI",
+                )
+            })
+        } else {
+            // Has no scheme. A relative IRI reference.
+            // SAFETY: if an IRI reference is not an IRI, then it is a relative
+            // iri reference. See the RFC 3987 syntax rule
+            // `IRI-reference = IRI / irelative-ref`.
+            Err(unsafe {
+                RiRelativeStr::<S>::new_unchecked_justified(
+                    s,
+                    "[validity] an IRI reference without a scheme must be a valid relative IRI",
+                )
+            })
+        }
     }
 
     /// Returns the string as [`&RiRelativeStr`][`RiRelativeStr`], if it is valid as an IRI.
@@ -348,7 +365,12 @@ impl<S: Spec> RiReferenceStr<S> {
             // SAFETY: `extract_query` returns the query part of an IRI, and the
             // returned string should have only valid characters since is the
             // substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "[validity] query in a valid IRI reference must also be valid",
+                )
+            }
         })
     }
 
@@ -453,7 +475,12 @@ impl<S: Spec> RiReferenceStr<S> {
             // SAFETY: `extract_fragment` returns the fragment part of an IRI,
             // and the returned string should have only valid characters since
             // is the substring of the source IRI.
-            unsafe { RiFragmentStr::new_maybe_unchecked(fragment) }
+            unsafe {
+                RiFragmentStr::new_unchecked_justified(
+                    fragment,
+                    "[validity] fragment in a valid IRI reference must also be valid",
+                )
+            }
         })
     }
 
@@ -563,13 +590,23 @@ impl<S: Spec> RiReferenceString<S> {
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
         // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
-        if iri::<S>(&s).is_ok() {
-            // SAFETY: just checked `s` is valid as an IRI.
-            Ok(unsafe { RiString::new_always_unchecked(s) })
+        if trusted_parser::extract_scheme(&s).is_some() {
+            // SAFETY: an IRI reference with a scheme is a non-relative IRI.
+            Ok(unsafe {
+                RiString::new_unchecked_justified(
+                    s,
+                    "[validity] IRI reference with a scheme must be a non-relative IRI reference",
+                )
+            })
         } else {
             // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
             // See the RFC 3987 syntax rule `IRI-reference = IRI / irelative-ref`.
-            Err(unsafe { RiRelativeString::new_maybe_unchecked(s) })
+            Err(unsafe {
+                RiRelativeString::new_unchecked_justified(
+                    s,
+                    "[validity] non-absolute IRI reference must be a relative IRI reference",
+                )
+            })
         }
     }
 
@@ -591,7 +628,7 @@ impl<S: Spec> RiReferenceString<S> {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(iri_reference::<S>(&self.inner).is_ok());
+        debug_assert_eq!(Self::validate(&self.inner), Ok(()));
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
@@ -634,8 +671,9 @@ impl<S: Spec> RiReferenceString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiReferenceStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -687,8 +725,9 @@ impl<S: Spec> RiReferenceString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiReferenceStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component \
                  is replaced with the empty password"
             );

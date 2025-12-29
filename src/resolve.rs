@@ -140,7 +140,12 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
         // SAFETY: `base_components` can only be created from `&RiAbsoluteStr<S>`,
         // and the type of `base_components` does not allow modification of the
         // content after it is created.
-        unsafe { RiAbsoluteStr::new_maybe_unchecked(self.base_components.iri().as_str()) }
+        unsafe {
+            RiAbsoluteStr::new_unchecked_justified(
+                self.base_components.iri().as_str(),
+                "[validity] already validated on `FixedBaseResolver` creation",
+            )
+        }
     }
 }
 
@@ -243,8 +248,14 @@ impl<S: Spec> FixedBaseResolver<'_, S> {
     #[must_use]
     pub fn query(&self) -> Option<&RiQueryStr<S>> {
         let query_raw = self.query_str()?;
-        let query = RiQueryStr::new(query_raw)
-            .expect("[validity] must be valid query if present in an absolute-IRI");
+        // SAFETY: `RiAbsoluteStr` must have already validated the string
+        // including the query, so the query must be valid.
+        let query = unsafe {
+            RiQueryStr::<S>::new_unchecked_justified(
+                query_raw,
+                "[validity] must be a valid query if present in an absolute-IRI",
+            )
+        };
         Some(query)
     }
 
