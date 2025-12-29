@@ -48,7 +48,7 @@ fn validate_varspec(s: &str, offset: usize) -> Result<(), Error> {
                 ));
             }
         }
-        Some((_, sep, _)) => unreachable!("[consistency] the byte {sep:#02x} is not searched"),
+        Some((_, sep, _)) => unreachable!("the byte {sep:#02x} is not searched"),
         None => validate_varname(s, offset)?,
     }
     Ok(())
@@ -151,7 +151,7 @@ pub(in crate::template) fn validate_template_str(s: &str) -> Result<(), Error> {
 
                 new_rest
             }
-            Some(_) => unreachable!("[consistency] searching only `%` and `{{`"),
+            Some(_) => unreachable!("searching only `%` and `{{`"),
             None => return validate_literal(rest, offset),
         };
         offset = s.len() - rest.len();

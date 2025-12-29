@@ -43,9 +43,9 @@ fn into_char_trusted(bytes: &[u8]) -> Result<char, ()> {
                 | (u32::from(bytes[2] & CONTINUE_BYTE_MASK) << 6)
                 | u32::from(bytes[3] & CONTINUE_BYTE_MASK)
         }
-        len => unreachable!(
-            "[consistency] expected 2, 3, or 4 bytes for a character, but got {len} as the length"
-        ),
+        len => {
+            unreachable!("expected 2, 3, or 4 bytes for a character, but got {len} as the length")
+        }
     };
     if c < MIN[len - 2] {
         // Redundant UTF-8 encoding.
@@ -207,8 +207,7 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                             .iter()
                             .copied()
                             .all(is_utf8_byte_continue),
-                        "[consistency] all non-first bytes have been \
-                         confirmed that they are UTF-8 continue bytes"
+                        "all non-first bytes have been confirmed to be UTF-8 continue bytes"
                     );
                     // Note that the first pct-encoded triplet is stripped from
                     // `after_first_triplet`.
@@ -273,7 +272,7 @@ impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
 
             assert!(
                 first_decoded.is_ascii(),
-                "[consistency] this function requires ASCII-only host as an argument"
+                "this function requires ASCII-only host as an argument"
             );
 
             if is_ascii_unreserved(first_decoded) {

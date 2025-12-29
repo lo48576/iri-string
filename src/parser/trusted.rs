@@ -438,10 +438,10 @@ pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
     let mut bytes = s.bytes();
     let upper_xdigit = bytes
         .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
+        .expect("at least two bytes should follow the `%` in a valid IRI reference");
     let lower_xdigit = bytes
         .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
+        .expect("at least two bytes should follow the `%` in a valid IRI reference");
     let v = hexdigits_to_byte([upper_xdigit, lower_xdigit]);
     (v, &s[2..])
 }

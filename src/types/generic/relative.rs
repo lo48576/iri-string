@@ -260,7 +260,7 @@ impl<S: Spec> RiRelativeStr<S> {
             unsafe {
                 RiQueryStr::new_unchecked_justified(
                     query,
-                    "[validity] query in a valid relative IRI reference must also be valid",
+                    "query in a valid relative IRI reference must also be valid",
                 )
             }
         })
@@ -346,7 +346,7 @@ impl<S: Spec> RiRelativeStr<S> {
             unsafe {
                 RiFragmentStr::new_unchecked_justified(
                     fragment,
-                    "[validity] fragment in a valid relative IRI reference must also be valid",
+                    "fragment in a valid relative IRI reference must also be valid",
                 )
             }
         })
@@ -519,7 +519,7 @@ impl<S: Spec> RiRelativeString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component is removed"
+                "the IRI must be valid after the password component is removed"
             );
         }
     }
@@ -563,7 +563,7 @@ impl<S: Spec> RiRelativeString<S> {
         debug_assert_eq!(
             self.as_str().as_bytes().get(pw_range.start - 1).copied(),
             Some(b':'),
-            "[validity] the password component must be prefixed with a separator colon"
+            "the password component must be prefixed with a separator colon"
         );
         // SAFETY: the IRI must be valid after the password component is
         // replaced with the empty password.
@@ -573,7 +573,7 @@ impl<S: Spec> RiRelativeString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component \
+                "the IRI must be valid after the password component \
                  is replaced with the empty password"
             );
         }

@@ -68,7 +68,7 @@ macro_rules! impl_conversions_between_iri {
                 unsafe {
                     <$borrowed_iri>::new_unchecked_justified(
                         self.as_str(),
-                        "[validity] a valid URI is also a valid IRI",
+                        "a valid URI is also a valid IRI",
                     )
                 }
             }
@@ -80,10 +80,7 @@ macro_rules! impl_conversions_between_iri {
             fn from(uri: $owned_uri) -> Self {
                 // SAFETY: A valid URI is also a valid IRI.
                 unsafe {
-                    Self::new_unchecked_justified(
-                        uri.into(),
-                        "[validate] a valid URI is also a valid IRI",
-                    )
+                    Self::new_unchecked_justified(uri.into(), "a valid URI is also a valid IRI")
                 }
             }
         }

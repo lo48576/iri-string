@@ -51,7 +51,7 @@ where
         let len_suffix = len % 3;
         let triplets_end = len - len_suffix;
         let triplets = core::str::from_utf8(&buf[..triplets_end])
-            .expect("[validity] percent-encoded triplets consist of ASCII characters");
+            .expect("percent-encoded triplets consist of ASCII characters");
         if let ControlFlow::Break(v) = f(PctEncodedFragments::InvalidUtf8PctTriplets(triplets)) {
             return Ok(ControlFlow::Break(v));
         }
@@ -62,10 +62,9 @@ where
             }
         }
         if len_suffix > 1 {
-            let after_percent = core::str::from_utf8(
-                &buf[(triplets_end + 1)..(triplets_end + len_suffix)],
-            )
-            .expect("[consistency] percent-encoded triplets contains only ASCII characters");
+            let after_percent =
+                core::str::from_utf8(&buf[(triplets_end + 1)..(triplets_end + len_suffix)])
+                    .expect("percent-encoded triplets contains only ASCII characters");
             if let ControlFlow::Break(v) = f(PctEncodedFragments::NoPctStr(after_percent)) {
                 return Ok(ControlFlow::Break(v));
             }
@@ -105,7 +104,7 @@ where
     fn output_as_undecodable(&mut self, len_undecodable: u8) -> fmt::Result {
         let len_written = usize::from(len_undecodable);
         let frag = core::str::from_utf8(&self.buf[..len_written])
-            .expect("[validity] `DecoderBuffer` writes a valid ASCII string");
+            .expect("`DecoderBuffer` writes a valid ASCII string");
         let len_incomplete = len_written % 3;
         let len_complete = len_written - len_incomplete;
         self.result = (self.f)(PctEncodedFragments::InvalidUtf8PctTriplets(
@@ -122,8 +121,7 @@ where
                 // A following hexdigit is available.
                 debug_assert_eq!(
                     len_incomplete, 2,
-                    "[consistency] the length of incomplete percent-encoded \
-                         triplet must be less than 2 bytes"
+                    "the length of incomplete percent-encoded triplet must be less than 2 bytes"
                 );
                 self.result = (self.f)(PctEncodedFragments::NoPctStr(
                     &frag[(len_complete + 1)..len_written],
@@ -156,8 +154,7 @@ where
                 let (plain_prefix, suffix) = find_split(rest, b'%').unwrap_or((rest, ""));
                 debug_assert!(
                     !plain_prefix.is_empty(),
-                    "[consistency] `len_consumed == 0` indicates non-empty \
-                     `rest` not starting with `%`"
+                    "`len_consumed == 0` indicates non-empty `rest` not starting with `%`"
                 );
                 self.result = (self.f)(PctEncodedFragments::NoPctStr(plain_prefix));
                 self.result_continue_or_err()?;
@@ -170,7 +167,7 @@ where
                 PushResult::Decoded(len_written, c) => {
                     let len_written = usize::from(len_written.get());
                     let frag = core::str::from_utf8(&self.buf[..len_written])
-                        .expect("[validity] `DecoderBuffer` writes a valid ASCII string");
+                        .expect("`DecoderBuffer` writes a valid ASCII string");
                     self.result = (self.f)(PctEncodedFragments::Char(frag, c));
                     self.result_continue_or_err()?;
                 }
@@ -239,7 +236,7 @@ impl DecoderBuffer {
     fn push_single_encoded_byte(&mut self, byte: u8) {
         debug_assert!(
             self.len_encoded < 12,
-            "[consistency] four percent-encoded triplets are enough for a unicode code point"
+            "four percent-encoded triplets are enough for a unicode code point"
         );
         let pos_enc = usize::from(self.len_encoded);
         self.len_encoded += 1;
@@ -251,7 +248,7 @@ impl DecoderBuffer {
             let lower = byte;
             debug_assert!(
                 upper.is_ascii_hexdigit() && lower.is_ascii_hexdigit(),
-                "[consistency] the `encoded` buffer should contain valid percent-encoded triplets"
+                "the `encoded` buffer should contain valid percent-encoded triplets"
             );
             self.decoded[pos_dec] = hexdigits_to_byte([upper, lower]);
         }
@@ -269,7 +266,7 @@ impl DecoderBuffer {
     pub(crate) fn push_encoded(&mut self, buf: &mut [u8], s: &str) -> (usize, PushResult) {
         debug_assert!(
             buf.len() >= 12,
-            "[internal precondition] destination buffer should be at least 12 bytes"
+            "[precondition] destination buffer should be at least 12 bytes"
         );
         let mut chars = s.chars();
         let mut len_triplet_incomplete = self.len_encoded % 3;
@@ -318,9 +315,9 @@ impl DecoderBuffer {
                     let c = decoded_str
                         .chars()
                         .next()
-                        .expect("[validity] `decoded` buffer is nonempty");
+                        .expect("`decoded` buffer is nonempty");
                     let len_result = NonZeroU8::new(self.len_encoded).expect(
-                        "[consistency] `encoded` buffer is nonempty since \
+                        "`encoded` buffer is nonempty since \
                          `push_single_encoded_byte()` was called",
                     );
                     self.write_and_pop(buf, len_result.get());
@@ -331,7 +328,7 @@ impl DecoderBuffer {
                     assert_eq!(
                         e.valid_up_to(),
                         0,
-                        "[consistency] `decoded` buffer contains at most one character"
+                        "`decoded` buffer contains at most one character"
                     );
                     let skip_len_decoded = match e.error_len() {
                         // Unexpected EOF. Wait for remaining input.
@@ -341,10 +338,7 @@ impl DecoderBuffer {
                     };
                     let len_consumed = s.len() - chars.as_str().len();
                     let len_result = skip_len_decoded as u8 * 3;
-                    assert_ne!(
-                        skip_len_decoded, 0,
-                        "[consistency] empty bytes cannot be invalid"
-                    );
+                    assert_ne!(skip_len_decoded, 0, "empty bytes cannot be invalid");
                     self.write_and_pop(buf, len_result);
                     return (len_consumed, PushResult::Undecodable(len_result));
                 }
@@ -362,7 +356,7 @@ impl DecoderBuffer {
         self.write_and_pop(buf, len_result.get());
         debug_assert_eq!(
             self.len_encoded, 0,
-            "[consistency] the buffer should be cleared after flushed"
+            "the buffer should be cleared after flushed"
         );
         Some(len_result)
     }

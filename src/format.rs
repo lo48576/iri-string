@@ -57,8 +57,8 @@ pub fn write_to_slice<'a, T: fmt::Display>(
         return Err(CapacityOverflowError);
     }
     let len = writer.cursor;
-    let result = core::str::from_utf8(&buf[..len])
-        .expect("[validity] fmt::Display writes valid UTF-8 byte sequence");
+    let result =
+        core::str::from_utf8(&buf[..len]).expect("fmt::Display writes valid UTF-8 byte sequence");
     Ok(result)
 }
 
@@ -103,7 +103,7 @@ pub fn try_append_to_string<T: fmt::Display>(
     if write!(writer, "{}", value).is_err() {
         let e = writer
             .error
-            .expect("[consistency] allocation error should be set on formatting failure");
+            .expect("allocation error should be set on formatting failure");
         return Err(e);
     }
     Ok(())

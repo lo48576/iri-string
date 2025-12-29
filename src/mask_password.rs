@@ -26,7 +26,7 @@ pub(crate) fn password_range_to_hide<S: Spec>(iri: &RiReferenceStr<S>) -> Option
         // 2: `"//".len()`.
         let authority_start = 2 + iri
             .find("//")
-            .expect("[validity] `authority` component must be prefixed with `//`");
+            .expect("`authority` component must be prefixed with `//`");
         let end = authority_start + userinfo.len();
         let start = authority_start + userinfo.find(':').map_or_else(|| userinfo.len(), |v| v + 1);
         Some(start..end)
@@ -49,7 +49,7 @@ where
 {
     debug_assert!(
         s.len() >= pw_range.end,
-        "[consistency] password range must be inside the IRI"
+        "password range must be inside the IRI"
     );
 
     f.write_str(&s[..pw_range.start])?;
@@ -214,7 +214,7 @@ macro_rules! impl_mask {
                 let iri = unsafe {
                     <$owned<S>>::new_unchecked_justified(
                         s,
-                        "[validity] the IRI string and its type remains valid without password",
+                        "the IRI string and its type remains valid without password",
                     )
                 };
                 Ok(iri)

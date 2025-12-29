@@ -1025,7 +1025,7 @@ macro_rules! impl_stringifiers {
                 Ok(unsafe {
                     Self::Target::new_unchecked_justified(
                         s,
-                        "[validity] the IRI to be built is already validated",
+                        "the IRI to be built is already validated",
                     )
                 })
             }
@@ -1047,10 +1047,7 @@ macro_rules! impl_stringifiers {
                 // SAFETY: `Built` will be returned to the user only when the
                 // resulting string is valid as the target IRI type.
                 unsafe {
-                    Self::new_unchecked_justified(
-                        s,
-                        "[validity] the IRI to be built is already validated",
-                    )
+                    Self::new_unchecked_justified(s, "the IRI to be built is already validated")
                 }
             }
         }

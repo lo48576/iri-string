@@ -272,7 +272,7 @@ impl<'a> NormalizationInput<'a> {
         Self {
             scheme: r.scheme_str(r_iri).unwrap_or_else(|| {
                 b.scheme_str(b_iri)
-                    .expect("[validity] non-relative IRI must have a scheme")
+                    .expect("non-relative IRI must have a scheme")
             }),
             authority: ref_toplevel.choose_then(
                 RefToplevel::Authority,
@@ -297,7 +297,7 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
     fn from(iri: &'a RiStr<S>) -> Self {
         let components = RiReferenceComponents::<S>::from(iri.as_ref());
         let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let scheme = scheme.expect("`absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
         NormalizationInput {
@@ -325,7 +325,7 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
     fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
         let components = RiReferenceComponents::<S>::from(iri.as_ref());
         let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let scheme = scheme.expect("`absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
         NormalizationInput {
@@ -649,10 +649,7 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiStr<S>> {
         // resulting URIs/IRIs can point to the semantically different resources,
         // but in such cases they are still syntactically valid as URIs/IRIs.
         Ok(unsafe {
-            Self::Target::new_unchecked_justified(
-                s,
-                "[validity] the normalization result must be a valid IRI",
-            )
+            Self::Target::new_unchecked_justified(s, "the normalization result must be a valid IRI")
         })
     }
 }
@@ -686,7 +683,7 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiAbsoluteStr<S>> {
         Ok(unsafe {
             Self::Target::new_unchecked_justified(
                 s,
-                "[validity] the normalization result must be a valid absolute IRI",
+                "the normalization result must be a valid absolute IRI",
             )
         })
     }

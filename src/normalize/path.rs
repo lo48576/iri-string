@@ -146,7 +146,7 @@ impl PathToNormalize<'_> {
     ) -> fmt::Result {
         debug_assert!(
             self.0.map_or(true, |s| s.ends_with('/')),
-            "[validity] the prefix field of `PathToNormalize` should end with a slash"
+            "the prefix field of `PathToNormalize` should end with a slash"
         );
 
         if self.is_empty() {
@@ -161,7 +161,7 @@ impl PathToNormalize<'_> {
             // See <https://github.com/lo48576/iri-string/issues/29>.
             debug_assert!(
                 op.mode.case_pct_normalization(),
-                "[consistency] case/pct normalization should still be applied"
+                "case/pct normalization should still be applied"
             );
             if let Some(prefix) = self.0 {
                 write!(f, "{}", PctCaseNormalized::<S>::new(prefix))?;
@@ -206,7 +206,7 @@ impl PathToNormalize<'_> {
                         SegmentKind::Dot | SegmentKind::DotDot => {
                             debug_assert!(
                                 seg.has_leading_slash,
-                                "[consistency] `.` or `..` segments without a
+                                "`.` or `..` segments without a
                                  leading slash have already been skipped"
                             );
                             skipped_len = seg.range.end;
@@ -282,14 +282,14 @@ impl PathToNormalize<'_> {
             // No need of searching dot segments anymore.
             assert!(
                 !too_deep_area_may_have_dot_segments,
-                "[consistency] loop condition of the previous loop"
+                "loop condition of the previous loop"
             );
             // Apply only normalization (if needed).
             for seg in PathSegmentsIter::new(&rest) {
                 assert_eq!(
                     seg.kind(&rest),
                     SegmentKind::Normal,
-                    "[consistency] already confirmed that there are no more dot segments"
+                    "already confirmed that there are no more dot segments"
                 );
                 let segname = seg.segment(&rest);
                 Self::emit_segment::<S, _>(
@@ -503,7 +503,7 @@ impl PathCharacteristic {
             Ok(_) => PathCharacteristic::CommonRelative,
             Err(_) => writer
                 .result
-                .expect("[consistency] the formatting quits early by `Err` when the check is done"),
+                .expect("the formatting quits early by `Err` when the check is done"),
         }
     }
 }

@@ -549,7 +549,7 @@ impl<S: Spec> RiAbsoluteStr<S> {
             unsafe {
                 RiQueryStr::new_unchecked_justified(
                     query,
-                    "[validity] query in a valid absolute IRI must also be valid",
+                    "query in a valid absolute IRI must also be valid",
                 )
             }
         })
@@ -661,7 +661,7 @@ impl<S: Spec> RiAbsoluteString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component is removed"
+                "the IRI must be valid after the password component is removed"
             );
         }
     }
@@ -705,7 +705,7 @@ impl<S: Spec> RiAbsoluteString<S> {
         debug_assert_eq!(
             self.as_str().as_bytes().get(pw_range.start - 1).copied(),
             Some(b':'),
-            "[validity] the password component must be prefixed with a separator colon"
+            "the password component must be prefixed with a separator colon"
         );
         // SAFETY: the IRI must be valid after the password is replaced with empty string.
         unsafe {
@@ -714,7 +714,7 @@ impl<S: Spec> RiAbsoluteString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component is removed"
+                "the IRI must be valid after the password component is removed"
             );
         }
     }

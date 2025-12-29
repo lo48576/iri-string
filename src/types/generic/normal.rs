@@ -155,7 +155,7 @@ impl<S: Spec> RiStr<S> {
         let prefix = unsafe {
             RiAbsoluteStr::new_unchecked_justified(
                 prefix,
-                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+                "a non-relative IRI without fragment is an absolute IRI by definition",
             )
         };
         let fragment = fragment.map(|fragment| {
@@ -163,7 +163,7 @@ impl<S: Spec> RiStr<S> {
             unsafe {
                 RiFragmentStr::new_unchecked_justified(
                     fragment,
-                    "[validity] fragment in a valid IRI must also be valid",
+                    "fragment in a valid IRI must also be valid",
                 )
             }
         });
@@ -198,7 +198,7 @@ impl<S: Spec> RiStr<S> {
         unsafe {
             RiAbsoluteStr::new_unchecked_justified(
                 &self.as_str()[..prefix_len],
-                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+                "a non-relative IRI without fragment is an absolute IRI by definition",
             )
         }
     }
@@ -808,7 +808,7 @@ impl<S: Spec> RiString<S> {
         let prefix = unsafe {
             RiAbsoluteString::new_unchecked_justified(
                 prefix,
-                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+                "a non-relative IRI without fragment is an absolute IRI by definition",
             )
         };
         let fragment = fragment.map(|fragment| {
@@ -817,7 +817,7 @@ impl<S: Spec> RiString<S> {
             unsafe {
                 RiFragmentString::new_unchecked_justified(
                     fragment,
-                    "[validity] fragment in a valid IRI must also be valid",
+                    "fragment in a valid IRI must also be valid",
                 )
             }
         });
@@ -852,7 +852,7 @@ impl<S: Spec> RiString<S> {
         unsafe {
             RiAbsoluteString::new_unchecked_justified(
                 s,
-                "[validity] a non-relative IRI without fragment is an absolute IRI by definition",
+                "a non-relative IRI without fragment is an absolute IRI by definition",
             )
         }
     }
@@ -908,7 +908,7 @@ impl<S: Spec> RiString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component is removed"
+                "the IRI must be valid after the password component is removed"
             );
         }
     }
@@ -952,7 +952,7 @@ impl<S: Spec> RiString<S> {
         debug_assert_eq!(
             self.as_str().as_bytes().get(pw_range.start - 1).copied(),
             Some(b':'),
-            "[validity] the password component must be prefixed with a separator colon"
+            "the password component must be prefixed with a separator colon"
         );
         // SAFETY: the IRI must still be valid if the password is replaced with
         // empty string.
@@ -962,7 +962,7 @@ impl<S: Spec> RiString<S> {
             debug_assert_eq!(
                 Self::validate(buf),
                 Ok(()),
-                "[validity] the IRI must be valid after the password component is removed"
+                "the IRI must be valid after the password component is removed"
             );
         }
     }

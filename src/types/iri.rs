@@ -138,7 +138,7 @@ macro_rules! impl_conversion_between_uri {
                 let uri = unsafe {
                     <$ty_borrowed_uri>::new_unchecked_justified(
                         self.as_str(),
-                        "[validity] an ASCII-only IRI is also a valid URI",
+                        "an ASCII-only IRI is also a valid URI",
                     )
                 };
                 Some(uri)
@@ -219,7 +219,7 @@ macro_rules! impl_conversion_between_uri {
                 debug_assert_eq!(
                     <$ty_borrowed_iri>::validate(self.as_str()),
                     Ok(()),
-                    "[consistency] the content must be valid at any time"
+                    "the content must be valid at any time"
                 );
                 Ok(())
             }
@@ -289,7 +289,7 @@ macro_rules! impl_conversion_between_uri {
                 let uri = unsafe {
                     <$ty_owned_uri>::new_unchecked_justified(
                         s,
-                        "[validity] an IRI encoded into ASCII-only string is also a valid URI",
+                        "an IRI encoded into ASCII-only string is also a valid URI",
                     )
                 };
                 Ok(uri)

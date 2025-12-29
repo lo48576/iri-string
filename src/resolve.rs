@@ -143,7 +143,7 @@ impl<'a, S: Spec> FixedBaseResolver<'a, S> {
         unsafe {
             RiAbsoluteStr::new_unchecked_justified(
                 self.base_components.iri().as_str(),
-                "[validity] already validated on `FixedBaseResolver` creation",
+                "already validated on `FixedBaseResolver` creation",
             )
         }
     }
@@ -176,7 +176,7 @@ impl<S: Spec> FixedBaseResolver<'_, S> {
     pub fn scheme_str(&self) -> &str {
         self.base_components
             .scheme_str()
-            .expect("[validity] absolute IRI should have the scheme part")
+            .expect("absolute IRI should have the scheme part")
     }
 
     /// Returns the authority.
@@ -253,7 +253,7 @@ impl<S: Spec> FixedBaseResolver<'_, S> {
         let query = unsafe {
             RiQueryStr::<S>::new_unchecked_justified(
                 query_raw,
-                "[validity] must be a valid query if present in an absolute-IRI",
+                "must be a valid query if present in an absolute-IRI",
             )
         };
         Some(query)

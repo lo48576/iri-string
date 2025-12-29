@@ -83,7 +83,7 @@ macro_rules! impl_for_iri {
                 Ok(unsafe {
                     <Self::Target>::new_unchecked_justified(
                         s,
-                        "[validity] an IRI must always be encodable into a valid URI",
+                        "an IRI must always be encodable into a valid URI",
                     )
                 })
             }
@@ -178,7 +178,7 @@ fn percent_encode_bytes(f: &mut fmt::Formatter<'_>, s: &str, buf: &mut [u8]) -> 
             debug_assert_eq!(
                 dest.len(),
                 3,
-                "[validity] `chunks_exact()` must return a slice with the exact length"
+                "`chunks_exact()` must return a slice with the exact length"
             );
             debug_assert_eq!(
                 dest[0], b'%',
@@ -251,14 +251,8 @@ pub(crate) fn try_percent_encode_iri_inline(
     let mut src_end = src_len;
     let mut rest_nonascii = num_nonascii;
     while rest_nonascii > 0 {
-        debug_assert!(
-            src_end > 0,
-            "[validity] the source position should not overrun"
-        );
-        debug_assert!(
-            dest_end > 0,
-            "[validity] the destination position should not overrun"
-        );
+        debug_assert!(src_end > 0, "the source position should not overrun");
+        debug_assert!(dest_end > 0, "the destination position should not overrun");
         src_end -= 1;
         dest_end -= 1;
         let byte = buf[src_end];
@@ -278,7 +272,7 @@ pub(crate) fn try_percent_encode_iri_inline(
     }
 
     // Move the result from the temporary buffer to the destination.
-    let s = String::from_utf8(buf).expect("[consistency] the encoding result is an ASCII string");
+    let s = String::from_utf8(buf).expect("the encoding result is an ASCII string");
     *iri = s;
     Ok(())
 }

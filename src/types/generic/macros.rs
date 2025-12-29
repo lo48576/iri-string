@@ -732,7 +732,7 @@ macro_rules! define_custom_string_owned {
                 unsafe {
                     $slice::new_unchecked_justified(
                         AsRef::<str>::as_ref(self),
-                        "[validity] conversion between the types of same syntax is always valid",
+                        "conversion between the types of same syntax is always valid",
                     )
                 }
             }
@@ -994,7 +994,7 @@ macro_rules! impl_trivial_conv_between_iri {
                 unsafe {
                     <$to_slice<S>>::new_unchecked_justified(
                         self.as_str(),
-                        "[validity] a cast to the superset syntax is always valid",
+                        "a cast to the superset syntax is always valid",
                     )
                 }
             }
@@ -1025,7 +1025,7 @@ macro_rules! impl_trivial_conv_between_iri {
                 unsafe {
                     <$to_owned<S>>::new_unchecked_justified(
                         s.into(),
-                        "[validity] a cast to the superset syntax is always valid",
+                        "a cast to the superset syntax is always valid",
                     )
                 }
             }
