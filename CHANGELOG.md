@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.10]
+
 * Add syntax checkers for more components of URIs/IRIs.
 * Put detailed info into `validate::Error` type.
 * Fix `validate::path()` function to accept paths starting with `//`.
@@ -1060,7 +1062,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.9...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.10...develop>
+[0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>
 [0.7.9]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.9>
 [0.7.8]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.8>
 [0.7.7]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.7>
