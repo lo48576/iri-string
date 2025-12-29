@@ -118,11 +118,22 @@ impl<S: Spec> RiReferenceStr<S> {
         // >
         // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
 
-        <&RiStr<S>>::try_from(self.as_str()).map_err(|_| {
-            // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
+        let s = self.as_str();
+        // TODO: Just checking `scheme:` is enough.
+        if trusted_parser::extract_scheme(s).is_some() {
+            // Has a scheme followed by a colon. An IRI.
+            debug_assert_eq!(RiStr::<S>::validate(s), Ok(()), "");
+            // SAFETY: an IRI reference with scheme is an absolute IRI.
             // See the RFC 3987 syntax rule `IRI-reference = IRI / irelative-ref`.
-            unsafe { RiRelativeStr::new_maybe_unchecked(self.as_str()) }
-        })
+            Ok(unsafe { RiStr::<S>::new_always_unchecked(s) })
+        } else {
+            // Has no scheme. A relative IRI reference.
+            debug_assert_eq!(RiRelativeStr::<S>::validate(s), Ok(()), "");
+            // SAFETY: if an IRI reference is not an IRI, then it is a relative
+            // iri reference. See the RFC 3987 syntax rule
+            // `IRI-reference = IRI / irelative-ref`.
+            Err(unsafe { RiRelativeStr::<S>::new_always_unchecked(s) })
+        }
     }
 
     /// Returns the string as [`&RiRelativeStr`][`RiRelativeStr`], if it is valid as an IRI.
