@@ -243,8 +243,14 @@ impl<S: Spec> FixedBaseResolver<'_, S> {
     #[must_use]
     pub fn query(&self) -> Option<&RiQueryStr<S>> {
         let query_raw = self.query_str()?;
-        let query = RiQueryStr::new(query_raw)
-            .expect("[validity] must be valid query if present in an absolute-IRI");
+        debug_assert_eq!(
+            RiQueryStr::<S>::validate(query_raw),
+            Ok(()),
+            "[validity] must be valid query if present in an absolute-IRI"
+        );
+        // SAFETY: `RiAbsoluteStr` must have already validated the string
+        // including the query, so the query must be valid.
+        let query = unsafe { RiQueryStr::<S>::new_always_unchecked(query_raw) };
         Some(query)
     }
 

@@ -239,7 +239,7 @@ macro_rules! define_custom_string_slice {
             /// The given string must be syntactically valid as `Self` type.
             #[inline]
             #[must_use]
-            unsafe fn new_always_unchecked(s: &str) -> &Self {
+            pub(crate) unsafe fn new_always_unchecked(s: &str) -> &Self {
                 // SAFETY: the cast is safe since `Self` type has `repr(transparent)`
                 // attribute and the content is guaranteed as valid by the
                 // precondition of the function.

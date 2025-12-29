@@ -1020,8 +1020,14 @@ macro_rules! impl_stringifiers {
             #[inline]
             fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
                 let s = self.try_to_string()?;
-                Ok(TryFrom::try_from(s)
-                    .expect("[validity] the IRI to be built is already validated"))
+                debug_assert_eq!(
+                    Self::Target::validate(s.as_str()),
+                    Ok(()),
+                    "[validity] the IRI to be built is already validated"
+                );
+                // SAFETY: `Built` will be returned to the user only when the
+                // resulting string is valid as the target IRI type.
+                Ok(unsafe { Self::Target::new_always_unchecked(s) })
             }
         }
 
@@ -1038,7 +1044,14 @@ macro_rules! impl_stringifiers {
             #[inline]
             fn from(builder: &Built<'_, $borrowed<S>>) -> Self {
                 let s = builder.to_string();
-                Self::try_from(s).expect("[validity] the IRI to be built is already validated")
+                debug_assert_eq!(
+                    Self::validate(s.as_str()),
+                    Ok(()),
+                    "[validity] the IRI to be built is already validated"
+                );
+                // SAFETY: `Built` will be returned to the user only when the
+                // resulting string is valid as the target IRI type.
+                unsafe { Self::new_always_unchecked(s) }
             }
         }
     };
