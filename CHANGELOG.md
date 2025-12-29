@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+* internal refactoring: Reduce redundant validation of string type conversions.
+
+### Changed (non-breaking)
+* internal refactoring: Reduce redundant validation of string type conversions.
+    + Previously, syntax validations had sometimes run again on the already
+      validated or always valid strings.
+    + This change will improve performance a bit for some string conversions.
+
 ## [0.7.10]
 
 * Add syntax checkers for more components of URIs/IRIs.
