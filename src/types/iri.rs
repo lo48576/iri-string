@@ -132,8 +132,9 @@ macro_rules! impl_conversion_between_uri {
                 if !self.as_str().is_ascii() {
                     return None;
                 }
-                debug_assert!(
-                    <$ty_borrowed_uri>::new(self.as_str()).is_ok(),
+                debug_assert_eq!(
+                    <$ty_borrowed_uri>::validate(self.as_str()),
+                    Ok(()),
                     "[consistency] the ASCII-only IRI must also be a valid URI"
                 );
                 // SAFETY: An ASCII-only IRI is a URI.
@@ -215,8 +216,9 @@ macro_rules! impl_conversion_between_uri {
                     let buf = self.as_inner_mut();
                     try_percent_encode_iri_inline(buf)?;
                 }
-                debug_assert!(
-                    <$ty_borrowed_iri>::new(self.as_str()).is_ok(),
+                debug_assert_eq!(
+                    <$ty_borrowed_iri>::validate(self.as_str()),
+                    Ok(()),
                     "[consistency] the content must be valid at any time"
                 );
                 Ok(())
@@ -281,8 +283,9 @@ macro_rules! impl_conversion_between_uri {
             pub fn try_encode_into_uri(mut self) -> Result<$ty_owned_uri, TryReserveError> {
                 self.try_encode_to_uri_inline()?;
                 let s: String = self.into();
-                debug_assert!(
-                    <$ty_borrowed_uri>::new(s.as_str()).is_ok(),
+                debug_assert_eq!(
+                    <$ty_borrowed_uri>::validate(s.as_str()),
+                    Ok(()),
                     "[consistency] the encoded IRI must also be a valid URI"
                 );
                 // SAFETY: An ASCII-only IRI is a URI.
@@ -318,8 +321,9 @@ macro_rules! impl_conversion_between_uri {
                     return Err(self);
                 }
                 let s: String = self.into();
-                debug_assert!(
-                    <$ty_borrowed_uri>::new(s.as_str()).is_ok(),
+                debug_assert_eq!(
+                    <$ty_borrowed_uri>::validate(s.as_str()),
+                    Ok(()),
                     "[consistency] the ASCII-only IRI must also be a valid URI"
                 );
                 // SAFETY: An ASCII-only IRI is a URI.

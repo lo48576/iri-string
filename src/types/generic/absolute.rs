@@ -653,8 +653,9 @@ impl<S: Spec> RiAbsoluteString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiAbsoluteStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -705,8 +706,9 @@ impl<S: Spec> RiAbsoluteString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiAbsoluteStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }

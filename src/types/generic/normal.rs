@@ -832,7 +832,7 @@ impl<S: Spec> RiString<S> {
     /// Removes fragment part (and following `#` character) if `None` is given.
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(iri::<S>(&self.inner).is_ok());
+        debug_assert_eq!(Self::validate(&self.inner), Ok(()));
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
@@ -875,8 +875,9 @@ impl<S: Spec> RiString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
@@ -928,8 +929,9 @@ impl<S: Spec> RiString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiStr::<S>::new(buf).is_ok(),
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
                 "[validity] the IRI must be valid after the password component is removed"
             );
         }
