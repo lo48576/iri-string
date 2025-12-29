@@ -32,7 +32,7 @@ where
 fn rfc3986_uris_absolute_without_fragment() {
     const URIS: &[&str] = &[
         // RFC 3986 itself.
-        "https://tools.ietf.org/html/rfc3986",
+        "https://www.rfc-editor.org/rfc/rfc3986.html",
         "https://datatracker.ietf.org/doc/html/rfc3986",
         // RFC 3986 section 1.1.2.
         "ftp://ftp.is.co.za/rfc/rfc1808.txt",
@@ -98,7 +98,7 @@ fn rfc3986_uris_absolute_without_fragment() {
         "http://www.w3.org/Addressing/",
         "ftp://foo.example.com/rfc/",
         // RFC 3987 itself.
-        "https://tools.ietf.org/html/rfc3987",
+        "https://www.rfc-editor.org/rfc/rfc3987.html",
         "https://datatracker.ietf.org/doc/html/rfc3987",
         // RFC 3987 section 3.1.
         "http://xn--rsum-bpad.example.org",

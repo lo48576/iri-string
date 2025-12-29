@@ -1,9 +1,7 @@
 //! Query string.
 
-use crate::{
-    spec::Spec,
-    validate::{query, Error},
-};
+use crate::spec::Spec;
+use crate::validate::{query, Error, ErrorKind};
 
 define_custom_string_slice! {
     /// A borrowed slice of an IRI query (i.e. after the first `?` and before the first `#`).
@@ -65,10 +63,10 @@ define_custom_string_slice! {
     /// assert!(IriQueryStr::new("#hash").is_err());
     /// ```
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`query` rule]: https://tools.ietf.org/html/rfc3986#section-3.4
-    /// [`iquery` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`query` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4
+    /// [`iquery` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
     struct RiQueryStr {
         validator = query,
         expecting_msg = "IRI query string",
@@ -86,10 +84,10 @@ define_custom_string_owned! {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`query` rule]: https://tools.ietf.org/html/rfc3986#section-3.4
-    /// [`iquery` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`query` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4
+    /// [`iquery` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
     /// [`RiQueryStr`]: struct.RiQueryStr.html
     struct RiQueryString {
         validator = query,
@@ -128,7 +126,7 @@ impl<S: Spec> RiQueryStr<S> {
     /// ```
     pub fn from_prefixed(s: &str) -> Result<&Self, Error> {
         if !s.starts_with('?') {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidQuery));
         }
         TryFrom::try_from(&s[1..])
     }

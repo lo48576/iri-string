@@ -3,7 +3,7 @@
 use crate::parser::char;
 use crate::parser::str::{find_split2_hole, satisfy_chars_with_pct_encoded};
 use crate::spec::Spec;
-use crate::validate::Error;
+use crate::validate::{Error, ErrorKind};
 
 /// Returns `Ok(_)` if the string matches `path-abempty` or `ipath-abempty`.
 pub(super) fn validate_path_abempty<S: Spec>(i: &str) -> Result<(), Error> {
@@ -12,7 +12,7 @@ pub(super) fn validate_path_abempty<S: Spec>(i: &str) -> Result<(), Error> {
     }
     let i = match i.strip_prefix('/') {
         Some(rest) => rest,
-        None => return Err(Error::new()),
+        None => return Err(Error::with_kind(ErrorKind::InvalidPath)),
     };
     let is_valid = satisfy_chars_with_pct_encoded(
         i,
@@ -22,7 +22,7 @@ pub(super) fn validate_path_abempty<S: Spec>(i: &str) -> Result<(), Error> {
     if is_valid {
         Ok(())
     } else {
-        Err(Error::new())
+        Err(Error::with_kind(ErrorKind::InvalidPath))
     }
 }
 
@@ -44,7 +44,7 @@ pub(super) fn validate_path_absolute_authority_absent<S: Spec>(i: &str) -> Resul
     if is_valid {
         Ok(())
     } else {
-        Err(Error::new())
+        Err(Error::with_kind(ErrorKind::InvalidPath))
     }
 }
 
@@ -63,21 +63,18 @@ pub(super) fn validate_path_relative_authority_absent<S: Spec>(i: &str) -> Resul
         Some((_, c, _)) => {
             debug_assert_eq!(c, b':');
             // `foo:bar`-style. This does not match `path-noscheme`.
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidPath));
         }
     };
     if is_valid {
         Ok(())
     } else {
-        Err(Error::new())
+        Err(Error::with_kind(ErrorKind::InvalidPath))
     }
 }
 
 /// Returns `Ok(_)` if the string matches `path`/`ipath` rules.
 pub(crate) fn validate_path<S: Spec>(i: &str) -> Result<(), Error> {
-    if i.starts_with("//") {
-        return Err(Error::new());
-    }
     let is_valid = satisfy_chars_with_pct_encoded(
         i,
         char::is_ascii_pchar_slash,
@@ -86,6 +83,17 @@ pub(crate) fn validate_path<S: Spec>(i: &str) -> Result<(), Error> {
     if is_valid {
         Ok(())
     } else {
-        Err(Error::new())
+        Err(Error::with_kind(ErrorKind::InvalidPath))
+    }
+}
+
+/// Returns `Ok(_)` if the string matches `segment`/`isegment` rules.
+pub(crate) fn validate_path_segment<S: Spec>(i: &str) -> Result<(), Error> {
+    let is_valid =
+        satisfy_chars_with_pct_encoded(i, char::is_ascii_pchar, S::is_nonascii_char_unreserved);
+    if is_valid {
+        Ok(())
+    } else {
+        Err(Error::with_kind(ErrorKind::InvalidPath))
     }
 }

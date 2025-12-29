@@ -20,7 +20,7 @@ use crate::spec::Spec;
 use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
 #[cfg(feature = "alloc")]
 use crate::types::{RiAbsoluteString, RiReferenceString, RiRelativeString, RiString};
-use crate::validate::Error;
+use crate::validate::{Error, ErrorKind};
 
 /// Port builder.
 ///
@@ -1068,7 +1068,7 @@ impl<S: Spec> Buildable<'_> for RiReferenceStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidScheme));
         }
         let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1084,10 +1084,10 @@ impl<S: Spec> Buildable<'_> for RiStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiAbsoluteStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_none() {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::InvalidScheme));
         }
         if builder.fragment.is_some() {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::UnexpectedFragment));
         }
         let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1103,7 +1103,7 @@ impl<S: Spec> Buildable<'_> for RiAbsoluteStr<S> {}
 impl<'a, S: Spec> private::Sealed<'a> for RiRelativeStr<S> {
     fn validate_builder(builder: Builder<'a>) -> Result<Built<'a, Self>, Error> {
         if builder.scheme.is_some() {
-            return Err(Error::new());
+            return Err(Error::with_kind(ErrorKind::UnexpectedAbsolute));
         }
         let path_is_absolute = validate_builder_for_iri_reference::<S>(&builder)?;
 
@@ -1134,7 +1134,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
                 // `user` is not allowed to have a colon, since the characters
                 // after the colon is parsed as the password.
                 if user.contains(':') {
-                    return Err(Error::new());
+                    return Err(Error::with_kind(ErrorKind::InvalidUserInfo));
                 }
 
                 // Note that the syntax of components inside `authority`
@@ -1154,7 +1154,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
 
         if let PortBuilderRepr::String(s) = authority.port.0 {
             if !s.bytes().all(|b| b.is_ascii_digit()) {
-                return Err(Error::new());
+                return Err(Error::with_kind(ErrorKind::InvalidPort));
             }
         }
     }
@@ -1208,7 +1208,7 @@ fn validate_builder_for_iri_reference<S: Spec>(builder: &Builder<'_>) -> Result<
         };
     }
     if !is_path_acceptable {
-        return Err(Error::new());
+        return Err(Error::with_kind(ErrorKind::InvalidPath));
     }
 
     if let Some(query) = builder.query {

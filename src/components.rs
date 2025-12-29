@@ -198,7 +198,7 @@ impl Splitter {
 
 /// Components of an IRI reference.
 ///
-/// See <https://tools.ietf.org/html/rfc3986#section-5.2.2>.
+/// See <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.2.2>.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct RiReferenceComponents<'a, S: Spec> {
     /// Original complete string.

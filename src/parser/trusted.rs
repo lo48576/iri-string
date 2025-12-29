@@ -280,23 +280,23 @@ pub(crate) fn split_fragment(iri: &str) -> (&str, Option<&str>) {
     // > scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
     // > ```
     // >
-    // > --- [RFC 3986, section 3.1. Scheme](https://tools.ietf.org/html/rfc3986#section-3.1)
+    // > --- [RFC 3986, section 3.1. Scheme](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.1)
     //
     // > The authority component is preceded by a double slash ("//") and is terminated by the
     // > next slash ("/"), question mark ("?"), or number sign ("#") character, or by the end
     // > of the URI.
     // >
-    // > --- [RFC 3986, section 3.2. Authority](https://tools.ietf.org/html/rfc3986#section-3.2)
+    // > --- [RFC 3986, section 3.2. Authority](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2)
     //
     // > The path is terminated by the first question mark ("?") or number sign ("#")
     // > character, or by the end of the URI.
     // >
-    // > --- [RFC 3986, section 3.3. Path](https://tools.ietf.org/html/rfc3986#section-3.3)
+    // > --- [RFC 3986, section 3.3. Path](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3)
     //
     // > The query component is indicated by the first question mark ("?") character and
     // > terminated by a number sign ("#") character or by the end of the URI.
     // >
-    // > --- [RFC 3986, section 3.4. Query](https://tools.ietf.org/html/rfc3986#section-3.4)
+    // > --- [RFC 3986, section 3.4. Query](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4)
     match find_split_hole(iri, b'#') {
         Some((prefix, fragment)) => (prefix, Some(fragment)),
         None => (iri, None),

@@ -63,10 +63,10 @@ define_custom_string_slice! {
     /// assert!(IriReferenceStr::new("%GG").is_err());
     /// ```
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`IRI-reference` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`URI-reference` rule]: https://tools.ietf.org/html/rfc3986#section-4.1
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`IRI-reference` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`URI-reference` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.1
     /// [`RiRelativeStr`]: struct.RiRelativeStr.html
     /// [`RiStr`]: struct.RiStr.html
     struct RiReferenceStr {
@@ -88,10 +88,10 @@ define_custom_string_owned! {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`IRI-reference` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`URI-reference` rule]: https://tools.ietf.org/html/rfc3986#section-4.1
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`IRI-reference` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`URI-reference` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.1
     /// [`RiReferenceStr`]: struct.RiReferenceString.html
     /// [`RiRelativeString`]: struct.RiRelativeString.html
     /// [`RiString`]: struct.RiString.html
@@ -116,7 +116,7 @@ impl<S: Spec> RiReferenceStr<S> {
         // > Some productions are ambiguous. The "first-match-wins" (a.k.a.
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
-        // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
+        // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
 
         <&RiStr<S>>::try_from(self.as_str()).map_err(|_| {
             // SAFETY: if an IRI reference is not an IRI, then it is a relative IRI.
@@ -155,10 +155,10 @@ impl<S: Spec> RiReferenceStr<S> {
     /// > Some parsers allow the scheme name to be present in a relative
     /// > reference if it is the same as the base URI scheme. This is considered
     /// > to be a loophole in prior specifications of partial URI
-    /// > [RFC1630](https://tools.ietf.org/html/rfc1630). Its use should be
+    /// > [RFC1630](https://www.rfc-editor.org/rfc/rfc1630.html). Its use should be
     /// > avoided but is allowed for backward compatibility.
     /// >
-    /// > --- <https://tools.ietf.org/html/rfc3986#section-5.4.2>
+    /// > --- <https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4.2>
     ///
     /// # Failures
     ///
@@ -168,8 +168,8 @@ impl<S: Spec> RiReferenceStr<S> {
     /// To see examples of such unresolvable IRIs, visit the documentation
     /// for [`normalize`][`crate::normalize`] module.
     ///
-    /// [RFC 3986 section 5.4]: https://tools.ietf.org/html/rfc3986#section-5.4
-    /// [RFC 3986 section 5.4.2]: https://tools.ietf.org/html/rfc3986#section-5.4.2
+    /// [RFC 3986 section 5.4]: https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4
+    /// [RFC 3986 section 5.4.2]: https://www.rfc-editor.org/rfc/rfc3986.html#section-5.4.2
     pub fn resolve_against<'a>(&'a self, base: &'a RiAbsoluteStr<S>) -> Normalized<'a, RiStr<S>> {
         FixedBaseResolver::new(base).resolve(self.as_ref())
     }
@@ -562,7 +562,7 @@ impl<S: Spec> RiReferenceString<S> {
         // > Some productions are ambiguous. The "first-match-wins" (a.k.a.
         // > "greedy") algorithm applies. For details, see [RFC3986].
         // >
-        // > --- <https://tools.ietf.org/html/rfc3987#section-2.2>.
+        // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
         if iri::<S>(&s).is_ok() {
             // SAFETY: just checked `s` is valid as an IRI.
             Ok(unsafe { RiString::new_always_unchecked(s) })

@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 
+## [0.7.10]
+
+* Add syntax checkers for more components of URIs/IRIs.
+* Put detailed info into `validate::Error` type.
+* Fix `validate::path()` function to accept paths starting with `//`.
+* Update links to IETF RFC documents.
+
+### Added
+* Add syntax checkers for more components of URIs/IRIs.
+    + List of added functions:
+        + `validate::scheme()`
+        + `validate::authority()`
+        + `validate::host()`
+        + `validate::port()`
+        + `validate::userinfo()`
+        + `validate::path_segment()`
+    + Note that functions for `path`, `query`, and `fragment` components have
+      already been provided.
+
+### Changed (non-breaking)
+* Put detailed info into `validate::Error` type.
+    + Now `validate::Error` type will provide a little more detailed error info
+      through `Display` and `ToString`.
+    + Note that the messages or the categorization is not guaranteed to be
+      stable. For now this is purely hint for human, and that is why the error
+      kind is not a public type.
+
+### Fixed
+* Fix `validate::path()` function to accept paths starting with `//`.
+    + Paths such as `//foo/bar` are valid although they cannot be used in some
+      contexts.
+* Update links to IETF RFC documents.
+    + Links to the old domain `tools.ietf.org` has redirect, but the redirection
+      truncates the fragment, so the links to the specific sections of documents
+      had not been working as expected.
+    + Now such links are updated to point to `www.rfc-editor.org`, so the links
+      in the documents and comments must be working as expected.
+
 ## [0.7.9]
 
 * Fix decoding of percent-encoded invalid UTF-8 bytes.
@@ -1024,7 +1062,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.9...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.10...develop>
+[0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>
 [0.7.9]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.9>
 [0.7.8]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.8>
 [0.7.7]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.7>

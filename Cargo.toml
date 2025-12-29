@@ -7,7 +7,7 @@ members = [
 
 [package]
 name = "iri-string"
-version = "0.7.9"
+version = "0.7.10"
 authors = ["YOSHIOKA Takuma <nop_thread@nops.red>"]
 edition = "2021"
 rust-version = "1.60"
@@ -43,6 +43,7 @@ std = ["alloc", "memchr?/std", "serde?/std"]
 
 [dependencies]
 memchr = { version = "2.4.1", default-features = false, optional = true }
+# NOTE: `workspace.dependencies` is not yet supported on MSRV (1.60).
 serde = { version = "1.0.103", default-features = false, features = ["derive"], optional = true }
 
 [dev-dependencies]

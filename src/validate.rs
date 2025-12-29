@@ -1,4 +1,7 @@
 //! Validators.
+//!
+//! Validators are functions that receive the string and checks if the entire
+//! string is syntactically valid.
 
 use core::fmt;
 
@@ -13,28 +16,81 @@ use crate::spec::Spec;
 // To return additional non-`Copy` data as an error, use wrapper type
 // (as `std::string::FromUtf8Error` contains `std::str::Utf8Error`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Error(());
+pub struct Error {
+    /// Error kind.
+    kind: ErrorKind,
+}
 
 impl Error {
-    /// Creates a new `Error`.
-    ///
-    /// For internal use.
+    /// Creates a new `Error` from the given error kind.
     #[inline]
     #[must_use]
-    pub(crate) fn new() -> Self {
-        Error(())
+    pub(crate) fn with_kind(kind: ErrorKind) -> Self {
+        Self { kind }
     }
 }
 
 impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Invalid IRI")
+        write!(f, "invalid IRI: {}", self.kind.description())
     }
 }
 
 #[cfg(feature = "std")]
 impl error::Error for Error {}
+
+/// Error kind.
+///
+/// This type may be reorganized between minor version bumps, so users should
+/// not expect specific error kind (or specific error message) to be returned
+/// for a specific error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub(crate) enum ErrorKind {
+    /// Invalid scheme.
+    InvalidScheme,
+    /// Invalid userinfo.
+    InvalidUserInfo,
+    /// Invalid host.
+    InvalidHost,
+    /// Invalid port.
+    InvalidPort,
+    /// Invalid path character.
+    InvalidPath,
+    /// Invalid query.
+    InvalidQuery,
+    /// Invalid fragment.
+    InvalidFragment,
+    /// Got an unexpected fragment.
+    UnexpectedFragment,
+    /// Expected a relative IRI but got an absolute IRI.
+    UnexpectedAbsolute,
+    /// Expected an absolute IRI but got a relative IRI.
+    UnexpectedRelative,
+    /// Invalid UTF-8 bytes.
+    InvalidUtf8,
+}
+
+impl ErrorKind {
+    /// Returns the human-friendly description for the error kind.
+    #[must_use]
+    fn description(self) -> &'static str {
+        match self {
+            Self::InvalidScheme => "invalid scheme",
+            Self::InvalidUserInfo => "invalid userinfo",
+            Self::InvalidHost => "invalid host",
+            Self::InvalidPort => "invalid port",
+            Self::InvalidPath => "invalid path",
+            Self::InvalidQuery => "invalid query",
+            Self::InvalidFragment => "invalid fragment",
+            Self::UnexpectedFragment => "unexpected fragment",
+            Self::UnexpectedAbsolute => "expected a relative IRI but got an absolute IRI",
+            Self::UnexpectedRelative => "expected an absolute IRI but got a relative IRI",
+            Self::InvalidUtf8 => "invalid utf-8 bytes",
+        }
+    }
+}
 
 /// Validates [IRI][uri].
 ///
@@ -88,7 +144,7 @@ impl error::Error for Error {}
 /// assert!(iri::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [uri]: https://tools.ietf.org/html/rfc3986#section-3
+/// [uri]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3
 /// [`RiStr`]: ../types/struct.RiStr.html
 /// [`RiString`]: ../types/struct.RiString.html
 pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
@@ -134,7 +190,7 @@ pub fn iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(iri_reference::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [uri-reference]: https://tools.ietf.org/html/rfc3986#section-4.1
+/// [uri-reference]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.1
 /// [`RiReferenceStr`]: ../types/struct.RiReferenceStr.html
 /// [`RiReferenceString`]: ../types/struct.RiReferenceString.html
 pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
@@ -198,7 +254,7 @@ pub fn iri_reference<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(absolute_iri::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [absolute-uri]: https://tools.ietf.org/html/rfc3986#section-4.3
+/// [absolute-uri]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3
 /// [`RiAbsoluteStr`]: ../types/struct.RiAbsoluteStr.html
 /// [`RiAbsoluteString`]: ../types/struct.RiAbsoluteString.html
 pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
@@ -255,18 +311,211 @@ pub fn absolute_iri<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(relative_ref::<UriSpec>("%GG").is_err());
 /// ```
 ///
-/// [relative-ref]: https://tools.ietf.org/html/rfc3986#section-4.2
+/// [relative-ref]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.2
 /// [`RiRelativeStr`]: ../types/struct.RiRelativeStr.html
 /// [`RiRelativeString`]: ../types/struct.RiRelativeString.html
 pub fn relative_ref<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_relative_ref::<S>(s)
 }
 
+/// Validates [IRI scheme][scheme].
+///
+/// Note that this function does not accept a trailing colon.
+///
+/// Also note that the syntax of the scheme is common between RFC 3986 (URIs)
+/// and RFC 3987 (IRIs).
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::validate::scheme;
+/// assert!(scheme("https").is_ok());
+/// assert!(scheme("file").is_ok());
+/// assert!(scheme("git+ssh").is_ok());
+///
+/// // Colon is syntactically not part of the scheme.
+/// assert!(scheme("colon:").is_err());
+/// // Scheme cannot be empty.
+/// assert!(scheme("").is_err());
+/// // The first character should be alphabetic character.
+/// assert!(scheme("0abc").is_err());
+/// assert!(scheme("+a").is_err());
+/// assert!(scheme("-a").is_err());
+/// ```
+///
+/// [scheme]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.1
+pub fn scheme(s: &str) -> Result<(), Error> {
+    parser::validate_scheme(s)
+}
+
+/// Validates [IRI authority][authority].
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::authority};
+/// assert!(authority::<UriSpec>("example.com").is_ok());
+/// assert!(authority::<UriSpec>("subdomain.example.com").is_ok());
+/// assert!(authority::<UriSpec>("no-period").is_ok());
+/// // Though strongly discouraged, this percent-encoded reg-name with
+/// // non-UTF-8 bytes is considered syntactically valid.
+/// assert!(authority::<UriSpec>("non-%99-utf-8").is_ok());
+/// // Empty authority is valid. Remember `file:///` has empty authority.
+/// assert!(authority::<UriSpec>("").is_ok());
+/// assert!(authority::<UriSpec>("127.0.0.1:8080").is_ok());
+/// assert!(authority::<UriSpec>("[::127.0.0.1]:8088").is_ok());
+/// // URI/IRI syntax itself does not have limit on the port number.
+/// assert!(authority::<UriSpec>("[::1]:9999999999").is_ok());
+/// // Syntax for future versions of IP addresses.
+/// assert!(authority::<UriSpec>("[v89ab.1+2,3(4)5&6]").is_ok());
+/// assert!(authority::<UriSpec>("user:password@host").is_ok());
+/// assert!(authority::<UriSpec>("co%3Alon:at%40sign@host:8888").is_ok());
+/// // Percent-encoded non-UTF8 (or even non-ASCII) bytes are valid.
+/// // Users are responsible to validate or reject such unusual input if needed.
+/// assert!(authority::<UriSpec>("not-a-%80-utf8@host").is_ok());
+///
+/// // Invalid percent encodings.
+/// assert!(authority::<UriSpec>("invalid%GGescape@host").is_err());
+/// // Invalid characters.
+/// assert!(authority::<UriSpec>("foo@bar@host").is_err());
+/// assert!(authority::<UriSpec>("slash/is-not-allowed").is_err());
+/// ```
+///
+/// [authority]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2
+pub fn authority<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_authority::<S>(s)
+}
+
+/// Validates [IRI host][host].
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::host};
+/// assert!(host::<UriSpec>("example.com").is_ok());
+/// assert!(host::<UriSpec>("subdomain.example.com").is_ok());
+/// assert!(host::<UriSpec>("no-period").is_ok());
+/// // Though strongly discouraged, this percent-encoded reg-name with
+/// // non-UTF-8 bytes is considered syntactically valid.
+/// assert!(host::<UriSpec>("non-%99-utf-8").is_ok());
+/// // Empty host is valid. Remember `file:///` has empty authority (and empty host).
+/// assert!(host::<UriSpec>("").is_ok());
+/// assert!(host::<UriSpec>("127.0.0.1").is_ok());
+/// assert!(host::<UriSpec>("[::1]").is_ok());
+/// assert!(host::<UriSpec>("[::127.0.0.1]").is_ok());
+/// // Syntax for future versions of IP addresses.
+/// assert!(host::<UriSpec>("[v89ab.1+2,3(4)5&6]").is_ok());
+///
+/// // `port` is not a part of the host.
+/// assert!(host::<UriSpec>("host:8080").is_err());
+/// // `userinfo` is not a part of the host.
+/// assert!(host::<UriSpec>("user:password@host").is_err());
+/// ```
+///
+/// [host]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2
+pub fn host<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_host::<S>(s)
+}
+
+/// Validates [IRI port][port].
+///
+/// Note that the syntax of the port is common between RFC 3986 (URIs) and
+/// RFC 3987 (IRIs).
+///
+/// Also note that this function does not accept a leading colon.
+///
+/// [host]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.3
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::validate::port;
+/// assert!(port("0").is_ok());
+/// assert!(port("8080").is_ok());
+/// assert!(port("0000080").is_ok());
+/// // URI/IRI syntax itself does not have limit on the port number.
+/// assert!(port("999999999").is_ok());
+///
+/// // The leading colon is not a part of the `port`.
+/// assert!(port(":443").is_err());
+/// ```
+pub fn port(s: &str) -> Result<(), Error> {
+    if s.bytes().all(|b| b.is_ascii_digit()) {
+        Ok(())
+    } else {
+        Err(Error::with_kind(ErrorKind::InvalidPort))
+    }
+}
+
+/// Validates [IRI userinfo][userinfo].
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::userinfo};
+/// assert!(userinfo::<UriSpec>("user").is_ok());
+/// assert!(userinfo::<UriSpec>("user:password").is_ok());
+/// assert!(userinfo::<UriSpec>("non-%99-utf-8").is_ok());
+/// // Special characters can be included if they are percent-encoded.
+/// assert!(userinfo::<UriSpec>("co%3Alon:at%40sign").is_ok());
+///
+/// // The trailing atsign is not a part of the userinfo.
+/// assert!(userinfo::<UriSpec>("user:password@").is_err());
+/// // Invalid characters.
+/// assert!(userinfo::<UriSpec>("foo@bar").is_err());
+/// assert!(userinfo::<UriSpec>("slash/is-not-allowed").is_err());
+/// ```
+///
+/// [authority]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.1
+pub fn userinfo<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_userinfo::<S>(s)
+}
+
 /// Validates [IRI path][path].
 ///
-/// [path]: https://tools.ietf.org/html/rfc3986#section-3.3
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::path};
+/// assert!(path::<UriSpec>("").is_ok());
+/// assert!(path::<UriSpec>("foo/bar").is_ok());
+/// assert!(path::<UriSpec>("foo/bar/").is_ok());
+/// assert!(path::<UriSpec>("/foo/bar").is_ok());
+/// assert!(path::<UriSpec>("non-%99-utf-8").is_ok());
+/// // Be careful! This is completely valid (absolute) path, but may be confused
+/// // with an protocol-relative URI, with the authority `foo` and the path `/bar`.
+/// assert!(path::<UriSpec>("//foo/bar").is_ok());
+/// // Be careful! This is completely valid (relative) path, but may be confused
+/// // with an absolute URI, with the scheme `foo` and the path `bar`.
+/// assert!(path::<UriSpec>("foo:bar").is_ok());
+///
+/// // Invalid characters.
+/// assert!(path::<UriSpec>("foo?bar").is_err());
+/// assert!(path::<UriSpec>("foo#bar").is_err());
+/// ```
+///
+/// [path]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
 pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_path::<S>(s)
+}
+
+/// Validates [IRI path segment][segment].
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::path_segment};
+/// assert!(path_segment::<UriSpec>("").is_ok());
+/// assert!(path_segment::<UriSpec>("escaped-%2F-slash").is_ok());
+/// assert!(path_segment::<UriSpec>("non-%99-utf-8").is_ok());
+///
+/// // A path segment itself cannot contain an unescaped slash.
+/// assert!(path_segment::<UriSpec>("foo/bar").is_err());
+/// ```
+///
+/// [segment]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.3
+pub fn path_segment<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_path_segment::<S>(s)
 }
 
 /// Validates [IRI query][query].
@@ -307,7 +556,7 @@ pub fn path<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(query::<UriSpec>("#hash").is_err());
 /// ```
 ///
-/// [query]: https://tools.ietf.org/html/rfc3986#section-3.4
+/// [query]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.4
 /// [`RiQueryStr`]: ../types/struct.RiQueryStr.html
 /// [`RiQueryString`]: ../types/struct.RiQueryString.html
 pub fn query<S: Spec>(s: &str) -> Result<(), Error> {
@@ -350,7 +599,7 @@ pub fn query<S: Spec>(s: &str) -> Result<(), Error> {
 /// assert!(fragment::<UriSpec>("#hash").is_err());
 /// ```
 ///
-/// [fragment]: https://tools.ietf.org/html/rfc3986#section-3.5
+/// [fragment]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.5
 /// [`RiFragmentStr`]: ../types/struct.RiFragmentStr.html
 /// [`RiFragmentString`]: ../types/struct.RiFragmentString.html
 pub fn fragment<S: Spec>(s: &str) -> Result<(), Error> {

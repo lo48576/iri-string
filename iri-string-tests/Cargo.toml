@@ -2,6 +2,7 @@
 name = "iri-string-tests"
 version = "0.0.0"
 edition = "2021"
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,5 +18,6 @@ serde = ["iri-string/serde"]
 [dependencies]
 iri-string = { path = ".." }
 
-serde = { version = "1.0.140", features = ["derive"] }
+# NOTE: `workspace.dependencies` is not yet supported on MSRV (1.60).
+serde = { version = "1.0.103", features = ["derive"] }
 serde_json = { version = "1.0.82", features = ["arbitrary_precision"] }

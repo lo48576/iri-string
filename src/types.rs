@@ -182,8 +182,8 @@
 //! # Ok::<_, Error>(())
 //! ```
 //!
-//! [RFC 3986]: https://tools.ietf.org/html/rfc3986
-//! [RFC 3987]: https://tools.ietf.org/html/rfc3987
+//! [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+//! [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
 //! [`RiStr`]: struct.RiStr.html
 //! [`RiString`]: struct.RiString.html
 //! [`RiAbsoluteStr`]: struct.RiAbsoluteStr.html

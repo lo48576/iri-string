@@ -74,10 +74,10 @@ define_custom_string_slice! {
     /// assert!(IriAbsoluteStr::new("%GG").is_err());
     /// ```
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`absolute-IRI` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`absolute-URI` rule]: https://tools.ietf.org/html/rfc3986#section-4.3
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`absolute-IRI` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`absolute-URI` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3
     /// [`RiStr`]: struct.RiStr.html
     struct RiAbsoluteStr {
         validator = absolute_iri,
@@ -100,10 +100,10 @@ define_custom_string_owned! {
     ///
     /// Enabled by `alloc` or `std` feature.
     ///
-    /// [RFC 3986]: https://tools.ietf.org/html/rfc3986
-    /// [RFC 3987]: https://tools.ietf.org/html/rfc3987
-    /// [`absolute-IRI` rule]: https://tools.ietf.org/html/rfc3987#section-2.2
-    /// [`absolute-URI` rule]: https://tools.ietf.org/html/rfc3986#section-4.3
+    /// [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
+    /// [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
+    /// [`absolute-IRI` rule]: https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2
+    /// [`absolute-URI` rule]: https://www.rfc-editor.org/rfc/rfc3986.html#section-4.3
     /// [`RiAbsoluteStr`]: struct.RiAbsoluteStr.html
     /// [`RiString`]: struct.RiString.html
     struct RiAbsoluteString {
