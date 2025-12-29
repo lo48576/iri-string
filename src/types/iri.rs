@@ -132,15 +132,15 @@ macro_rules! impl_conversion_between_uri {
                 if !self.as_str().is_ascii() {
                     return None;
                 }
-                debug_assert_eq!(
-                    <$ty_borrowed_uri>::validate(self.as_str()),
-                    Ok(()),
-                    "[consistency] the ASCII-only IRI must also be a valid URI"
-                );
                 // SAFETY: An ASCII-only IRI is a URI.
                 // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
                 // and the difference is that URIs can only have ASCII characters.
-                let uri = unsafe { <$ty_borrowed_uri>::new_maybe_unchecked(self.as_str()) };
+                let uri = unsafe {
+                    <$ty_borrowed_uri>::new_unchecked_justified(
+                        self.as_str(),
+                        "[validity] an ASCII-only IRI is also a valid URI",
+                    )
+                };
                 Some(uri)
             }
         }
@@ -283,15 +283,15 @@ macro_rules! impl_conversion_between_uri {
             pub fn try_encode_into_uri(mut self) -> Result<$ty_owned_uri, TryReserveError> {
                 self.try_encode_to_uri_inline()?;
                 let s: String = self.into();
-                debug_assert_eq!(
-                    <$ty_borrowed_uri>::validate(s.as_str()),
-                    Ok(()),
-                    "[consistency] the encoded IRI must also be a valid URI"
-                );
-                // SAFETY: An ASCII-only IRI is a URI.
+                // SAFETY: The resulting ASCII-only IRI is a URI.
                 // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
                 // and the difference is that URIs can only have ASCII characters.
-                let uri = unsafe { <$ty_owned_uri>::new_maybe_unchecked(s) };
+                let uri = unsafe {
+                    <$ty_owned_uri>::new_unchecked_justified(
+                        s,
+                        "[validity] an IRI encoded into ASCII-only string is also a valid URI",
+                    )
+                };
                 Ok(uri)
             }
 
@@ -321,15 +321,15 @@ macro_rules! impl_conversion_between_uri {
                     return Err(self);
                 }
                 let s: String = self.into();
-                debug_assert_eq!(
-                    <$ty_borrowed_uri>::validate(s.as_str()),
-                    Ok(()),
-                    "[consistency] the ASCII-only IRI must also be a valid URI"
-                );
                 // SAFETY: An ASCII-only IRI is a URI.
                 // URI (by `UriSpec`) is a subset of IRI (by `IriSpec`),
                 // and the difference is that URIs can only have ASCII characters.
-                let uri = unsafe { <$ty_owned_uri>::new_maybe_unchecked(s) };
+                let uri = unsafe {
+                    <$ty_owned_uri>::new_unchecked_justified(
+                        s,
+                        "an ASCII-only IRI is also a valid URI",
+                    )
+                };
                 Ok(uri)
             }
         }

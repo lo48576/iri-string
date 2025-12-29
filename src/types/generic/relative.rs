@@ -257,7 +257,12 @@ impl<S: Spec> RiRelativeStr<S> {
             // SAFETY: `extract_query` returns the query part of an IRI, and the
             // returned string should have only valid characters since is the
             // substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "[validity] query in a valid relative IRI reference must also be valid",
+                )
+            }
         })
     }
 
@@ -334,7 +339,17 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| {
+            // SAFETY: `extract_fragment` returns the fragment part of an IRI,
+            // and the returned string should have only valid characters since
+            // is the substring of the source IRI.
+            unsafe {
+                RiFragmentStr::new_unchecked_justified(
+                    fragment,
+                    "[validity] fragment in a valid relative IRI reference must also be valid",
+                )
+            }
+        })
     }
 
     /// Returns the fragment part as a raw string slice if exists.
@@ -378,7 +393,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment_str(&self) -> Option<&str> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment_str()
+        trusted_parser::extract_fragment(self.as_str())
     }
 
     /// Returns the authority components.

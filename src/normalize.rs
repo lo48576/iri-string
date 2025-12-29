@@ -644,16 +644,16 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiStr<S>> {
 
     fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
         let s = self.try_to_string()?;
-        debug_assert_eq!(
-            Self::Target::validate(s.as_str()),
-            Ok(()),
-            "[validity] the normalization result must be a valid IRI"
-        );
         // SAFETY: Normalization provided by this crate must always succeed for
         // URIs/IRIs. "Fallible" normalization in this crate mean that the
         // resulting URIs/IRIs can point to the semantically different resources,
         // but in such cases they are still syntactically valid as URIs/IRIs.
-        Ok(unsafe { Self::Target::new_always_unchecked(s) })
+        Ok(unsafe {
+            Self::Target::new_unchecked_justified(
+                s,
+                "[validity] the normalization result must be a valid IRI",
+            )
+        })
     }
 }
 
@@ -679,16 +679,16 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiAbsoluteStr<S>> {
 
     fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
         let s = self.try_to_string()?;
-        debug_assert_eq!(
-            Self::Target::validate(s.as_str()),
-            Ok(()),
-            "[validity] the normalization result must be a valid absolute IRI"
-        );
         // SAFETY: Normalization provided by this crate must always succeed for
         // URIs/IRIs. "Fallible" normalization in this crate mean that the
         // resulting URIs/IRIs can point to the semantically different resources,
         // but in such cases they are still syntactically valid as URIs/IRIs.
-        Ok(unsafe { Self::Target::new_always_unchecked(s) })
+        Ok(unsafe {
+            Self::Target::new_unchecked_justified(
+                s,
+                "[validity] the normalization result must be a valid absolute IRI",
+            )
+        })
     }
 }
 

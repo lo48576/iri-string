@@ -78,14 +78,14 @@ macro_rules! impl_for_iri {
 
             fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
                 let s = self.try_to_string()?;
-                debug_assert_eq!(
-                    Self::Target::validate(s.as_str()),
-                    Ok(()),
-                    "[validity] an IRI must always be encodable into a valid URI"
-                );
                 // SAFETY: Conversion from an IRI to a URI always succeeds, so
                 // the resulting string is always a valid URI.
-                Ok(unsafe { <Self::Target>::new_always_unchecked(s) })
+                Ok(unsafe {
+                    <Self::Target>::new_unchecked_justified(
+                        s,
+                        "[validity] an IRI must always be encodable into a valid URI",
+                    )
+                })
             }
         }
 

@@ -546,7 +546,12 @@ impl<S: Spec> RiAbsoluteStr<S> {
             // the query part of an IRI (including the leading `?` character),
             // and the returned string consists of allowed characters since it
             // is a substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "[validity] query in a valid absolute IRI must also be valid",
+                )
+            }
         })
     }
 

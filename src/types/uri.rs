@@ -65,7 +65,12 @@ macro_rules! impl_conversions_between_iri {
         impl AsRef<$borrowed_iri> for $borrowed_uri {
             fn as_ref(&self) -> &$borrowed_iri {
                 // SAFETY: A valid URI is also a valid IRI.
-                unsafe { <$borrowed_iri>::new_maybe_unchecked(self.as_str()) }
+                unsafe {
+                    <$borrowed_iri>::new_unchecked_justified(
+                        self.as_str(),
+                        "[validity] a valid URI is also a valid IRI",
+                    )
+                }
             }
         }
 
@@ -74,7 +79,12 @@ macro_rules! impl_conversions_between_iri {
             #[inline]
             fn from(uri: $owned_uri) -> Self {
                 // SAFETY: A valid URI is also a valid IRI.
-                unsafe { Self::new_maybe_unchecked(uri.into()) }
+                unsafe {
+                    Self::new_unchecked_justified(
+                        uri.into(),
+                        "[validate] a valid URI is also a valid IRI",
+                    )
+                }
             }
         }
 

@@ -124,8 +124,8 @@ macro_rules! impl_cmp2_as_str {
 ///
 /// * `pub fn new()`
 /// * `pub fn new_unchecked()`
-/// * `pub(crate) fn new_maybe_unchecked()`
-/// * `fn new_always_unchecked()`
+/// * `pub(crate) fn new_always_unchecked()`
+/// * `pub(crate) fn new_unchecked_justified()`
 /// * `pub(in crate::types) fn validate()`
 /// * `pub fn as_str()`
 /// * `pub fn len()`
@@ -207,24 +207,8 @@ macro_rules! define_custom_string_slice {
             #[inline]
             #[must_use]
             pub unsafe fn new_unchecked(s: &str) -> &Self {
-                // SAFETY: `new_always_unchecked` requires the same precondition
+                // SAFETY: `new_unchecked` requires the same precondition
                 // as `new_always_unchecked`.
-                unsafe { Self::new_always_unchecked(s) }
-            }
-
-            /// Creates a new string maybe without validation.
-            ///
-            /// This does validation on debug build.
-            ///
-            /// # Safety
-            ///
-            /// The given string must be syntactically valid as `Self` type.
-            #[must_use]
-            pub(crate) unsafe fn new_maybe_unchecked(s: &str) -> &Self {
-                debug_assert_eq!(Self::validate(s), Ok(()));
-                // SAFETY: `new_maybe_unchecked` requires the same precondition
-                // as `new_always_unchecked`. Additionally in debug build, just
-                // checked the content is actually valid by `Self::validate(s)`.
                 unsafe { Self::new_always_unchecked(s) }
             }
 
@@ -232,7 +216,10 @@ macro_rules! define_custom_string_slice {
             ///
             /// This does not validate the given string at any time.
             ///
-            /// Intended for internal use.
+            /// Intended for internal use. This should be used when the
+            /// conversion is done right after the direct validation is done.
+            /// For example, in a code path `T::validate(s)` returned `Ok(_)`,
+            /// this function can be used to convert `s` into the type `T`.
             ///
             /// # Safety
             ///
@@ -244,6 +231,31 @@ macro_rules! define_custom_string_slice {
                 // attribute and the content is guaranteed as valid by the
                 // precondition of the function.
                 unsafe { &*(s as *const str as *const Self) }
+            }
+
+            /// Creates a new string possibly without validation.
+            ///
+            /// This does validation on debug build.
+            ///
+            /// Intended for internal use. This should be used when the
+            /// conversion is considered valid based on knowledge of the
+            /// specifications and/or internal algorithms, but the entire input
+            /// is not yet validated.
+            ///
+            /// # Safety
+            ///
+            /// The given string must be syntactically valid as `Self` type.
+            #[inline]
+            #[must_use]
+            pub(crate) unsafe fn new_unchecked_justified<'a>(
+                s: &'a str,
+                reason: &'_ str
+            ) -> &'a Self {
+                debug_assert_eq!(Self::validate(s), Ok(()), "{reason}");
+                // SAFETY: `new_unchecked_justified` requires the same precondition
+                // as `new_always_unchecked`. Additionally in debug build, just
+                // checked the content is actually valid by `Self::validate(s)`.
+                unsafe { Self::new_always_unchecked(s) }
             }
 
             /// Checks if the given string content is valid as `Self`.
@@ -450,8 +462,8 @@ macro_rules! define_custom_string_slice {
 /// Methods to be implemented:
 ///
 /// * `pub fn new_unchecked()`
-/// * `pub(crate) fn new_maybe_unchecked()`
 /// * `pub(crate) fn new_always_unchecked()`
+/// * `pub(crate) fn new_unchecked_justified()`
 /// * `pub(in crate::types) fn validate()`
 /// * `pub fn shrink_to_fit()`
 ///
@@ -555,7 +567,7 @@ macro_rules! define_custom_string_owned {
             #[inline]
             #[must_use]
             pub unsafe fn new_unchecked(s: alloc::string::String) -> Self {
-                // SAFETY: `new_always_unchecked` requires the same precondition
+                // SAFETY: `new_unchecked` requires the same precondition
                 // as `new_always_unchecked`.
                 unsafe { Self::new_always_unchecked(s) }
             }
@@ -564,7 +576,10 @@ macro_rules! define_custom_string_owned {
             ///
             /// This does not validate the given string at any time.
             ///
-            /// Intended for internal use.
+            /// Intended for internal use. This should be used when the
+            /// conversion is done right after the direct validation is done.
+            /// For example, in a code path `T::validate(s)` returned `Ok(_)`,
+            /// this function can be used to convert `s` into the type `T`.
             ///
             /// # Safety
             ///
@@ -584,21 +599,25 @@ macro_rules! define_custom_string_owned {
                 }
             }
 
-            /// Creates a new string maybe without validation.
+            /// Creates a new string possibly without validation.
             ///
             /// This does validation on debug build.
+            ///
+            /// Intended for internal use. This should be used when the
+            /// conversion is considered valid based on knowledge of the
+            /// specifications and/or internal algorithms, but the entire input
+            /// is not yet validated.
             ///
             /// # Safety
             ///
             /// The given string must be syntactically valid as `Self` type.
             #[must_use]
-            pub(crate) unsafe fn new_maybe_unchecked(s: alloc::string::String) -> Self {
-                debug_assert_eq!(
-                    Self::validate(&s),
-                    Ok(()),
-                    "[precondition] the given string must be valid"
-                );
-                // SAFETY: `new_maybe_unchecked` requires the same precondition
+            pub(crate) unsafe fn new_unchecked_justified(
+                s: alloc::string::String,
+                reason: &str,
+            ) -> Self {
+                debug_assert_eq!(Self::validate(&s), Ok(()), "{reason}");
+                // SAFETY: `new_unchecked_justified` requires the same precondition
                 // as `new_always_unchecked`. Additionally in debug build, just
                 // checked the content is actually valid by `Self::validate(s)`.
                 unsafe { Self::new_always_unchecked(s) }
@@ -710,7 +729,12 @@ macro_rules! define_custom_string_owned {
             fn as_ref(&self) -> &$slice<S> {
                 // SAFETY: `$ty<S>` and `$slice<S>` requires same validation, so
                 // the content of `self: &$ty<S>` must be valid as `$slice<S>`.
-                unsafe { $slice::new_always_unchecked(AsRef::<str>::as_ref(self)) }
+                unsafe {
+                    $slice::new_unchecked_justified(
+                        AsRef::<str>::as_ref(self),
+                        "[validity] conversion between the types of same syntax is always valid",
+                    )
+                }
             }
         }
 
@@ -967,7 +991,12 @@ macro_rules! impl_trivial_conv_between_iri {
                 // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
                 // The caller of `impl_trivial_conv_between_iri!` macro is
                 // responsible for guaranteeing that.
-                unsafe { <$to_slice<S>>::new_maybe_unchecked(self.as_str()) }
+                unsafe {
+                    <$to_slice<S>>::new_unchecked_justified(
+                        self.as_str(),
+                        "[validity] a cast to the superset syntax is always valid",
+                    )
+                }
             }
         }
 
@@ -993,7 +1022,12 @@ macro_rules! impl_trivial_conv_between_iri {
                 // SAFETY: `$from_slice<S>` should be subset of `$to_slice<S>`.
                 // The caller of `impl_trivial_conv_between_iri!` macro is
                 // responsible for guaranteeing that.
-                unsafe { <$to_owned<S>>::new_maybe_unchecked(s.into()) }
+                unsafe {
+                    <$to_owned<S>>::new_unchecked_justified(
+                        s.into(),
+                        "[validity] a cast to the superset syntax is always valid",
+                    )
+                }
             }
         }
 
