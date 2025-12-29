@@ -111,6 +111,8 @@ steps:
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
 
   - name: clippy (allow warning, allow failure)
     image: *rust_image
@@ -127,8 +129,6 @@ steps:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
       - matrix:
-          RUST_DEP_VERSIONS: default
-      - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: build (allow failure)
@@ -144,8 +144,6 @@ steps:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
       - matrix:
-          RUST_DEP_VERSIONS: default
-      - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: build
@@ -158,6 +156,8 @@ steps:
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
 
   - name: run tests (allow failure)
     image: *rust_image
@@ -173,8 +173,6 @@ steps:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
       - matrix:
-          RUST_DEP_VERSIONS: default
-      - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: run tests
@@ -188,6 +186,8 @@ steps:
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
 
   - name: run doctests (allow failure)
     image: *rust_image
@@ -203,8 +203,6 @@ steps:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
       - matrix:
-          RUST_DEP_VERSIONS: default
-      - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: run doctests
@@ -218,3 +216,5 @@ steps:
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
+      - matrix:
+          RUST_DEP_VERSIONS: default
