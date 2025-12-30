@@ -453,17 +453,12 @@ pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
 /// The given string should be valid `host` or `host ":" port` string.
 #[must_use]
 pub(crate) fn is_ascii_only_host(mut host: &str) -> bool {
-    while let Some((i, c)) = host
-        .char_indices()
-        .find(|(_i, c)| !c.is_ascii() || *c == '%')
-    {
-        if c != '%' {
+    while let Some(pos) = host.find(|c: char| !c.is_ascii() || c == '%') {
+        if host.as_bytes()[pos] != b'%' {
             // Non-ASCII character found.
-            debug_assert!(!c.is_ascii());
             return false;
         }
-        // Percent-encoded character found.
-        let after_pct = &host[(i + 1)..];
+        let after_pct = &host[(pos + 1)..];
         let (byte, rest) = take_xdigits2(after_pct);
         if !byte.is_ascii() {
             return false;

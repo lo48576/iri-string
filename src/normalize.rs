@@ -478,8 +478,7 @@ pub(crate) fn normalize_scheme(f: &mut fmt::Formatter<'_>, scheme: &str) -> fmt:
     // no percent-encoded characters.
     scheme
         .chars()
-        .map(|c| c.to_ascii_lowercase())
-        .try_for_each(|c| f.write_char(c))
+        .try_for_each(|c| f.write_char(c.to_ascii_lowercase()))
 }
 
 /// Writes the normalized authority.
