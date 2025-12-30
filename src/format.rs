@@ -118,12 +118,8 @@ where
     struct CmpWriter<'a>(&'a str);
     impl fmt::Write for CmpWriter<'_> {
         fn write_str(&mut self, s: &str) -> fmt::Result {
-            if self.0.len() < s.len() {
-                return Err(fmt::Error);
-            }
-            let (prefix, rest) = self.0.split_at(s.len());
-            self.0 = rest;
-            if prefix == s {
+            if let Some(rest) = self.0.strip_prefix(s) {
+                self.0 = rest;
                 Ok(())
             } else {
                 Err(fmt::Error)
