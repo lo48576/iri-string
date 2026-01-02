@@ -523,6 +523,13 @@ impl SegmentKind {
     /// Creates a new `SegmentKind` from the given segment name.
     #[must_use]
     fn from_segment(s: &str) -> Self {
+        if !(1..=6).contains(&s.len()) {
+            // The length of a dot segment can only be 1, 2, 3, 4, or 6.
+            return SegmentKind::Normal;
+        }
+        if !(s.starts_with('.') || s.starts_with('%')) {
+            return SegmentKind::Normal;
+        }
         match s {
             "." | "%2E" | "%2e" => SegmentKind::Dot,
             ".." | ".%2E" | ".%2e" | "%2E." | "%2E%2E" | "%2E%2e" | "%2e." | "%2e%2E"
