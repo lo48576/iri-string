@@ -92,6 +92,12 @@ impl<'a> PathToNormalize<'a> {
         self.front.len() + self.back.map_or(0, |s| s.len())
     }
 
+    /// Returns `true` if the path starts with a slash.
+    #[must_use]
+    fn starts_with_slash(&self) -> bool {
+        self.front.starts_with('/')
+    }
+
     /// Returns a byte at the position.
     ///
     /// Returns `None` if the index is out of range.
@@ -177,7 +183,7 @@ impl PathToNormalize<'_> {
 
         if (op.mode == NormalizationMode::PreserveAuthoritylessRelativePath)
             && !authority_is_present
-            && self.byte_at(0) != Some(b'/')
+            && !self.starts_with_slash()
         {
             // Treat the path as "opaque", i.e. do not apply dot segments removal.
             // See <https://github.com/lo48576/iri-string/issues/29>.
