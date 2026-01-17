@@ -277,13 +277,13 @@ impl PathToNormalize<'_> {
                     SegmentKind::DotDot => {
                         level = level.saturating_sub(1);
                         may_have_not_yet_resolved_dot_segments = true;
-                        if level < segname_queue.len() {
-                            segname_queue[level] = None;
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = None;
                         }
                     }
                     SegmentKind::Normal => {
-                        if level < segname_queue.len() {
-                            segname_queue[level] = Some(seg.segment(&rest));
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = Some(seg.segment(&rest));
                             may_have_not_yet_resolved_dot_segments = false;
                             resolved_end = seg.name_range.end;
                             if level == 0 {
