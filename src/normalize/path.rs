@@ -263,7 +263,11 @@ impl PathToNormalize<'_> {
             let mut first_segment_has_leading_slash = false;
 
             // Find higher path segments.
-            let mut end = 0;
+
+            // The end byte position of the prefix that is being written in this
+            // iteration (of the outer `while` loop) and is ignorable after the
+            // next iteration.
+            let mut resolved_end = 0;
             for seg in PathSegmentsIter::new(&rest) {
                 let kind = seg.kind(&rest);
                 match kind {
@@ -281,7 +285,7 @@ impl PathToNormalize<'_> {
                         if level < segname_queue.len() {
                             segname_queue[level] = Some(seg.segment(&rest));
                             may_have_not_yet_resolved_dot_segments = false;
-                            end = seg.name_range.end;
+                            resolved_end = seg.name_range.end;
                             if level == 0 {
                                 first_segment_has_leading_slash = seg.has_leading_slash;
                             }
@@ -304,7 +308,7 @@ impl PathToNormalize<'_> {
             }
 
             // Trim the processed prefix.
-            rest.remove_start(end);
+            rest.remove_start(resolved_end);
         }
 
         if !rest.is_empty() {
