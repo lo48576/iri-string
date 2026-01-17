@@ -308,27 +308,43 @@ impl PathToNormalize<'_> {
         }
 
         if !rest.is_empty() {
-            // No need of searching dot segments anymore.
-            assert!(
-                !may_have_not_yet_resolved_dot_segments,
-                "loop condition of the previous loop"
-            );
-            // Apply only normalization (if needed).
-            for seg in PathSegmentsIter::new(&rest) {
-                assert_eq!(
-                    seg.kind(&rest),
-                    SegmentKind::Normal,
-                    "already confirmed that there are no more dot segments"
-                );
-                let segname = seg.segment(&rest);
-                Self::emit_segment::<S, _>(
-                    f,
-                    &mut only_a_slash_is_written,
-                    seg.has_leading_slash,
-                    segname,
-                    authority_is_present,
-                    op,
-                )?;
+            if !authority_is_present {
+                // Note that `rest` has no dot segments. In order to handle
+                // authority-less relative path correctly, it would be enough to
+                // check if the path to be written starts with `//` or not.
+                match only_a_slash_is_written {
+                    None => {
+                        // TODO: `Option::is_some_and()` is stabilized since Rust 1.70.0.
+                        if ((rest.front == "/")
+                            && rest.back.map_or(false, |back| back.starts_with('/')))
+                            || rest.front.starts_with("//")
+                        {
+                            f.write_str("/.//")?;
+                            rest.remove_start("//".len());
+                        }
+                    }
+                    Some(true) => {
+                        if rest.starts_with_slash() {
+                            f.write_str(".//")?;
+                            rest.remove_start("/".len());
+                        }
+                    }
+                    Some(false) => {}
+                }
+            }
+
+            // Emit the path at once. No need to split into segments since it
+            // has no dot segments.
+            if op.mode.case_pct_normalization() {
+                write!(f, "{}", PctCaseNormalized::<S>::new(rest.front))?;
+                if let Some(back) = &rest.back {
+                    write!(f, "{}", PctCaseNormalized::<S>::new(back))?;
+                }
+            } else {
+                f.write_str(rest.front)?;
+                if let Some(back) = &rest.back {
+                    f.write_str(back)?;
+                }
             }
         }
 
