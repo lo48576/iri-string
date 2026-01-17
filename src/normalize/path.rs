@@ -219,9 +219,9 @@ impl PathToNormalize<'_> {
         // Some(true): Only a `/` is written as the path.
         let mut only_a_slash_is_written = None;
         // `true` if the path may have not yet handled dot segments.
-        let mut too_deep_area_may_have_dot_segments = true;
+        let mut may_have_not_yet_resolved_dot_segments = true;
         // Scan for the dot segments and resolve them.
-        while !rest.is_empty() && too_deep_area_may_have_dot_segments {
+        while !rest.is_empty() && may_have_not_yet_resolved_dot_segments {
             /// The size of the queue to track the path segments.
             ///
             /// This should be nonzero.
@@ -269,11 +269,11 @@ impl PathToNormalize<'_> {
                 let kind = seg.kind(&rest);
                 match kind {
                     SegmentKind::Dot => {
-                        too_deep_area_may_have_dot_segments = true;
+                        may_have_not_yet_resolved_dot_segments = true;
                     }
                     SegmentKind::DotDot => {
                         level = level.saturating_sub(1);
-                        too_deep_area_may_have_dot_segments = true;
+                        may_have_not_yet_resolved_dot_segments = true;
                         if level < segname_queue.len() {
                             segname_queue[level] = None;
                         }
@@ -281,7 +281,7 @@ impl PathToNormalize<'_> {
                     SegmentKind::Normal => {
                         if level < segname_queue.len() {
                             segname_queue[level] = Some(seg.segment(&rest));
-                            too_deep_area_may_have_dot_segments = false;
+                            may_have_not_yet_resolved_dot_segments = false;
                             end = seg.name_range.end;
                             if level == 0 {
                                 first_segment_has_leading_slash = seg.has_leading_slash;
@@ -311,7 +311,7 @@ impl PathToNormalize<'_> {
         if !rest.is_empty() {
             // No need of searching dot segments anymore.
             assert!(
-                !too_deep_area_may_have_dot_segments,
+                !may_have_not_yet_resolved_dot_segments,
                 "loop condition of the previous loop"
             );
             // Apply only normalization (if needed).
