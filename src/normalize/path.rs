@@ -20,30 +20,57 @@ pub(crate) enum Path<'a> {
 
 /// Path that needs merge and/or dot segment removal.
 ///
+/// This works like a queue with `pop_front` functionality.
+///
 /// # Invariants
 ///
-/// If the first field (prefix field) is not `None`, it must end with a slash.
+/// * `back` should be `None` if `front` is empty.
+/// * `back` should be a non-empty string if `Some`.
+/// * `front` should ends with a slash if `back` is `Some`.
+///     + In other words, any path segments can exist in `front` or `back`
+///       but not both at a time.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct PathToNormalize<'a>(Option<&'a str>, &'a str);
+pub(crate) struct PathToNormalize<'a> {
+    /// Front half of the buffer.
+    front: &'a str,
+    /// Back half of the buffer.
+    back: Option<&'a str>,
+}
 
 impl<'a> PathToNormalize<'a> {
     /// Creates a `PathToNormalize` from the given single path.
     #[inline]
     #[must_use]
     pub(crate) fn from_single_path(path: &'a str) -> Self {
-        Self(None, path)
+        Self {
+            front: path,
+            back: None,
+        }
     }
 
     /// Creates a `PathToNormalize` from the given base and reference paths to be resolved.
     #[must_use]
     pub(crate) fn from_paths_to_be_resolved(base: &'a str, reference: &'a str) -> Self {
         if reference.starts_with('/') {
-            return Self(None, reference);
+            return Self {
+                front: reference,
+                back: None,
+            };
         }
 
         match rfind(base.as_bytes(), b'/') {
-            Some(last_slash_pos) => Self(Some(&base[..=last_slash_pos]), reference),
-            None => Self(None, reference),
+            Some(last_slash_pos) => {
+                let front = &base[..=last_slash_pos];
+                debug_assert!(front.ends_with('/'));
+                Self {
+                    front,
+                    back: Some(reference).filter(|s| !s.is_empty()),
+                }
+            }
+            None => Self {
+                front: reference,
+                back: None,
+            },
         }
     }
 
@@ -51,69 +78,70 @@ impl<'a> PathToNormalize<'a> {
     #[inline]
     #[must_use]
     fn is_empty(&self) -> bool {
-        // If `self.0` is `Some(_)`, it ends with a slash, i.e. it is not empty.
-        self.0.is_none() && self.1.is_empty()
+        debug_assert!(
+            !(self.front.is_empty() && self.back.is_some()),
+            "the front buffer must have been refilled"
+        );
+        self.front.is_empty()
     }
 
-    /// Returns the length of the not yet normalized path.
+    /// Returns the length of the path.
     #[inline]
     #[must_use]
     pub(super) fn len(&self) -> usize {
-        self.len_prefix() + self.1.len()
+        self.front.len() + self.back.map_or(0, |s| s.len())
     }
 
-    /// Returns the length of the prefix part.
+    /// Returns a byte at the position.
     ///
-    /// Returns 0 if the prefix part is empty.
+    /// Returns `None` if the index is out of range.
+    // This characteristic is necessary since `i` can be the index after the
+    // last byte (i.e., the "end" index of the range).
+    #[must_use]
+    fn byte_at(&self, i: usize) -> Option<u8> {
+        match i.checked_sub(self.front.len()) {
+            None => Some(self.front.as_bytes()[i]),
+            Some(back_i) => self
+                .back
+                .and_then(|back| back.as_bytes().get(back_i).copied()),
+        }
+    }
+
+    /// Returns the position of the next slash after (including) `start`.
     #[inline]
     #[must_use]
-    fn len_prefix(&self) -> usize {
-        self.0.map_or(0, |s| s.len())
-    }
-
-    /// Returns a byte at the given position.
-    #[must_use]
-    fn byte_at(&self, mut i: usize) -> Option<u8> {
-        if let Some(prefix) = self.0 {
-            if i < prefix.len() {
-                return Some(prefix.as_bytes()[i]);
-            }
-            i -= prefix.len();
+    fn find_next_slash(&self, start: usize) -> Option<usize> {
+        if let Some(back_i) = start.checked_sub(self.front.len()) {
+            // Search the back buffer.
+            return self.back?[back_i..].find('/').map(|pos| start + pos);
         }
-        self.1.as_bytes().get(i).copied()
-    }
-
-    /// Returns the position of the next slash of the byte at the given position.
-    #[must_use]
-    fn find_next_slash(&self, scan_start: usize) -> Option<usize> {
-        if let Some(prefix) = self.0 {
-            let prefix_len = prefix.len();
-            if scan_start < prefix_len {
-                prefix[scan_start..].find('/').map(|rel| rel + scan_start)
-            } else {
-                let local_i = scan_start - prefix_len;
-                self.1[local_i..].find('/').map(|rel| rel + scan_start)
+        match self.front[start..].find('/') {
+            Some(pos) => Some(start + pos),
+            None => {
+                debug_assert!(
+                    self.back.is_none(),
+                    "front must ends with a slash if back is `Some`"
+                );
+                None
             }
-        } else {
-            self.1[scan_start..].find('/').map(|rel| rel + scan_start)
         }
     }
 
     /// Removes the `len` characters from the beginning of `self`.
     fn remove_start(&mut self, len: usize) {
-        if let Some(prefix) = self.0 {
-            if let Some(suffix_trim_len) = len.checked_sub(prefix.len()) {
-                self.0 = None;
-                self.1 = &self.1[suffix_trim_len..];
-            } else {
-                self.0 = Some(&prefix[len..]);
-            }
-        } else {
-            self.1 = &self.1[len..];
+        if let Some(back_len) = len.checked_sub(self.front.len()) {
+            self.front = self
+                .back
+                .take()
+                .and_then(|s| s.get(back_len..))
+                .unwrap_or_default();
+            return;
         }
+        self.front = &self.front[len..];
     }
 
     /// Removes the prefix that are ignorable on normalization.
+    //
     // Skips the prefix dot segments without leading slashes (such as `./`,
     // `../`, and `../.././`).
     // This is necessary because such segments should be removed with the
@@ -127,7 +155,7 @@ impl<'a> PathToNormalize<'a> {
             match seg.kind(self) {
                 SegmentKind::Dot | SegmentKind::DotDot => {
                     // Attempt to skip the following slash by `+ 1`.
-                    let skip = self.len().min(seg.range.end + 1);
+                    let skip = self.front.len().min(seg.range.end + 1);
                     self.remove_start(skip);
                 }
                 SegmentKind::Normal => break,
@@ -144,11 +172,6 @@ impl PathToNormalize<'_> {
         op: NormalizationOp,
         authority_is_present: bool,
     ) -> fmt::Result {
-        debug_assert!(
-            self.0.map_or(true, |s| s.ends_with('/')),
-            "the prefix field of `PathToNormalize` should end with a slash"
-        );
-
         if self.is_empty() {
             return Ok(());
         }
@@ -163,10 +186,10 @@ impl PathToNormalize<'_> {
                 op.mode.case_pct_normalization(),
                 "case/pct normalization should still be applied"
             );
-            if let Some(prefix) = self.0 {
-                write!(f, "{}", PctCaseNormalized::<S>::new(prefix))?;
+            write!(f, "{}", PctCaseNormalized::<S>::new(self.front))?;
+            if let Some(back) = self.back {
+                write!(f, "{}", PctCaseNormalized::<S>::new(back))?;
             }
-            write!(f, "{}", PctCaseNormalized::<S>::new(self.1))?;
             return Ok(());
         }
 
@@ -553,17 +576,15 @@ impl PathSegment {
     #[inline]
     #[must_use]
     fn segment<'a>(&self, path: &PathToNormalize<'a>) -> &'a str {
-        if let Some(prefix) = path.0 {
-            let prefix_len = prefix.len();
-            if self.range.end <= prefix_len {
-                &prefix[self.range.clone()]
-            } else {
-                let range = (self.range.start - prefix_len)..(self.range.end - prefix_len);
-                &path.1[range]
-            }
-        } else {
-            &path.1[self.range.clone()]
+        if let Some(seg_name) = path.front.get(self.range.clone()) {
+            return seg_name;
         }
+        let front_len = path.front.len();
+        let back = path
+            .back
+            .expect("the segname range implies that the back buffer is filled");
+        let back_range = (self.range.start - front_len)..(self.range.end - front_len);
+        &back[back_range]
     }
 
     /// Returns the segment kind.
@@ -595,33 +616,24 @@ impl Iterator for PathSegmentsIter<'_> {
     type Item = PathSegment;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let path_len = self.path.len();
-        if self.cursor >= path_len {
-            return None;
-        }
-        let has_leading_slash = self.path.byte_at(self.cursor) == Some(b'/');
-
-        let prefix_len = self.path.len_prefix();
-        if (prefix_len != 0) && (self.cursor == prefix_len - 1) {
-            debug_assert!(has_leading_slash);
-            let end = self.path.1.find('/').unwrap_or(self.path.1.len()) + prefix_len;
-            self.cursor = end;
-            return Some(PathSegment {
-                has_leading_slash,
-                range: prefix_len..end,
-            });
-        }
-
-        if has_leading_slash {
+        let cursor_byte = self.path.byte_at(self.cursor)?;
+        let has_leading_slash = cursor_byte == b'/';
+        let segname_start = if has_leading_slash {
             // Skip the leading slash.
-            self.cursor += 1;
+            self.cursor + 1
+        } else {
+            self.cursor
         };
-        let start = self.cursor;
-        self.cursor = self.path.find_next_slash(self.cursor).unwrap_or(path_len);
 
+        // Find the trailing slash of the next segment.
+        let segname_end = self
+            .path
+            .find_next_slash(segname_start)
+            .unwrap_or_else(|| self.path.len());
+        self.cursor = segname_end;
         Some(PathSegment {
             has_leading_slash,
-            range: start..self.cursor,
+            range: segname_start..segname_end,
         })
     }
 }
