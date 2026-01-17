@@ -110,7 +110,7 @@ impl<'a> PathToNormalize<'a> {
     /// Returns the position of the next slash after (including) `start`.
     #[inline]
     #[must_use]
-    fn find_next_slash(&self, start: usize) -> Option<usize> {
+    fn find_next_slash_from(&self, start: usize) -> Option<usize> {
         if let Some(back_i) = start.checked_sub(self.front.len()) {
             // Search the back buffer.
             return self.back?[back_i..].find('/').map(|pos| start + pos);
@@ -628,7 +628,7 @@ impl Iterator for PathSegmentsIter<'_> {
         // Find the trailing slash of the next segment.
         let segname_end = self
             .path
-            .find_next_slash(segname_start)
+            .find_next_slash_from(segname_start)
             .unwrap_or_else(|| self.path.len());
         self.cursor = segname_end;
         Some(PathSegment {
