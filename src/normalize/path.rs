@@ -229,20 +229,19 @@ impl PathToNormalize<'_> {
 
             {
                 // Skip the dot segments at the head.
-                let mut skipped_len = 0;
-                for seg in PathSegmentsIter::new(&rest) {
-                    match seg.kind(&rest) {
+                let skipped_len = PathSegmentsIter::new(&rest)
+                    .map_while(|seg| match seg.kind(&rest) {
                         SegmentKind::Dot | SegmentKind::DotDot => {
                             debug_assert!(
                                 seg.has_leading_slash,
-                                "`.` or `..` segments without a
-                                 leading slash have already been skipped"
+                                "dot segments without a leading slash have already been skipped"
                             );
-                            skipped_len = seg.name_range.end;
+                            Some(seg.name_range.end)
                         }
-                        _ => break,
-                    }
-                }
+                        SegmentKind::Normal => None,
+                    })
+                    .last()
+                    .unwrap_or(0);
                 rest.remove_start(skipped_len);
                 if rest.is_empty() {
                     // Finished with a dot segment.
