@@ -143,9 +143,8 @@ impl<'a> PathToNormalize<'a> {
     /// Removes the prefix that are ignorable on normalization.
     //
     // Skips the prefix dot segments without leading slashes (such as `./`,
-    // `../`, and `../.././`).
-    // This is necessary because such segments should be removed with the
-    // FOLLOWING slashes, not leading slashes.
+    // `../`, and `../.././`). This is necessary because such segments should be
+    // removed along with the FOLLOWING slashes, not leading slashes.
     fn remove_ignorable_prefix(&mut self) {
         while let Some(seg) = PathSegmentsIter::new(self).next() {
             if seg.has_leading_slash {
@@ -196,12 +195,11 @@ impl PathToNormalize<'_> {
         let mut rest = *self;
 
         // Skip the prefix dot segments without leading slashes (such as `./`,
-        // `../`, and `../.././`).
-        // This is necessary because such segments should be removed with the
-        // FOLLOWING slashes, not leading slashes.
+        // `../`, and `../.././`). This is necessary because such segments should
+        // be removed along with the FOLLOWING slashes, not leading slashes.
         rest.remove_ignorable_prefix();
         if rest.is_empty() {
-            // Path consists of only `/.`s and `/..`s.
+            // The path consists of only `/.`s and `/..`s.
             // In this case, if the authority component is present, the result
             // should be `/`, not empty.
             if authority_is_present {
@@ -214,7 +212,9 @@ impl PathToNormalize<'_> {
         // Some(false): Something other than `/` is already written as the path.
         // Some(true): Only a `/` is written as the path.
         let mut only_a_slash_is_written = None;
+        // `true` if the path may have not yet handled dot segments.
         let mut too_deep_area_may_have_dot_segments = true;
+        // Scan for the dot segments and resolve them.
         while !rest.is_empty() && too_deep_area_may_have_dot_segments {
             /// The size of the queue to track the path segments.
             ///
@@ -222,7 +222,7 @@ impl PathToNormalize<'_> {
             const QUEUE_SIZE: usize = 8;
 
             {
-                // Skip `/.` and `/..` segments at the head.
+                // Skip the dot segments at the head.
                 let mut skipped_len = 0;
                 for seg in PathSegmentsIter::new(&rest) {
                     match seg.kind(&rest) {
@@ -286,7 +286,7 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            // Write the path segments as possible, and update the internal state.
+            // At this point, `queue` has the prefix of the resolved path.
             for segname in queue.iter().flatten() {
                 Self::emit_segment::<S, _>(
                     f,
@@ -298,6 +298,7 @@ impl PathToNormalize<'_> {
                 )?;
             }
 
+            // Trim the processed prefix.
             rest.remove_start(end);
         }
 
@@ -345,8 +346,6 @@ impl PathToNormalize<'_> {
         match *only_a_slash_is_written {
             None => {
                 // First segment.
-                // This pass can be possible if `./` is repeated `QUEUE_SIZE`
-                // times at the beginning.
                 if first_segment_has_leading_slash {
                     f.write_char('/')?;
                 }
@@ -356,10 +355,11 @@ impl PathToNormalize<'_> {
             Some(only_a_slash) => {
                 if only_a_slash && !authority_is_present {
                     // Apply serialization like WHATWG URL Standard.
-                    // This prevents `<scheme=foo>:<path=//bar>` from written as
-                    // `foo://bar`, which is interpreted as
-                    // `<scheme=foo>://<authority=bar>`. Prepending `./`, the
-                    // serialization result would be `foo:/.//bar`, which is safe.
+                    // This prevents `<scheme=foo>:<path=//bar>` from written as `foo://bar`,
+                    // which is interpreted as `<scheme=foo>://<authority=bar>`, which is
+                    // semantically different from the original IRI. Prepending `./`, the
+                    // serialization result would be `foo:/.//bar`, which is semantically
+                    // equivalent to the original.
                     f.write_str("./")?;
                     *only_a_slash_is_written = Some(false);
                 }
@@ -600,6 +600,9 @@ struct PathSegmentsIter<'a> {
     /// Path.
     path: &'a PathToNormalize<'a>,
     /// Current cursor position.
+    ///
+    /// This is the next scan start position. If the previous segment has a
+    /// trailing slash, the value will be the next byte position of the slash.
     cursor: usize,
 }
 
