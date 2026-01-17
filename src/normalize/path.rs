@@ -254,7 +254,7 @@ impl PathToNormalize<'_> {
                     } else {
                         f.write_char('/')?;
                     }
-                    break;
+                    return Ok(());
                 }
             }
 
