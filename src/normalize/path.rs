@@ -259,7 +259,7 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            let mut queue: [Option<&'_ str>; QUEUE_SIZE] = Default::default();
+            let mut segname_queue: [Option<&'_ str>; QUEUE_SIZE] = Default::default();
             let mut level: usize = 0;
             let mut first_segment_has_leading_slash = false;
 
@@ -274,13 +274,13 @@ impl PathToNormalize<'_> {
                     SegmentKind::DotDot => {
                         level = level.saturating_sub(1);
                         too_deep_area_may_have_dot_segments = true;
-                        if level < queue.len() {
-                            queue[level] = None;
+                        if level < segname_queue.len() {
+                            segname_queue[level] = None;
                         }
                     }
                     SegmentKind::Normal => {
-                        if level < queue.len() {
-                            queue[level] = Some(seg.segment(&rest));
+                        if level < segname_queue.len() {
+                            segname_queue[level] = Some(seg.segment(&rest));
                             too_deep_area_may_have_dot_segments = false;
                             end = seg.name_range.end;
                             if level == 0 {
@@ -292,8 +292,8 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            // At this point, `queue` has the prefix of the resolved path.
-            for segname in queue.iter().flatten() {
+            // At this point, `segname_queue` has the prefix of the resolved path.
+            for segname in segname_queue.iter().flatten() {
                 Self::emit_segment::<S, _>(
                     f,
                     &mut only_a_slash_is_written,
