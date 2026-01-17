@@ -160,7 +160,7 @@ impl<'a> PathToNormalize<'a> {
             match seg.kind(self) {
                 SegmentKind::Dot | SegmentKind::DotDot => {
                     // Attempt to skip the following slash by `+ 1`.
-                    let skip = self.front.len().min(seg.range.end + 1);
+                    let skip = self.front.len().min(seg.name_range.end + 1);
                     self.remove_start(skip);
                 }
                 SegmentKind::Normal => break,
@@ -238,7 +238,7 @@ impl PathToNormalize<'_> {
                                 "`.` or `..` segments without a
                                  leading slash have already been skipped"
                             );
-                            skipped_len = seg.range.end;
+                            skipped_len = seg.name_range.end;
                         }
                         _ => break,
                     }
@@ -282,7 +282,7 @@ impl PathToNormalize<'_> {
                         if level < queue.len() {
                             queue[level] = Some(seg.segment(&rest));
                             too_deep_area_may_have_dot_segments = false;
-                            end = seg.range.end;
+                            end = seg.name_range.end;
                             if level == 0 {
                                 first_segment_has_leading_slash = seg.has_leading_slash;
                             }
@@ -574,7 +574,7 @@ struct PathSegment {
     /// Presence of a leading slash.
     has_leading_slash: bool,
     /// Range of the segment name (without any slashes).
-    range: Range<usize>,
+    name_range: Range<usize>,
 }
 
 impl PathSegment {
@@ -582,14 +582,14 @@ impl PathSegment {
     #[inline]
     #[must_use]
     fn segment<'a>(&self, path: &PathToNormalize<'a>) -> &'a str {
-        if let Some(seg_name) = path.front.get(self.range.clone()) {
+        if let Some(seg_name) = path.front.get(self.name_range.clone()) {
             return seg_name;
         }
         let front_len = path.front.len();
         let back = path
             .back
             .expect("the segname range implies that the back buffer is filled");
-        let back_range = (self.range.start - front_len)..(self.range.end - front_len);
+        let back_range = (self.name_range.start - front_len)..(self.name_range.end - front_len);
         &back[back_range]
     }
 
@@ -642,7 +642,7 @@ impl Iterator for PathSegmentsIter<'_> {
         self.cursor = segname_end;
         Some(PathSegment {
             has_leading_slash,
-            range: segname_start..segname_end,
+            name_range: segname_start..segname_end,
         })
     }
 }
