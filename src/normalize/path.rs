@@ -172,7 +172,7 @@ impl<'a> PathToNormalize<'a> {
 impl PathToNormalize<'_> {
     /// Writes the normalized path.
     pub(crate) fn fmt_write_normalize<S: Spec, W: fmt::Write>(
-        &self,
+        mut self,
         f: &mut W,
         op: NormalizationOp,
         authority_is_present: bool,
@@ -198,13 +198,11 @@ impl PathToNormalize<'_> {
             return Ok(());
         }
 
-        let mut rest = *self;
-
         // Skip the prefix dot segments without leading slashes (such as `./`,
         // `../`, and `../.././`). This is necessary because such segments should
         // be removed along with the FOLLOWING slashes, not leading slashes.
-        rest.remove_ignorable_prefix();
-        if rest.is_empty() {
+        self.remove_ignorable_prefix();
+        if self.is_empty() {
             // The path consists of only `/.`s and `/..`s.
             // In this case, if the authority component is present, the result
             // should be `/`, not empty.
@@ -221,7 +219,7 @@ impl PathToNormalize<'_> {
         // `true` if the path may have not yet handled dot segments.
         let mut may_have_not_yet_resolved_dot_segments = true;
         // Scan for the dot segments and resolve them.
-        while !rest.is_empty() && may_have_not_yet_resolved_dot_segments {
+        while !self.is_empty() && may_have_not_yet_resolved_dot_segments {
             /// The size of the queue to track the path segments.
             ///
             /// This should be nonzero.
@@ -229,8 +227,8 @@ impl PathToNormalize<'_> {
 
             {
                 // Skip the dot segments at the head.
-                let skipped_len = PathSegmentsIter::new(&rest)
-                    .map_while(|seg| match seg.kind(&rest) {
+                let skipped_len = PathSegmentsIter::new(&self)
+                    .map_while(|seg| match seg.kind(&self) {
                         SegmentKind::Dot | SegmentKind::DotDot => {
                             debug_assert!(
                                 seg.has_leading_slash,
@@ -242,8 +240,8 @@ impl PathToNormalize<'_> {
                     })
                     .last()
                     .unwrap_or(0);
-                rest.remove_start(skipped_len);
-                if rest.is_empty() {
+                self.remove_start(skipped_len);
+                if self.is_empty() {
                     // Finished with a dot segment.
                     // The last `/.` or `/..` should be replaced to `/`.
                     if !authority_is_present && (only_a_slash_is_written == Some(true)) {
@@ -268,8 +266,8 @@ impl PathToNormalize<'_> {
             // iteration (of the outer `while` loop) and is ignorable after the
             // next iteration.
             let mut resolved_end = 0;
-            for seg in PathSegmentsIter::new(&rest) {
-                let kind = seg.kind(&rest);
+            for seg in PathSegmentsIter::new(&self) {
+                let kind = seg.kind(&self);
                 match kind {
                     SegmentKind::Dot => {
                         may_have_not_yet_resolved_dot_segments = true;
@@ -283,7 +281,7 @@ impl PathToNormalize<'_> {
                     }
                     SegmentKind::Normal => {
                         if let Some(dest) = segname_queue.get_mut(level) {
-                            *dest = Some(seg.segment(&rest));
+                            *dest = Some(seg.segment(&self));
                             may_have_not_yet_resolved_dot_segments = false;
                             resolved_end = seg.name_range.end;
                             if level == 0 {
@@ -308,29 +306,29 @@ impl PathToNormalize<'_> {
             }
 
             // Trim the processed prefix.
-            rest.remove_start(resolved_end);
+            self.remove_start(resolved_end);
         }
 
-        if !rest.is_empty() {
+        if !self.is_empty() {
             if !authority_is_present {
-                // Note that `rest` has no dot segments. In order to handle
+                // Note that `self` has no dot segments anymore. In order to handle
                 // authority-less relative path correctly, it would be enough to
                 // check if the path to be written starts with `//` or not.
                 match only_a_slash_is_written {
                     None => {
                         // TODO: `Option::is_some_and()` is stabilized since Rust 1.70.0.
-                        if ((rest.front == "/")
-                            && rest.back.map_or(false, |back| back.starts_with('/')))
-                            || rest.front.starts_with("//")
+                        if ((self.front == "/")
+                            && self.back.map_or(false, |back| back.starts_with('/')))
+                            || self.front.starts_with("//")
                         {
                             f.write_str("/.//")?;
-                            rest.remove_start("//".len());
+                            self.remove_start("//".len());
                         }
                     }
                     Some(true) => {
-                        if rest.starts_with_slash() {
+                        if self.starts_with_slash() {
                             f.write_str(".//")?;
-                            rest.remove_start("/".len());
+                            self.remove_start("/".len());
                         }
                     }
                     Some(false) => {}
@@ -340,13 +338,13 @@ impl PathToNormalize<'_> {
             // Emit the path at once. No need to split into segments since it
             // has no dot segments.
             if op.mode.case_pct_normalization() {
-                write!(f, "{}", PctCaseNormalized::<S>::new(rest.front))?;
-                if let Some(back) = &rest.back {
+                write!(f, "{}", PctCaseNormalized::<S>::new(self.front))?;
+                if let Some(back) = &self.back {
                     write!(f, "{}", PctCaseNormalized::<S>::new(back))?;
                 }
             } else {
-                f.write_str(rest.front)?;
-                if let Some(back) = &rest.back {
+                f.write_str(self.front)?;
+                if let Some(back) = &self.back {
                     f.write_str(back)?;
                 }
             }
