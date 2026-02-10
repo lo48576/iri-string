@@ -1,7 +1,7 @@
 //! Path normalization.
 
 use core::fmt;
-use core::ops::Range;
+use core::ops::{ControlFlow, Range};
 
 use crate::parser::str::{find_split_hole, rfind};
 use crate::spec::{Spec, UriSpec};
@@ -225,88 +225,16 @@ impl PathToNormalize<'_> {
             /// This should be nonzero.
             const QUEUE_SIZE: usize = 8;
 
-            {
-                // Skip the dot segments at the head.
-                let skipped_len = PathSegmentsIter::new(&self)
-                    .map_while(|seg| match seg.kind(&self) {
-                        SegmentKind::Dot | SegmentKind::DotDot => {
-                            debug_assert!(
-                                seg.has_leading_slash,
-                                "dot segments without a leading slash have already been skipped"
-                            );
-                            Some(seg.name_range.end)
-                        }
-                        SegmentKind::Normal => None,
-                    })
-                    .last()
-                    .unwrap_or(0);
-                self.remove_start(skipped_len);
-                if self.is_empty() {
-                    // Finished with a dot segment.
-                    // The last `/.` or `/..` should be replaced to `/`.
-                    if !authority_is_present && (only_a_slash_is_written == Some(true)) {
-                        // Insert a dot segment to break the prefix `//`.
-                        // Without this, the path starts with `//` and it may
-                        // be confused with the prefix of an authority.
-                        f.write_str(".//")?;
-                    } else {
-                        f.write_char('/')?;
-                    }
-                    return Ok(());
-                }
+            let ret = self.resolve_and_write_path_prefixes::<S, _, QUEUE_SIZE>(
+                &mut only_a_slash_is_written,
+                &mut may_have_not_yet_resolved_dot_segments,
+                authority_is_present,
+                f,
+                op,
+            )?;
+            if matches!(ret, ControlFlow::Break(_)) {
+                return Ok(());
             }
-
-            let mut segname_queue: [Option<&'_ str>; QUEUE_SIZE] = Default::default();
-            let mut level: usize = 0;
-            let mut first_segment_has_leading_slash = false;
-
-            // Find higher path segments.
-
-            // The end byte position of the prefix that is being written in this
-            // iteration (of the outer `while` loop) and is ignorable after the
-            // next iteration.
-            let mut resolved_end = 0;
-            for seg in PathSegmentsIter::new(&self) {
-                let kind = seg.kind(&self);
-                match kind {
-                    SegmentKind::Dot => {
-                        may_have_not_yet_resolved_dot_segments = true;
-                    }
-                    SegmentKind::DotDot => {
-                        level = level.saturating_sub(1);
-                        may_have_not_yet_resolved_dot_segments = true;
-                        if let Some(dest) = segname_queue.get_mut(level) {
-                            *dest = None;
-                        }
-                    }
-                    SegmentKind::Normal => {
-                        if let Some(dest) = segname_queue.get_mut(level) {
-                            *dest = Some(seg.segment(&self));
-                            may_have_not_yet_resolved_dot_segments = false;
-                            resolved_end = seg.name_range.end;
-                            if level == 0 {
-                                first_segment_has_leading_slash = seg.has_leading_slash;
-                            }
-                        }
-                        level += 1;
-                    }
-                }
-            }
-
-            // At this point, `segname_queue` has the prefix of the resolved path.
-            for segname in segname_queue.iter().flatten() {
-                Self::emit_segment::<S, _>(
-                    f,
-                    &mut only_a_slash_is_written,
-                    first_segment_has_leading_slash,
-                    segname,
-                    authority_is_present,
-                    op,
-                )?;
-            }
-
-            // Trim the processed prefix.
-            self.remove_start(resolved_end);
         }
 
         if !self.is_empty() {
@@ -351,6 +279,115 @@ impl PathToNormalize<'_> {
         }
 
         Ok(())
+    }
+
+    /// Resolves the path and writes the prefixes as much as confirmed.
+    fn resolve_and_write_path_prefixes<S, W, const QUEUE_SIZE: usize>(
+        &mut self,
+        only_a_slash_is_written: &mut Option<bool>,
+        may_have_not_yet_resolved_dot_segments: &mut bool,
+        authority_is_present: bool,
+        f: &mut W,
+        op: NormalizationOp,
+    ) -> Result<ControlFlow<()>, fmt::Error>
+    where
+        S: Spec,
+        W: fmt::Write,
+    {
+        assert!(!self.is_empty());
+        assert!(*may_have_not_yet_resolved_dot_segments);
+
+        // Skip the dot segments at the head.
+        {
+            let skipped_len = PathSegmentsIter::new(self)
+                .map_while(|seg| match seg.kind(self) {
+                    SegmentKind::Dot | SegmentKind::DotDot => {
+                        debug_assert!(
+                            seg.has_leading_slash,
+                            "dot segments without a leading slash have already been skipped"
+                        );
+                        Some(seg.name_range.end)
+                    }
+                    SegmentKind::Normal => None,
+                })
+                .last()
+                .unwrap_or(0);
+            self.remove_start(skipped_len);
+            if self.is_empty() {
+                // Finished with a dot segment.
+                // The last `/.` or `/..` should be replaced to `/`.
+                if !authority_is_present && (*only_a_slash_is_written == Some(true)) {
+                    // Insert a dot segment to break the prefix `//`.
+                    // Without this, the path starts with `//` and it may
+                    // be confused with the prefix of an authority.
+                    f.write_str(".//")?;
+                } else {
+                    f.write_char('/')?;
+                }
+                return Ok(ControlFlow::Break(()));
+            }
+        }
+
+        // Find decisive path segments from higher to lower.
+        let (segname_queue, first_segment_has_leading_slash, resolved_end): (
+            [Option<&'_ str>; QUEUE_SIZE],
+            bool,
+            usize,
+        ) = {
+            let mut segname_queue: [Option<&'_ str>; QUEUE_SIZE] = [Default::default(); QUEUE_SIZE];
+            let mut first_segment_has_leading_slash = false;
+            // The end byte position of the prefix that is being written in this
+            // function call. The part before this position is ignorable after
+            // the next iteration.
+            let mut resolved_end = 0;
+
+            let mut level: usize = 0;
+            for seg in PathSegmentsIter::new(self) {
+                let kind = seg.kind(self);
+                match kind {
+                    SegmentKind::Dot => {
+                        *may_have_not_yet_resolved_dot_segments = true;
+                    }
+                    SegmentKind::DotDot => {
+                        level = level.saturating_sub(1);
+                        *may_have_not_yet_resolved_dot_segments = true;
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = None;
+                        }
+                    }
+                    SegmentKind::Normal => {
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = Some(seg.segment(self));
+                            *may_have_not_yet_resolved_dot_segments = false;
+                            resolved_end = seg.name_range.end;
+                            if level == 0 {
+                                first_segment_has_leading_slash = seg.has_leading_slash;
+                            }
+                        }
+                        level += 1;
+                    }
+                }
+            }
+
+            (segname_queue, first_segment_has_leading_slash, resolved_end)
+        };
+
+        // At this point, `segname_queue` has the prefix of the resolved path.
+        for segname in segname_queue.iter().flatten() {
+            PathToNormalize::emit_segment::<S, _>(
+                f,
+                only_a_slash_is_written,
+                first_segment_has_leading_slash,
+                segname,
+                authority_is_present,
+                op,
+            )?;
+        }
+
+        // Trim the processed prefix.
+        self.remove_start(resolved_end);
+
+        Ok(ControlFlow::Continue(()))
     }
 
     /// Emits a non-dot segment and update the current state.
