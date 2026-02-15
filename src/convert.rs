@@ -26,7 +26,7 @@ const HEXDIGITS: [u8; 16] = [
 
 /// A resource identifier mapped to a URI of some kind.
 ///
-/// Supported `Src` type are:
+/// Supported `Src` types are:
 ///
 /// * IRIs:
 ///     + [`IriAbsoluteStr`] (alias of `RiAbsoluteStr<IriSpec>`)

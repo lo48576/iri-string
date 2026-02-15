@@ -68,7 +68,7 @@
 //!
 //! * `serde`
 //!     + Enables serde support.
-//!     + Implement `Serailize` and `Deserialize` traits for IRI / URI types.
+//!     + Implements `Serailize` and `Deserialize` traits for IRI / URI types.
 //! * `memchr`
 //!     + Enables faster internal character search.
 //!
