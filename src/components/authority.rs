@@ -43,7 +43,7 @@ impl<'a> AuthorityComponents<'a> {
         &self.authority[self.host_start..self.host_end]
     }
 
-    /// Returns the `port` part, excluding the following `:`.
+    /// Returns the `port` part, excluding the leading `:`.
     #[must_use]
     pub fn port(&self) -> Option<&'a str> {
         if self.host_end == self.authority.len() {
