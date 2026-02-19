@@ -680,6 +680,40 @@ impl<'a> Builder<'a> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// The builder does **not** convert or encode the values automatically, so
+    /// the caller need to encode the host by yourself if they won't be valid
+    /// without additional encoding.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::build::Builder;
+    /// use iri_string::percent_encode::PercentEncodedForUri;
+    /// use iri_string::types::UriReferenceStr;
+    ///
+    /// let mut builder = Builder::new();
+    /// builder.host("\u{03B1}.example.com");
+    /// assert!(
+    ///     builder.build::<UriReferenceStr>().is_err(),
+    ///     "a URI cannot have non-ASCII characters"
+    /// );
+    ///
+    /// let mut builder = Builder::new();
+    /// // Encode by yourself.
+    /// //
+    /// // Using percent-encoding here, but of course you can use another
+    /// // encoding such as IDNA.
+    /// let encoded_host =
+    ///     PercentEncodedForUri::from_reg_name("\u{03B1}.example.com")
+    ///         .to_string();
+    /// assert_eq!(encoded_host, "%CE%B1.example.com");
+    /// builder.host(&encoded_host);
+    /// let uri = builder.build::<UriReferenceStr>()?;
+    /// # #[cfg(feature = "alloc")] {
+    /// assert_eq!(uri.to_string(), "//%CE%B1.example.com");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
     #[inline]
     pub fn host(&mut self, v: &'a str) {
         self.authority_builder().host = HostRepr::String(v);
