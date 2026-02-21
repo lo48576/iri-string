@@ -503,7 +503,7 @@ impl_cmp!(str, str, &UriTemplateStr);
 impl fmt::Display for UriTemplateStr {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+        self.as_str().fmt(f)
     }
 }
 

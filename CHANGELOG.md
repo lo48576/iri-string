@@ -2,9 +2,31 @@
 
 ## [Unreleased]
 
+* Support fill and align on formatting of IRI/URI types via `std::fmt::Display`.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Changed (non-breaking)
+* Support fill and align on formatting of IRI/URI types via `std::fmt::Display`.
+    + About formatting, see "Width" and "Fill/Alignment" sections of the
+      `std::fmt` documentation
+      (<https://doc.rust-lang.org/stable/std/fmt/index.html>).
+        - Typical example of the newly supported formating is
+          `{:<WIDTH}`, `{:>WIDTH}`, and `{:^WIDTH}`.
+    + Affected types:
+        - `RiAbsoluteStr`
+        - `RiAbsoluteString`
+        - `RiFragmentStr`
+        - `RiFragmentString`
+        - `RiQueryStr`
+        - `RiQueryString`
+        - `RiReferenceStr`
+        - `RiReferenceString`
+        - `RiRelativeStr`
+        - `RiRelativeString`
+        - `RiStr`
+        - `RiString`
+        - `UriTemplateStr`
+        - `UriTemplateString`
 * internal refactoring: Reduce redundant validation of string type conversions.
     + Previously, syntax validations had sometimes run again on the already
       validated or always valid strings.

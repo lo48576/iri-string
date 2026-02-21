@@ -405,7 +405,7 @@ macro_rules! define_custom_string_slice {
         impl<S: crate::spec::Spec> core::fmt::Display for $ty<S> {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                f.write_str(self.as_str())
+                self.as_str().fmt(f)
             }
         }
 
@@ -872,7 +872,7 @@ macro_rules! define_custom_string_owned {
         impl<S: crate::spec::Spec> core::fmt::Display for $ty<S> {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                f.write_str(self.as_str())
+                self.as_str().fmt(f)
             }
         }
 
