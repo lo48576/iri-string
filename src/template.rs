@@ -123,6 +123,7 @@ mod parser;
 #[cfg(feature = "alloc")]
 pub mod simple_context;
 mod string;
+mod value;
 
 pub use self::context::{Context, DynamicContext};
 #[cfg(feature = "alloc")]

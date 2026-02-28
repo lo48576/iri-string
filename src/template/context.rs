@@ -56,6 +56,7 @@ use core::fmt;
 use core::ops::ControlFlow;
 
 pub use crate::template::components::VarName;
+pub use crate::template::value::VisitValueNaive;
 
 /// A trait for types that can behave as a static URI template expansion context.
 ///
