@@ -2,7 +2,16 @@
 
 ## [Unreleased]
 
+* Add utility functions to visit a list or an associative array for URI template
+  expansion.
 * internal refactoring: Reduce redundant validation of string type conversions.
+
+### Added
+* Add utility functions to visit a list or an associative array for URI template
+  expansion.
+    + List of added trait methods:
+        + `template::context::Visitor::visit_list_direct()`
+        + `template::context::Visitor::visit_assoc_direct()`
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.

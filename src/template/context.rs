@@ -246,11 +246,36 @@ pub trait Visitor: Sized + private::Sealed {
     #[must_use]
     fn visit_string<T: fmt::Display>(self, v: T) -> Self::Result;
     /// Visits a list variable.
+    ///
+    /// If all the items are in a single iterable value, you can use
+    /// [`visit_list_direct`][`Self::visit_list_direct`] instead for convenience.
     #[must_use]
     fn visit_list(self) -> Self::ListVisitor;
     /// Visits an associative array variable.
+    ///
+    /// If all the entries are in a single iterable value, you can use
+    /// [`visit_assoc_direct`][`Self::visit_assoc_direct`] instead for convenience.
     #[must_use]
     fn visit_assoc(self) -> Self::AssocVisitor;
+
+    /// Visits just a single list and finishes the visit right away.
+    fn visit_list_direct<I, T>(self, items: I) -> Self::Result
+    where
+        I: IntoIterator<Item = T>,
+        T: fmt::Display,
+    {
+        self.visit_list().visit_items_and_finish(items)
+    }
+
+    /// Visits just a single associative array and finishes the visit right away.
+    fn visit_assoc_direct<I, K, T>(self, entries: I) -> Self::Result
+    where
+        I: IntoIterator<Item = (K, T)>,
+        K: fmt::Display,
+        T: fmt::Display,
+    {
+        self.visit_assoc().visit_entries_and_finish(entries)
+    }
 }
 
 /// List visitor.
