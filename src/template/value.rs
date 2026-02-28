@@ -6,6 +6,15 @@ use core::fmt;
 use crate::template::context::AssocVisitor as _;
 use crate::template::context::{ListVisitor as _, Visitor};
 
+/// Make visitor visit the value that implements [`VisitValueNaive`] trait.
+pub fn visit_value_naive<V, T>(visitor: V, value: T) -> V::Result
+where
+    V: Visitor,
+    T: VisitValueNaive,
+{
+    value.visit_value(visitor)
+}
+
 /// A trait for types that are expected to have "naive" visit implementation.
 ///
 /// This trait can be implemented when a type of a value has a default variable
