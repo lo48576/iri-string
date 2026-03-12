@@ -192,6 +192,22 @@ pub(crate) fn extract_authority_relative(i: &str) -> Option<&str> {
     slash_slash_authority_opt(i).1
 }
 
+/// Extracts `authority` part and its position from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[cfg(feature = "alloc")]
+#[must_use]
+pub(crate) fn extract_authority_and_offset(i: &str) -> Option<(&str, usize)> {
+    let (i, scheme) = scheme_colon_opt(i);
+    let authority = slash_slash_authority_opt(i).1?;
+    // 2: `"//".len()`
+    // +3: `"://".len()`
+    let offset = scheme.map_or(2, |s| s.len() + 3);
+    Some((authority, offset))
+}
+
 /// Extracts `path` part from an IRI reference.
 ///
 /// # Precondition

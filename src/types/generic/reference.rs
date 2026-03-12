@@ -1,5 +1,7 @@
 //! IRI reference.
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
@@ -732,5 +734,159 @@ impl<S: Spec> RiReferenceString<S> {
                  is replaced with the empty password"
             );
         }
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// If the IRI has no authority, returns `None` without doing nothing. Note
+    /// that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    fn try_replace_host_impl(
+        &mut self,
+        new_host: &'_ str,
+        replace_only_reg_name: bool,
+    ) -> Result<Option<&str>, TryReserveError> {
+        use crate::types::generic::replace_domain_impl;
+
+        let result: Result<Option<core::ops::Range<usize>>, TryReserveError>;
+        {
+            // SAFETY: Replacing the (already existing) host part with another
+            // valid host does not change the class of an IRI.
+            let strbuf = unsafe { self.as_inner_mut() };
+            result = replace_domain_impl::<S>(strbuf, new_host, replace_only_reg_name);
+            debug_assert_eq!(
+                RiReferenceStr::<S>::validate(strbuf),
+                Ok(()),
+                "replacing a host with another valid host must keep an IRI valid: raw={strbuf:?}",
+            );
+        }
+        result.map(|opt| opt.map(|range| &self.as_str()[range]))
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// If the IRI has no authority, returns `None` without doing nothing. Note
+    /// that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    ///
+    /// If you need to replace only when the host is `reg-name` (for example
+    /// when you attempt to apply IDNA encoding), use
+    /// [`try_replace_host_reg_name`][`Self::try_replace_host_reg_name`] method
+    /// instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::types::UriReferenceString;
+    /// let mut iri =
+    ///     UriReferenceString::try_from("https://user:pass@example.com:443/").unwrap();
+    /// let new_host_opt = iri.replace_host("www.example.com");
+    /// assert_eq!(new_host_opt, Some("www.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "www.example.com");
+    /// assert_eq!(iri, "https://user:pass@www.example.com:443/");
+    /// ```
+    pub fn replace_host(&mut self, new_host: &'_ str) -> Option<&str> {
+        self.try_replace_host(new_host)
+            .expect("failed to allocate memory when replacing the host part of an IRI")
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// This returns `TryReserveError` on memory allocation failure, instead of
+    /// panicking. Otherwise, this method behaves same as
+    /// [`replace_host`][`Self::replace_host`] method.
+    pub fn try_replace_host(&mut self, new_host: &'_ str) -> Result<Option<&str>, TryReserveError> {
+        self.try_replace_host_impl(new_host, false)
+    }
+
+    /// Replaces the domain name (`reg-name`) in-place and returns the new host,
+    /// if authority is not empty.
+    ///
+    /// If the IRI has no authority or the host is not a reg-name (i.e., is
+    /// neither an IP-address nor empty), returns `None` without doing nothing.
+    /// Note that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::types::UriReferenceString;
+    /// let mut iri =
+    ///     UriReferenceString::try_from("https://user:pass@example.com:443/").unwrap();
+    /// let new_host_opt = iri.replace_host("www.example.com");
+    /// assert_eq!(new_host_opt, Some("www.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "www.example.com");
+    /// assert_eq!(iri, "https://user:pass@www.example.com:443/");
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::types::UriReferenceString;
+    /// let mut iri =
+    ///     UriReferenceString::try_from("https://192.168.0.1/").unwrap();
+    /// let new_host_opt = iri.replace_host_reg_name("localhost");
+    /// assert_eq!(new_host_opt, None, "IPv4 address is not a reg-name");
+    /// assert_eq!(iri, "https://192.168.0.1/", "won't be changed");
+    /// ```
+    ///
+    /// To apply IDNA conversion, get the domain by [`AuthorityComponents::reg_name`]
+    /// method, convert the domain, and then set it by this
+    /// `replace_host_reg_name` method.
+    ///
+    /// ```
+    /// # extern crate alloc;
+    /// # use alloc::string::String;
+    /// # use iri_string::types::IriReferenceString;
+    /// /// Converts the given into IDNA encoding.
+    /// fn conv_idna(domain: &str) -> String {
+    ///     /* ... */
+    /// #   if domain == "\u{03B1}.example.com" {
+    /// #       "xn--mxa.example.com".into()
+    /// #   } else {
+    /// #       unimplemented!()
+    /// #   }
+    /// }
+    ///
+    /// // U+03B1: GREEK SMALL LETTER ALPHA
+    /// let mut iri =
+    ///     IriReferenceString::try_from("https://\u{03B1}.example.com/").unwrap();
+    ///
+    /// let old_domain = iri
+    ///     .authority_components()
+    ///     .expect("authority is not empty")
+    ///     .reg_name()
+    ///     .expect("the host is reg-name");
+    /// assert_eq!(old_domain, "\u{03B1}.example.com");
+    ///
+    /// // Get the new host by your own.
+    /// let new_domain: String = conv_idna(old_domain);
+    /// assert_eq!(new_domain, "xn--mxa.example.com");
+    ///
+    /// let new_host_opt = iri.replace_host(&new_domain);
+    /// assert_eq!(new_host_opt, Some("xn--mxa.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "xn--mxa.example.com");
+    /// assert_eq!(iri, "https://xn--mxa.example.com/");
+    /// ```
+    pub fn replace_host_reg_name(&mut self, new_host: &'_ str) -> Option<&str> {
+        self.try_replace_host_reg_name(new_host)
+            .expect("failed to allocate memory when replacing the host part of an IRI")
+    }
+
+    /// Replaces the domain name (`reg-name`) in-place and returns the new host,
+    /// if authority is not empty.
+    ///
+    /// This returns `TryReserveError` on memory allocation failure, instead of
+    /// panicking. Otherwise, this method behaves same as
+    /// [`replace_host_reg_name`][`Self::replace_host_reg_name`] method.
+    pub fn try_replace_host_reg_name(
+        &mut self,
+        new_host: &'_ str,
+    ) -> Result<Option<&str>, TryReserveError> {
+        self.try_replace_host_impl(new_host, true)
     }
 }
