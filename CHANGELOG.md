@@ -5,6 +5,7 @@
 * Add utility functions to visit a list or an associative array for URI template
   expansion.
 * Add methods to replace host in allocated IRI string types.
+* Support creating a `build::Builder` from IRI reference types.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Added
@@ -34,6 +35,12 @@
         + `types::generic::RiString::replace_host_reg_name`
         + `types::generic::RiString::try_replace_host`
         + `types::generic::RiString::try_replace_host_reg_name`
+* Support creating a `build::Builder` from IRI reference types.
+    + List of added trait impls:
+        + `From<types::RiAbsoluteStr<S>> for build::Builder<'_>`
+        + `From<types::RiReferenceStr<S>> for build::Builder<'_>`
+        + `From<types::RiRelativeStr<S>> for build::Builder<'_>`
+        + `From<types::RiStr<S>> for build::Builder<'_>`
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.
