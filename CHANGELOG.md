@@ -4,6 +4,7 @@
 
 * Add utility functions to visit a list or an associative array for URI template
   expansion.
+* Add methods to replace host in allocated IRI string types.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Added
@@ -12,6 +13,27 @@
     + List of added trait methods:
         + `template::context::Visitor::visit_list_direct()`
         + `template::context::Visitor::visit_assoc_direct()`
+* Add methods to replace host in allocated IRI string types.
+    + In summary, added `{,try_}replace_host{,_reg_name}` methods to types
+      that can contain authorities (i.e.,
+      `Ri{Absolute,Reference,Relative,}String`).
+    + List of added methods:
+        + `types::generic::RiAbsoluteString::replace_host`
+        + `types::generic::RiAbsoluteString::replace_host_reg_name`
+        + `types::generic::RiAbsoluteString::try_replace_host`
+        + `types::generic::RiAbsoluteString::try_replace_host_reg_name`
+        + `types::generic::RiReferenceString::replace_host`
+        + `types::generic::RiReferenceString::replace_host_reg_name`
+        + `types::generic::RiReferenceString::try_replace_host`
+        + `types::generic::RiReferenceString::try_replace_host_reg_name`
+        + `types::generic::RiRelativeString::replace_host`
+        + `types::generic::RiRelativeString::replace_host_reg_name`
+        + `types::generic::RiRelativeString::try_replace_host`
+        + `types::generic::RiRelativeString::try_replace_host_reg_name`
+        + `types::generic::RiString::replace_host`
+        + `types::generic::RiString::replace_host_reg_name`
+        + `types::generic::RiString::try_replace_host`
+        + `types::generic::RiString::try_replace_host_reg_name`
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.
