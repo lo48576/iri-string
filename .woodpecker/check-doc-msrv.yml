@@ -45,11 +45,11 @@ steps:
     commands:
       - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
-      - cargo doc --workspace --no-deps ${OPT_FEATURES}
+      - cargo doc --workspace --no-deps --no-default-features ${OPT_FEATURES}
 
   - name: doc private-items
     image: *rust_image
     commands:
       - <<: *configure_toolchain_cmds
       - export RUSTDOCFLAGS="-D warnings"
-      - cargo doc --workspace --no-deps ${OPT_FEATURES} --document-private-items
+      - cargo doc --workspace --no-deps --no-default-features ${OPT_FEATURES} --document-private-items
