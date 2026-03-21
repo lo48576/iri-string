@@ -9,6 +9,7 @@
 * Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
   percent-decoding by the user.
 * Add a syntax checker for `reg-name` and `ireg-name` syntax.
+* doc: Add a guidance to apply IDNA conversion to IRI types.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Added
@@ -54,6 +55,8 @@
 * Add a syntax checker for `reg-name` and `ireg-name` syntax.
     + List of added functions:
         - `validate::reg_name()`
+* doc: Add a guidance to apply IDNA conversion to IRI types.
+    + See the module documentation for `types::generic`.
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.
