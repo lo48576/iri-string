@@ -1,5 +1,7 @@
 //! Functions for common string operations.
 
+use core::ops::{self, RangeFrom, RangeTo};
+
 pub(crate) use self::maybe_pct_encoded::{
     process_percent_encoded_best_effort, PctEncodedFragments,
 };
@@ -155,10 +157,17 @@ pub(crate) fn find_split3(
 /// If `needle` is not found, returns `None`.
 #[cfg(not(feature = "memchr"))]
 #[must_use]
-pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
+pub(crate) fn find_split_hole<T>(haystack: &T, needle: u8) -> Option<(&T, &T)>
+where
+    T: ?Sized
+        + AsRef<[u8]>
+        + ops::Index<RangeFrom<usize>, Output = T>
+        + ops::Index<RangeTo<usize>, Output = T>,
+{
     haystack
-        .bytes()
-        .position(|b| b == needle)
+        .as_ref()
+        .iter()
+        .position(|&b| b == needle)
         .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
 }
 
@@ -167,9 +176,14 @@ pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)
 /// If `needle` is not found, returns `None`.
 #[cfg(feature = "memchr")]
 #[must_use]
-pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
-    memchr::memchr(needle, haystack.as_bytes())
-        .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
+pub(crate) fn find_split_hole<T>(haystack: &T, needle: u8) -> Option<(&T, &T)>
+where
+    T: ?Sized
+        + AsRef<[u8]>
+        + ops::Index<RangeFrom<usize>, Output = T>
+        + ops::Index<RangeTo<usize>, Output = T>,
+{
+    memchr::memchr(needle, haystack.as_ref()).map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
 }
 
 /// Finds the first needle, and returns the string before it, the needle, and the string after it.

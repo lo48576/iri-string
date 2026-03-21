@@ -5,6 +5,7 @@
 pub(crate) mod authority;
 
 use core::num::NonZeroUsize;
+use core::ops::{self, RangeFrom};
 
 use crate::components::{RiReferenceComponents, Splitter};
 use crate::format::eq_str_display;
@@ -443,14 +444,14 @@ pub(super) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
 ///
 /// Panics if the string does not start with two hexdigits.
 #[must_use]
-pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
-    let mut bytes = s.bytes();
-    let upper_xdigit = bytes
-        .next()
-        .expect("at least two bytes should follow the `%` in a valid IRI reference");
-    let lower_xdigit = bytes
-        .next()
-        .expect("at least two bytes should follow the `%` in a valid IRI reference");
+pub(crate) fn take_xdigits2<T>(s: &T) -> (u8, &T)
+where
+    T: ?Sized + AsRef<[u8]> + ops::Index<RangeFrom<usize>, Output = T>,
+{
+    let (upper_xdigit, lower_xdigit) = match s.as_ref() {
+        [upper, lower, ..] => (*upper, *lower),
+        _ => panic!("at least two bytes should follow the `%` in a valid IRI reference"),
+    };
     let v = hexdigits_to_byte([upper_xdigit, lower_xdigit]);
     (v, &s[2..])
 }
