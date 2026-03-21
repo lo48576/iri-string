@@ -7,6 +7,7 @@ use crate::parser::str::{
     find_split_hole, get_wrapped_inner, rfind_split_hole, satisfy_chars_with_pct_encoded,
     strip_ascii_char_prefix,
 };
+use crate::parser::trusted as trusted_parser;
 use crate::spec::Spec;
 use crate::validate::{Error, ErrorKind};
 
@@ -244,6 +245,20 @@ pub(crate) fn validate_host<S: Spec>(i: &str) -> Result<(), Error> {
                 Err(Error::with_kind(ErrorKind::InvalidHost))
             }
         }
+    }
+}
+
+/// Returns `Ok(_)` if the string matches `reg-name` or `ireg-name`.
+pub(crate) fn validate_reg_name<S: Spec>(i: &str) -> Result<(), Error> {
+    let is_valid_ipv4addr_or_reg_name =
+        satisfy_chars_with_pct_encoded(i, char::is_ascii_regname, char::is_nonascii_regname::<S>);
+
+    // Note that if `is_valid_ipv4addr_or_reg_name` is true, then `i` is
+    // guaranteed to be a valid IPv4Address or a valid reg-name.
+    if is_valid_ipv4addr_or_reg_name && trusted_parser::authority::is_host_reg_name(i) {
+        Ok(())
+    } else {
+        Err(Error::with_kind(ErrorKind::InvalidRegName))
     }
 }
 

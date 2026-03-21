@@ -8,6 +8,7 @@
 * Support creating a `build::Builder` from IRI reference types.
 * Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
   percent-decoding by the user.
+* Add a syntax checker for `reg-name` and `ireg-name` syntax.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Added
@@ -50,6 +51,9 @@
         + `percent_decode::decode::PercentDecodedWhatwgBytyes` type
         + `percent_decode::decode::DecodedFragment` type
         + `percent_decode::decode::PercentDecodedBytesFragment` iterator type
+* Add a syntax checker for `reg-name` and `ireg-name` syntax.
+    + List of added functions:
+        - `validate::reg_name()`
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.

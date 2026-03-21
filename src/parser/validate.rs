@@ -10,7 +10,9 @@ use crate::parser::str::{
 use crate::spec::Spec;
 use crate::validate::{Error, ErrorKind};
 
-pub(crate) use self::authority::{validate_authority, validate_host, validate_userinfo};
+pub(crate) use self::authority::{
+    validate_authority, validate_host, validate_reg_name, validate_userinfo,
+};
 pub(crate) use self::path::{validate_path, validate_path_segment};
 use self::path::{
     validate_path_abempty, validate_path_absolute_authority_absent,
