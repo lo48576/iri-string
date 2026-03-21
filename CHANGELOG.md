@@ -6,6 +6,8 @@
   expansion.
 * Add methods to replace host in allocated IRI string types.
 * Support creating a `build::Builder` from IRI reference types.
+* Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
+  percent-decoding by the user.
 * internal refactoring: Reduce redundant validation of string type conversions.
 
 ### Added
@@ -41,6 +43,13 @@
         + `From<types::RiReferenceStr<S>> for build::Builder<'_>`
         + `From<types::RiRelativeStr<S>> for build::Builder<'_>`
         + `From<types::RiStr<S>> for build::Builder<'_>`
+* Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
+  percent-decoding by the user.
+    + List of added items:
+        + `percent_decode::decode::decode_whatwg_bytes()` function
+        + `percent_decode::decode::PercentDecodedWhatwgBytyes` type
+        + `percent_decode::decode::DecodedFragment` type
+        + `percent_decode::decode::PercentDecodedBytesFragment` iterator type
 
 ### Changed (non-breaking)
 * internal refactoring: Reduce redundant validation of string type conversions.
