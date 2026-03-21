@@ -430,7 +430,7 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, mode: NormalizednessCheckMode) -> 
 ///
 /// The parameters `upper` and `lower` should be an ASCII hexadecimal digit.
 #[must_use]
-pub(super) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
+pub(crate) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
     // 'A'..='F' (0x41..=0x46) | 'a'..='f' (0x61..=0x66) => add 9 to the nibble.
     // '0'..='9' (0x30..=0x39) => use the nibble as is.
     let upper_offset = if upper >= 0x40 { 9 << 4 } else { 0 };

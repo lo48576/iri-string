@@ -6,6 +6,8 @@
 //!
 //! [`IriStr::encode_to_uri`]: `crate::types::IriStr::encode_to_uri`
 
+pub mod decode;
+
 use core::fmt::{self, Write as _};
 use core::marker::PhantomData;
 
