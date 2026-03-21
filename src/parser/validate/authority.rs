@@ -198,7 +198,7 @@ pub(crate) fn validate_authority<S: Spec>(i: &str) -> Result<(), Error> {
     validate_host::<S>(maybe_host)
 }
 
-/// Validates `host`.
+/// Returns `Ok(_)` if the string matches `host` or `ihost`.
 pub(crate) fn validate_host<S: Spec>(i: &str) -> Result<(), Error> {
     match get_wrapped_inner(i, b'[', b']') {
         Some(maybe_addr) => {
