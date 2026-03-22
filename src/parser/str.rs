@@ -1,8 +1,11 @@
 //! Functions for common string operations.
 
+use core::ops::{self, RangeFrom, RangeTo};
+
 pub(crate) use self::maybe_pct_encoded::{
     process_percent_encoded_best_effort, PctEncodedFragments,
 };
+use crate::parser::trusted as trusted_parser;
 
 mod maybe_pct_encoded;
 
@@ -155,10 +158,17 @@ pub(crate) fn find_split3(
 /// If `needle` is not found, returns `None`.
 #[cfg(not(feature = "memchr"))]
 #[must_use]
-pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
+pub(crate) fn find_split_hole<T>(haystack: &T, needle: u8) -> Option<(&T, &T)>
+where
+    T: ?Sized
+        + AsRef<[u8]>
+        + ops::Index<RangeFrom<usize>, Output = T>
+        + ops::Index<RangeTo<usize>, Output = T>,
+{
     haystack
-        .bytes()
-        .position(|b| b == needle)
+        .as_ref()
+        .iter()
+        .position(|&b| b == needle)
         .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
 }
 
@@ -167,9 +177,14 @@ pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)
 /// If `needle` is not found, returns `None`.
 #[cfg(feature = "memchr")]
 #[must_use]
-pub(crate) fn find_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str)> {
-    memchr::memchr(needle, haystack.as_bytes())
-        .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
+pub(crate) fn find_split_hole<T>(haystack: &T, needle: u8) -> Option<(&T, &T)>
+where
+    T: ?Sized
+        + AsRef<[u8]>
+        + ops::Index<RangeFrom<usize>, Output = T>
+        + ops::Index<RangeTo<usize>, Output = T>,
+{
+    memchr::memchr(needle, haystack.as_ref()).map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
 }
 
 /// Finds the first needle, and returns the string before it, the needle, and the string after it.
@@ -285,73 +300,38 @@ pub(crate) fn rfind_split_hole(haystack: &str, needle: u8) -> Option<(&str, &str
         .map(|pos| (&haystack[..pos], &haystack[(pos + 1)..]))
 }
 
-/// Returns `true` if the string only contains the allowed characters.
+/// Returns `true` if the string only contains the allowed characters and percent-encoded char.
 #[must_use]
-fn satisfy_chars<F, G>(mut s: &str, pred_ascii: F, pred_nonascii: G) -> bool
+pub(crate) fn satisfy_chars_with_pct_encoded<F, G>(s: &str, pred_ascii: F, pred_nonascii: G) -> bool
 where
     F: Copy + Fn(u8) -> bool,
     G: Copy + Fn(char) -> bool,
 {
-    while !s.is_empty() {
-        match s.bytes().position(|b| !b.is_ascii()) {
-            Some(nonascii_pos) => {
-                // Valdiate ASCII prefix.
-                if nonascii_pos != 0 {
-                    let (prefix, rest) = s.split_at(nonascii_pos);
-                    if !prefix.bytes().all(pred_ascii) {
-                        return false;
-                    }
-                    s = rest;
-                }
-
-                // Extract non-ASCII part and validate it.
-                let (prefix, rest) = match s.bytes().position(|b| b.is_ascii()) {
-                    Some(ascii_pos) => s.split_at(ascii_pos),
-                    None => (s, ""),
-                };
-                if !prefix.chars().all(pred_nonascii) {
+    let mut chars = s.chars();
+    while let Some(c) = chars.next() {
+        if c.is_ascii() {
+            if c == '%' {
+                // Percent-encoded triplet.
+                // TODO: `Option::is_none_or` is available since Rust 1.82.0.
+                if chars.next().filter(|c| c.is_ascii_hexdigit()).is_none() {
+                    // Upper nibble.
                     return false;
                 }
-                s = rest;
+                if chars.next().filter(|c| c.is_ascii_hexdigit()).is_none() {
+                    // Lower nibble.
+                    return false;
+                }
+            } else if !pred_ascii(c as u8) {
+                // Unacceptable ASCII char.
+                return false;
             }
-            None => {
-                // All chars are ASCII.
-                return s.bytes().all(pred_ascii);
-            }
+        } else if !pred_nonascii(c) {
+            // Unacceptable non-ASCII char.
+            return false;
         }
     }
 
     true
-}
-
-/// Returns `true` if the string only contains the allowed characters and percent-encoded char.
-#[must_use]
-pub(crate) fn satisfy_chars_with_pct_encoded<F, G>(
-    mut s: &str,
-    pred_ascii: F,
-    pred_nonascii: G,
-) -> bool
-where
-    F: Copy + Fn(u8) -> bool,
-    G: Copy + Fn(char) -> bool,
-{
-    while let Some((prefix, suffix)) = find_split_hole(s, b'%') {
-        // Verify strings before the percent-encoded char.
-        if !prefix.is_empty() && !satisfy_chars(prefix, pred_ascii, pred_nonascii) {
-            return false;
-        }
-
-        // Verify the percent-encoded char.
-        if !starts_with_double_hexdigits(suffix.as_bytes()) {
-            return false;
-        }
-
-        // Advance the cursor.
-        s = &suffix[2..];
-    }
-
-    // Verify the rest.
-    satisfy_chars(s, pred_ascii, pred_nonascii)
 }
 
 /// Returns `true` if the given string starts with two hexadecimal digits.
@@ -360,6 +340,20 @@ pub(crate) fn starts_with_double_hexdigits(s: &[u8]) -> bool {
     match s {
         [x, y] | [x, y, ..] => x.is_ascii_hexdigit() && y.is_ascii_hexdigit(),
         _ => false,
+    }
+}
+
+/// Decodes the starting two hexdigits if available, and returns the byte and the rest.
+#[must_use]
+pub(crate) fn strip_decode_xdigits2<T>(s: &T) -> (Option<u8>, &T)
+where
+    T: ?Sized + AsRef<[u8]> + ops::Index<RangeFrom<usize>, Output = T>,
+{
+    if starts_with_double_hexdigits(s.as_ref()) {
+        let (decoded, rest) = trusted_parser::take_xdigits2(s);
+        (Some(decoded), rest)
+    } else {
+        (None, s)
     }
 }
 

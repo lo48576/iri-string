@@ -59,7 +59,7 @@ impl<'a> Iterator for Chunks<'a> {
         match find_split(self.template, b'{') {
             Some(("", _)) => {
                 let (expr_body, rest) = find_split_hole(&self.template[1..], b'}')
-                    .expect("[validity] expression inside a template must be closed");
+                    .expect("expression inside a template must be closed");
                 self.template = rest;
                 Some(Chunk::Expr(ExprBody::new(expr_body)))
             }
@@ -457,37 +457,38 @@ fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
             if max_len == 0 {
                 return ControlFlow::Break(Ok(()));
             }
-            let result =
-                match frag {
-                    PctEncodedFragments::Char(s, _) => {
-                        max_len -= 1;
-                        writer.write_str(s)
-                    }
-                    PctEncodedFragments::NoPctStr(s) => {
-                        let mut chars = s.char_indices();
-                        let count =
-                            chars.by_ref().take(max_len).last().map(|(i, _)| i).expect(
-                                "[consistency] decomposed string fragment must not be empty",
-                            );
-                        let sub_len = s.len() - chars.as_str().len();
-                        max_len -= count;
-                        write!(
-                            writer,
-                            "{}",
-                            PercentEncoded::<_, S>::characters(&s[..sub_len])
-                        )
-                    }
-                    PctEncodedFragments::StrayPercent => {
-                        max_len -= 1;
-                        writer.write_str("%25")
-                    }
-                    PctEncodedFragments::InvalidUtf8PctTriplets(s) => {
-                        let count = max_len.min(s.len() / 3);
-                        let sub_len = count * 3;
-                        max_len -= count;
-                        writer.write_str(&s[..sub_len])
-                    }
-                };
+            let result = match frag {
+                PctEncodedFragments::Char(s, _) => {
+                    max_len -= 1;
+                    writer.write_str(s)
+                }
+                PctEncodedFragments::NoPctStr(s) => {
+                    let mut chars = s.char_indices();
+                    let count = chars
+                        .by_ref()
+                        .take(max_len)
+                        .last()
+                        .map(|(i, _)| i)
+                        .expect("decomposed string fragment must not be empty");
+                    let sub_len = s.len() - chars.as_str().len();
+                    max_len -= count;
+                    write!(
+                        writer,
+                        "{}",
+                        PercentEncoded::<_, S>::characters(&s[..sub_len])
+                    )
+                }
+                PctEncodedFragments::StrayPercent => {
+                    max_len -= 1;
+                    writer.write_str("%25")
+                }
+                PctEncodedFragments::InvalidUtf8PctTriplets(s) => {
+                    let count = max_len.min(s.len() / 3);
+                    let sub_len = count * 3;
+                    max_len -= count;
+                    writer.write_str(&s[..sub_len])
+                }
+            };
             if result.is_err() {
                 return ControlFlow::Break(result);
             }

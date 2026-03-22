@@ -15,6 +15,7 @@ use crate::format::Censored;
 use crate::format::{ToDedicatedString, ToStringFallible};
 use crate::normalize::{self, NormalizationMode, PathCharacteristic, PctCaseNormalized};
 use crate::parser::str::{find_split, prior_byte2};
+use crate::parser::trusted as trusted_parser;
 use crate::parser::validate as parser;
 use crate::spec::Spec;
 use crate::types::{RiAbsoluteStr, RiReferenceStr, RiRelativeStr, RiStr};
@@ -262,6 +263,7 @@ impl Default for HostRepr<'_> {
 /// # Usage
 ///
 /// 1. Create builder by [`Builder::new()`][`Self::new`].
+///     + Alternatively, you can create a builder from an IRI using [`From`] trait.
 /// 2. Set (or unset) components and set normalization mode as you wish.
 /// 3. Validate by [`Builder::build()`][`Self::build`] and get [`Built`] value.
 /// 4. Use [`core::fmt::Display`] trait to serialize the resulting [`Built`],
@@ -680,6 +682,40 @@ impl<'a> Builder<'a> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// The builder does **not** convert or encode the values automatically, so
+    /// the caller need to encode the host by yourself if they won't be valid
+    /// without additional encoding.
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::build::Builder;
+    /// use iri_string::percent_encode::PercentEncodedForUri;
+    /// use iri_string::types::UriReferenceStr;
+    ///
+    /// let mut builder = Builder::new();
+    /// builder.host("\u{03B1}.example.com");
+    /// assert!(
+    ///     builder.build::<UriReferenceStr>().is_err(),
+    ///     "a URI cannot have non-ASCII characters"
+    /// );
+    ///
+    /// let mut builder = Builder::new();
+    /// // Encode by yourself.
+    /// //
+    /// // Using percent-encoding here, but of course you can use another
+    /// // encoding such as IDNA.
+    /// let encoded_host =
+    ///     PercentEncodedForUri::from_reg_name("\u{03B1}.example.com")
+    ///         .to_string();
+    /// assert_eq!(encoded_host, "%CE%B1.example.com");
+    /// builder.host(&encoded_host);
+    /// let uri = builder.build::<UriReferenceStr>()?;
+    /// # #[cfg(feature = "alloc")] {
+    /// assert_eq!(uri.to_string(), "//%CE%B1.example.com");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
     #[inline]
     pub fn host(&mut self, v: &'a str) {
         self.authority_builder().host = HostRepr::String(v);
@@ -929,6 +965,8 @@ impl<'a> Builder<'a> {
     ///
     /// # Examples
     ///
+    /// From an empty builder:
+    ///
     /// ```
     /// # use iri_string::validate::Error;
     /// use iri_string::build::Builder;
@@ -950,9 +988,81 @@ impl<'a> Builder<'a> {
     /// # }
     /// # Ok::<_, Error>(())
     /// ```
+    ///
+    /// From an IRI:
+    ///
+    /// ```
+    /// # use iri_string::validate::Error;
+    /// use iri_string::build::Builder;
+    /// use iri_string::types::{IriReferenceStr, IriStr};
+    ///
+    /// // Using `IriStr` in this example, but you can use
+    /// // other relative or absolute URI/IRI types too.
+    /// let orig = IriStr::new("http://example.com/bar/")?;
+    /// let mut builder = Builder::from(orig);
+    /// // http -> https
+    /// builder.scheme("https");
+    /// builder.userinfo("username");
+    ///
+    /// let iri = builder.build::<IriReferenceStr>()?;
+    /// # #[cfg(feature = "alloc")] {
+    /// assert_eq!(iri.to_string(), "https://username@example.com/bar/");
+    /// # }
+    /// # Ok::<_, Error>(())
+    /// ```
     #[inline]
     pub fn normalize(&mut self) {
         self.normalize = true;
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiReferenceStr<S>> for Builder<'a> {
+    fn from(iri: &'a RiReferenceStr<S>) -> Self {
+        let (scheme, authority_str, path, query, fragment) =
+            trusted_parser::decompose_iri_reference(iri).to_major();
+        let authority = authority_str.map(|authority_str| {
+            let authority_components =
+                trusted_parser::authority::decompose_authority(authority_str);
+
+            AuthorityBuilder {
+                host: HostRepr::String(authority_components.host()),
+                port: authority_components
+                    .port()
+                    .map_or_else(Default::default, Into::into),
+                userinfo: authority_components
+                    .userinfo()
+                    .map_or_else(Default::default, Into::into),
+            }
+        });
+        Self {
+            scheme,
+            authority,
+            path,
+            query,
+            fragment,
+            normalize: false,
+        }
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiRelativeStr<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiRelativeStr<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
+impl<'a, S: Spec> From<&'a RiStr<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiStr<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
     }
 }
 
@@ -1020,8 +1130,14 @@ macro_rules! impl_stringifiers {
             #[inline]
             fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
                 let s = self.try_to_string()?;
-                Ok(TryFrom::try_from(s)
-                    .expect("[validity] the IRI to be built is already validated"))
+                // SAFETY: `Built` will be returned to the user only when the
+                // resulting string is valid as the target IRI type.
+                Ok(unsafe {
+                    Self::Target::new_unchecked_justified(
+                        s,
+                        "the IRI to be built is already validated",
+                    )
+                })
             }
         }
 
@@ -1038,7 +1154,11 @@ macro_rules! impl_stringifiers {
             #[inline]
             fn from(builder: &Built<'_, $borrowed<S>>) -> Self {
                 let s = builder.to_string();
-                Self::try_from(s).expect("[validity] the IRI to be built is already validated")
+                // SAFETY: `Built` will be returned to the user only when the
+                // resulting string is valid as the target IRI type.
+                unsafe {
+                    Self::new_unchecked_justified(s, "the IRI to be built is already validated")
+                }
             }
         }
     };

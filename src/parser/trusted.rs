@@ -4,8 +4,8 @@
 
 pub(crate) mod authority;
 
-use core::cmp::Ordering;
 use core::num::NonZeroUsize;
+use core::ops::{self, RangeFrom};
 
 use crate::components::{RiReferenceComponents, Splitter};
 use crate::format::eq_str_display;
@@ -191,6 +191,22 @@ pub(crate) fn extract_authority_absolute(i: &str) -> Option<&str> {
 #[must_use]
 pub(crate) fn extract_authority_relative(i: &str) -> Option<&str> {
     slash_slash_authority_opt(i).1
+}
+
+/// Extracts `authority` part and its position from an IRI reference.
+///
+/// # Precondition
+///
+/// The given string must be a valid IRI reference.
+#[cfg(feature = "alloc")]
+#[must_use]
+pub(crate) fn extract_authority_and_offset(i: &str) -> Option<(&str, usize)> {
+    let (i, scheme) = scheme_colon_opt(i);
+    let authority = slash_slash_authority_opt(i).1?;
+    // 2: `"//".len()`
+    // +3: `"://".len()`
+    let offset = scheme.map_or(2, |s| s.len() + 3);
+    Some((authority, offset))
 }
 
 /// Extracts `path` part from an IRI reference.
@@ -414,18 +430,12 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, mode: NormalizednessCheckMode) -> 
 ///
 /// The parameters `upper` and `lower` should be an ASCII hexadecimal digit.
 #[must_use]
-pub(super) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
-    let i_upper = match (upper & 0xf0).cmp(&0x40) {
-        Ordering::Less => upper - b'0',
-        Ordering::Equal => upper - (b'A' - 10),
-        Ordering::Greater => upper - (b'a' - 10),
-    };
-    let i_lower = match (lower & 0xf0).cmp(&0x40) {
-        Ordering::Less => lower - b'0',
-        Ordering::Equal => lower - (b'A' - 10),
-        Ordering::Greater => lower - (b'a' - 10),
-    };
-    (i_upper << 4) + i_lower
+pub(crate) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
+    // 'A'..='F' (0x41..=0x46) | 'a'..='f' (0x61..=0x66) => add 9 to the nibble.
+    // '0'..='9' (0x30..=0x39) => use the nibble as is.
+    let upper_offset = if upper >= 0x40 { 9 << 4 } else { 0 };
+    let lower_offset = if lower >= 0x40 { 9 } else { 0 };
+    (upper << 4) + upper_offset + (lower & 0x0f) + lower_offset
 }
 
 /// Converts the first two hexdigit bytes in the buffer into a byte.
@@ -434,14 +444,14 @@ pub(super) fn hexdigits_to_byte([upper, lower]: [u8; 2]) -> u8 {
 ///
 /// Panics if the string does not start with two hexdigits.
 #[must_use]
-pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
-    let mut bytes = s.bytes();
-    let upper_xdigit = bytes
-        .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
-    let lower_xdigit = bytes
-        .next()
-        .expect("[validity] at least two bytes should follow the `%` in a valid IRI reference");
+pub(crate) fn take_xdigits2<T>(s: &T) -> (u8, &T)
+where
+    T: ?Sized + AsRef<[u8]> + ops::Index<RangeFrom<usize>, Output = T>,
+{
+    let (upper_xdigit, lower_xdigit) = match s.as_ref() {
+        [upper, lower, ..] => (*upper, *lower),
+        _ => panic!("at least two bytes should follow the `%` in a valid IRI reference"),
+    };
     let v = hexdigits_to_byte([upper_xdigit, lower_xdigit]);
     (v, &s[2..])
 }
@@ -453,17 +463,12 @@ pub(crate) fn take_xdigits2(s: &str) -> (u8, &str) {
 /// The given string should be valid `host` or `host ":" port` string.
 #[must_use]
 pub(crate) fn is_ascii_only_host(mut host: &str) -> bool {
-    while let Some((i, c)) = host
-        .char_indices()
-        .find(|(_i, c)| !c.is_ascii() || *c == '%')
-    {
-        if c != '%' {
+    while let Some(pos) = host.find(|c: char| !c.is_ascii() || c == '%') {
+        if host.as_bytes()[pos] != b'%' {
             // Non-ASCII character found.
-            debug_assert!(!c.is_ascii());
             return false;
         }
-        // Percent-encoded character found.
-        let after_pct = &host[(i + 1)..];
+        let after_pct = &host[(pos + 1)..];
         let (byte, rest) = take_xdigits2(after_pct);
         if !byte.is_ascii() {
             return false;

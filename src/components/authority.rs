@@ -27,6 +27,21 @@ impl<'a> AuthorityComponents<'a> {
             .map(trusted_parser::authority::decompose_authority)
     }
 
+    /// Creates a new `AuthorityComponents` from the IRI, and return it with authority offset.
+    ///
+    /// # Precondition
+    ///
+    /// The parameter `iri` must be a valid IRI reference. If the condition is
+    /// not met, this function may panic or return a wrong result (but won't
+    /// cause undefined behavior).
+    #[cfg(feature = "alloc")]
+    #[must_use]
+    pub(crate) fn from_iri_get_offset(iri: &'a str) -> Option<(Self, usize)> {
+        let (authority_str, offset) = trusted_parser::extract_authority_and_offset(iri)?;
+        let components = trusted_parser::authority::decompose_authority(authority_str);
+        Some((components, offset))
+    }
+
     /// Returns the `userinfo` part, excluding the following `@`.
     #[must_use]
     pub fn userinfo(&self) -> Option<&'a str> {
@@ -43,7 +58,19 @@ impl<'a> AuthorityComponents<'a> {
         &self.authority[self.host_start..self.host_end]
     }
 
-    /// Returns the `port` part, excluding the following `:`.
+    /// Returns the `host` part if it matches `reg-name` (i.e., looks like a domain name).
+    #[inline]
+    #[must_use]
+    pub fn reg_name(&self) -> Option<&'a str> {
+        let host = self.host();
+        if trusted_parser::authority::is_host_reg_name(host) {
+            Some(host)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the `port` part, excluding the leading `:`.
     #[must_use]
     pub fn port(&self) -> Option<&'a str> {
         if self.host_end == self.authority.len() {

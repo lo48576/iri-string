@@ -43,9 +43,9 @@ fn into_char_trusted(bytes: &[u8]) -> Result<char, ()> {
                 | (u32::from(bytes[2] & CONTINUE_BYTE_MASK) << 6)
                 | u32::from(bytes[3] & CONTINUE_BYTE_MASK)
         }
-        len => unreachable!(
-            "[consistency] expected 2, 3, or 4 bytes for a character, but got {len} as the length"
-        ),
+        len => {
+            unreachable!("expected 2, 3, or 4 bytes for a character, but got {len} as the length")
+        }
     };
     if c < MIN[len - 2] {
         // Redundant UTF-8 encoding.
@@ -55,7 +55,7 @@ fn into_char_trusted(bytes: &[u8]) -> Result<char, ()> {
     char::from_u32(c).ok_or(())
 }
 
-/// Writable as a normalized path segment percent-encoding IRI.
+/// A wrapper to make a path be written with percent-encoding normalization.
 ///
 /// This wrapper does the things below when being formatted:
 ///
@@ -66,11 +66,11 @@ fn into_char_trusted(bytes: &[u8]) -> Result<char, ()> {
 ///
 /// # Safety
 ///
-/// The given string should be the valid path segment.
+/// The given string should be a valid path.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PctCaseNormalized<'a, S> {
-    /// Valid segment name to normalize.
-    segname: &'a str,
+    /// Valid path to normalize.
+    path: &'a str,
     /// Spec.
     _spec: PhantomData<fn() -> S>,
 }
@@ -81,7 +81,7 @@ impl<'a, S: Spec> PctCaseNormalized<'a, S> {
     #[must_use]
     pub(crate) fn new(source: &'a str) -> Self {
         Self {
-            segname: source,
+            path: source,
             _spec: PhantomData,
         }
     }
@@ -89,7 +89,7 @@ impl<'a, S: Spec> PctCaseNormalized<'a, S> {
 
 impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut rest = self.segname;
+        let mut rest = self.path;
 
         'outer_loop: while !rest.is_empty() {
             // Scan the next percent-encoded triplet.
@@ -207,8 +207,7 @@ impl<S: Spec> fmt::Display for PctCaseNormalized<'_, S> {
                             .iter()
                             .copied()
                             .all(is_utf8_byte_continue),
-                        "[consistency] all non-first bytes have been \
-                         confirmed that they are UTF-8 continue bytes"
+                        "all non-first bytes have been confirmed to be UTF-8 continue bytes"
                     );
                     // Note that the first pct-encoded triplet is stripped from
                     // `after_first_triplet`.
@@ -273,7 +272,7 @@ impl fmt::Display for NormalizedAsciiOnlyHost<'_> {
 
             assert!(
                 first_decoded.is_ascii(),
-                "[consistency] this function requires ASCII-only host as an argument"
+                "this function requires ASCII-only host as an argument"
             );
 
             if is_ascii_unreserved(first_decoded) {

@@ -119,7 +119,7 @@ impl UriTemplateStr {
     #[inline]
     #[must_use]
     pub unsafe fn new_unchecked(s: &str) -> &Self {
-        // SAFETY: `new_always_unchecked` requires the same precondition
+        // SAFETY: `new_unchecked` requires the same precondition
         // as `new_always_unchecked`.
         unsafe { Self::new_always_unchecked(s) }
     }
@@ -140,6 +140,11 @@ impl UriTemplateStr {
         // attribute and the content is guaranteed as valid by the
         // precondition of the function.
         unsafe { &*(s as *const str as *const Self) }
+    }
+
+    /// Checks if the given string content is valid as `Self`.
+    pub(super) fn validate(s: &str) -> Result<(), Error> {
+        validate_template_str(s)
     }
 
     /// Returns the template as a plain `&str`.
@@ -468,8 +473,8 @@ impl<'a> TryFrom<&'a str> for &'a UriTemplateStr {
 
     #[inline]
     fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        match validate_template_str(s) {
-            // SAFETY: just checked the string is valid.
+        match UriTemplateStr::validate(s) {
+            // SAFETY: just confirmed the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }
@@ -483,8 +488,8 @@ impl<'a> TryFrom<&'a [u8]> for &'a UriTemplateStr {
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
         let s = core::str::from_utf8(bytes)
             .map_err(|e| Error::new(ErrorKind::InvalidUtf8, e.valid_up_to()))?;
-        match validate_template_str(s) {
-            // SAFETY: just checked the string is valid.
+        match UriTemplateStr::validate(s) {
+            // SAFETY: just confirmed the string is valid.
             Ok(()) => Ok(unsafe { UriTemplateStr::new_always_unchecked(s) }),
             Err(e) => Err(e),
         }

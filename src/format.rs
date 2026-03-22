@@ -28,18 +28,21 @@ impl std::error::Error for CapacityOverflowError {}
 struct ByteBufWriter<'b> {
     /// Destination buffer.
     buffer: &'b mut [u8],
-    /// Position to write the next string fragment.
-    cursor: usize,
+    /// Total written number of bytes.
+    len_written: usize,
 }
 
 impl fmt::Write for ByteBufWriter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let dest = &mut self.buffer[self.cursor..];
-        if dest.len() < s.len() {
+        let len = s.len();
+        // TODO: `<[_]>::split_at_mut_checked()` is stable since Rust 1.80.0.
+        if self.buffer.len() < len {
             return Err(fmt::Error);
         }
-        dest[..s.len()].copy_from_slice(s.as_bytes());
-        self.cursor += s.len();
+        let (prefix, rest) = core::mem::take(&mut self.buffer).split_at_mut(len);
+        prefix.copy_from_slice(s.as_bytes());
+        self.buffer = rest;
+        self.len_written += len;
         Ok(())
     }
 }
@@ -51,14 +54,14 @@ pub fn write_to_slice<'a, T: fmt::Display>(
 ) -> Result<&'a str, CapacityOverflowError> {
     let mut writer = ByteBufWriter {
         buffer: buf,
-        cursor: 0,
+        len_written: 0,
     };
     if write!(writer, "{}", value).is_err() {
         return Err(CapacityOverflowError);
     }
-    let len = writer.cursor;
-    let result = core::str::from_utf8(&buf[..len])
-        .expect("[validity] fmt::Display writes valid UTF-8 byte sequence");
+    let len = writer.len_written;
+    let result =
+        core::str::from_utf8(&buf[..len]).expect("fmt::Display writes valid UTF-8 byte sequence");
     Ok(result)
 }
 
@@ -103,7 +106,7 @@ pub fn try_append_to_string<T: fmt::Display>(
     if write!(writer, "{}", value).is_err() {
         let e = writer
             .error
-            .expect("[consistency] allocation error should be set on formatting failure");
+            .expect("allocation error should be set on formatting failure");
         return Err(e);
     }
     Ok(())
@@ -118,12 +121,8 @@ where
     struct CmpWriter<'a>(&'a str);
     impl fmt::Write for CmpWriter<'_> {
         fn write_str(&mut self, s: &str) -> fmt::Result {
-            if self.0.len() < s.len() {
-                return Err(fmt::Error);
-            }
-            let (prefix, rest) = self.0.split_at(s.len());
-            self.0 = rest;
-            if prefix == s {
+            if let Some(rest) = self.0.strip_prefix(s) {
+                self.0 = rest;
                 Ok(())
             } else {
                 Err(fmt::Error)

@@ -1,4 +1,12 @@
 //! Percent encoding.
+//!
+//! Functions in this module is intended for manual URI components manipulation.
+//! If you need to convert a Unicode IRI into ASCII-only URI, check `encode_to_uri`
+//! methods of IRI string types (such as [`IriStr::encode_to_uri`]).
+//!
+//! [`IriStr::encode_to_uri`]: `crate::types::IriStr::encode_to_uri`
+
+pub mod decode;
 
 use core::fmt::{self, Write as _};
 use core::marker::PhantomData;

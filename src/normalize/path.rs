@@ -1,7 +1,7 @@
 //! Path normalization.
 
 use core::fmt;
-use core::ops::Range;
+use core::ops::{ControlFlow, Range};
 
 use crate::parser::str::{find_split_hole, rfind};
 use crate::spec::{Spec, UriSpec};
@@ -20,30 +20,57 @@ pub(crate) enum Path<'a> {
 
 /// Path that needs merge and/or dot segment removal.
 ///
+/// This works like a queue with `pop_front` functionality.
+///
 /// # Invariants
 ///
-/// If the first field (prefix field) is not `None`, it must end with a slash.
+/// * `back` should be `None` if `front` is empty.
+/// * `back` should be a non-empty string if `Some`.
+/// * `front` should ends with a slash if `back` is `Some`.
+///     + In other words, any path segments can exist in `front` or `back`
+///       but not both at a time.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct PathToNormalize<'a>(Option<&'a str>, &'a str);
+pub(crate) struct PathToNormalize<'a> {
+    /// Front half of the buffer.
+    front: &'a str,
+    /// Back half of the buffer.
+    back: Option<&'a str>,
+}
 
 impl<'a> PathToNormalize<'a> {
     /// Creates a `PathToNormalize` from the given single path.
     #[inline]
     #[must_use]
     pub(crate) fn from_single_path(path: &'a str) -> Self {
-        Self(None, path)
+        Self {
+            front: path,
+            back: None,
+        }
     }
 
     /// Creates a `PathToNormalize` from the given base and reference paths to be resolved.
     #[must_use]
     pub(crate) fn from_paths_to_be_resolved(base: &'a str, reference: &'a str) -> Self {
         if reference.starts_with('/') {
-            return Self(None, reference);
+            return Self {
+                front: reference,
+                back: None,
+            };
         }
 
         match rfind(base.as_bytes(), b'/') {
-            Some(last_slash_pos) => Self(Some(&base[..=last_slash_pos]), reference),
-            None => Self(None, reference),
+            Some(last_slash_pos) => {
+                let front = &base[..=last_slash_pos];
+                debug_assert!(front.ends_with('/'));
+                Self {
+                    front,
+                    back: Some(reference).filter(|s| !s.is_empty()),
+                }
+            }
+            None => Self {
+                front: reference,
+                back: None,
+            },
         }
     }
 
@@ -51,73 +78,79 @@ impl<'a> PathToNormalize<'a> {
     #[inline]
     #[must_use]
     fn is_empty(&self) -> bool {
-        // If `self.0` is `Some(_)`, it ends with a slash, i.e. it is not empty.
-        self.0.is_none() && self.1.is_empty()
+        debug_assert!(
+            !(self.front.is_empty() && self.back.is_some()),
+            "the front buffer must have been refilled"
+        );
+        self.front.is_empty()
     }
 
-    /// Returns the length of the not yet normalized path.
+    /// Returns the length of the path.
     #[inline]
     #[must_use]
     pub(super) fn len(&self) -> usize {
-        self.len_prefix() + self.1.len()
+        self.front.len() + self.back.map_or(0, |s| s.len())
     }
 
-    /// Returns the length of the prefix part.
+    /// Returns `true` if the path starts with a slash.
+    #[must_use]
+    fn starts_with_slash(&self) -> bool {
+        self.front.starts_with('/')
+    }
+
+    /// Returns a byte at the position.
     ///
-    /// Returns 0 if the prefix part is empty.
+    /// Returns `None` if the index is out of range.
+    // This characteristic is necessary since `i` can be the index after the
+    // last byte (i.e., the "end" index of the range).
+    #[must_use]
+    fn byte_at(&self, i: usize) -> Option<u8> {
+        match i.checked_sub(self.front.len()) {
+            None => Some(self.front.as_bytes()[i]),
+            Some(back_i) => self
+                .back
+                .and_then(|back| back.as_bytes().get(back_i).copied()),
+        }
+    }
+
+    /// Returns the position of the next slash after (including) `start`.
     #[inline]
     #[must_use]
-    fn len_prefix(&self) -> usize {
-        self.0.map_or(0, |s| s.len())
-    }
-
-    /// Returns a byte at the given position.
-    #[must_use]
-    fn byte_at(&self, mut i: usize) -> Option<u8> {
-        if let Some(prefix) = self.0 {
-            if i < prefix.len() {
-                return Some(prefix.as_bytes()[i]);
-            }
-            i -= prefix.len();
+    fn find_next_slash_from(&self, start: usize) -> Option<usize> {
+        if let Some(back_i) = start.checked_sub(self.front.len()) {
+            // Search the back buffer.
+            return self.back?[back_i..].find('/').map(|pos| start + pos);
         }
-        self.1.as_bytes().get(i).copied()
-    }
-
-    /// Returns the position of the next slash of the byte at the given position.
-    #[must_use]
-    fn find_next_slash(&self, scan_start: usize) -> Option<usize> {
-        if let Some(prefix) = self.0 {
-            let prefix_len = prefix.len();
-            if scan_start < prefix_len {
-                prefix[scan_start..].find('/').map(|rel| rel + scan_start)
-            } else {
-                let local_i = scan_start - prefix_len;
-                self.1[local_i..].find('/').map(|rel| rel + scan_start)
+        match self.front[start..].find('/') {
+            Some(pos) => Some(start + pos),
+            None => {
+                debug_assert!(
+                    self.back.is_none(),
+                    "front must ends with a slash if back is `Some`"
+                );
+                None
             }
-        } else {
-            self.1[scan_start..].find('/').map(|rel| rel + scan_start)
         }
     }
 
     /// Removes the `len` characters from the beginning of `self`.
     fn remove_start(&mut self, len: usize) {
-        if let Some(prefix) = self.0 {
-            if let Some(suffix_trim_len) = len.checked_sub(prefix.len()) {
-                self.0 = None;
-                self.1 = &self.1[suffix_trim_len..];
-            } else {
-                self.0 = Some(&prefix[len..]);
-            }
-        } else {
-            self.1 = &self.1[len..];
+        if let Some(back_len) = len.checked_sub(self.front.len()) {
+            self.front = self
+                .back
+                .take()
+                .and_then(|s| s.get(back_len..))
+                .unwrap_or_default();
+            return;
         }
+        self.front = &self.front[len..];
     }
 
     /// Removes the prefix that are ignorable on normalization.
+    //
     // Skips the prefix dot segments without leading slashes (such as `./`,
-    // `../`, and `../.././`).
-    // This is necessary because such segments should be removed with the
-    // FOLLOWING slashes, not leading slashes.
+    // `../`, and `../.././`). This is necessary because such segments should be
+    // removed along with the FOLLOWING slashes, not leading slashes.
     fn remove_ignorable_prefix(&mut self) {
         while let Some(seg) = PathSegmentsIter::new(self).next() {
             if seg.has_leading_slash {
@@ -127,7 +160,7 @@ impl<'a> PathToNormalize<'a> {
             match seg.kind(self) {
                 SegmentKind::Dot | SegmentKind::DotDot => {
                     // Attempt to skip the following slash by `+ 1`.
-                    let skip = self.len().min(seg.range.end + 1);
+                    let skip = self.front.len().min(seg.name_range.end + 1);
                     self.remove_start(skip);
                 }
                 SegmentKind::Normal => break,
@@ -139,46 +172,38 @@ impl<'a> PathToNormalize<'a> {
 impl PathToNormalize<'_> {
     /// Writes the normalized path.
     pub(crate) fn fmt_write_normalize<S: Spec, W: fmt::Write>(
-        &self,
+        mut self,
         f: &mut W,
         op: NormalizationOp,
         authority_is_present: bool,
     ) -> fmt::Result {
-        debug_assert!(
-            self.0.map_or(true, |s| s.ends_with('/')),
-            "[validity] the prefix field of `PathToNormalize` should end with a slash"
-        );
-
         if self.is_empty() {
             return Ok(());
         }
 
         if (op.mode == NormalizationMode::PreserveAuthoritylessRelativePath)
             && !authority_is_present
-            && self.byte_at(0) != Some(b'/')
+            && !self.starts_with_slash()
         {
             // Treat the path as "opaque", i.e. do not apply dot segments removal.
             // See <https://github.com/lo48576/iri-string/issues/29>.
             debug_assert!(
                 op.mode.case_pct_normalization(),
-                "[consistency] case/pct normalization should still be applied"
+                "case/pct normalization should still be applied"
             );
-            if let Some(prefix) = self.0 {
-                write!(f, "{}", PctCaseNormalized::<S>::new(prefix))?;
+            write!(f, "{}", PctCaseNormalized::<S>::new(self.front))?;
+            if let Some(back) = self.back {
+                write!(f, "{}", PctCaseNormalized::<S>::new(back))?;
             }
-            write!(f, "{}", PctCaseNormalized::<S>::new(self.1))?;
             return Ok(());
         }
 
-        let mut rest = *self;
-
         // Skip the prefix dot segments without leading slashes (such as `./`,
-        // `../`, and `../.././`).
-        // This is necessary because such segments should be removed with the
-        // FOLLOWING slashes, not leading slashes.
-        rest.remove_ignorable_prefix();
-        if rest.is_empty() {
-            // Path consists of only `/.`s and `/..`s.
+        // `../`, and `../.././`). This is necessary because such segments should
+        // be removed along with the FOLLOWING slashes, not leading slashes.
+        self.remove_ignorable_prefix();
+        if self.is_empty() {
+            // The path consists of only `/.`s and `/..`s.
             // In this case, if the authority component is present, the result
             // should be `/`, not empty.
             if authority_is_present {
@@ -191,69 +216,150 @@ impl PathToNormalize<'_> {
         // Some(false): Something other than `/` is already written as the path.
         // Some(true): Only a `/` is written as the path.
         let mut only_a_slash_is_written = None;
-        let mut too_deep_area_may_have_dot_segments = true;
-        while !rest.is_empty() && too_deep_area_may_have_dot_segments {
+        // `true` if the path may have not yet handled dot segments.
+        let mut may_have_not_yet_resolved_dot_segments = true;
+        // Scan for the dot segments and resolve them.
+        while !self.is_empty() && may_have_not_yet_resolved_dot_segments {
             /// The size of the queue to track the path segments.
             ///
             /// This should be nonzero.
             const QUEUE_SIZE: usize = 8;
 
-            {
-                // Skip `/.` and `/..` segments at the head.
-                let mut skipped_len = 0;
-                for seg in PathSegmentsIter::new(&rest) {
-                    match seg.kind(&rest) {
-                        SegmentKind::Dot | SegmentKind::DotDot => {
-                            debug_assert!(
-                                seg.has_leading_slash,
-                                "[consistency] `.` or `..` segments without a
-                                 leading slash have already been skipped"
-                            );
-                            skipped_len = seg.range.end;
+            let ret = self.resolve_and_write_path_prefixes::<S, _, QUEUE_SIZE>(
+                &mut only_a_slash_is_written,
+                &mut may_have_not_yet_resolved_dot_segments,
+                authority_is_present,
+                f,
+                op,
+            )?;
+            if matches!(ret, ControlFlow::Break(_)) {
+                return Ok(());
+            }
+        }
+
+        if !self.is_empty() {
+            if !authority_is_present {
+                // Note that `self` has no dot segments anymore. In order to handle
+                // authority-less relative path correctly, it would be enough to
+                // check if the path to be written starts with `//` or not.
+                match only_a_slash_is_written {
+                    None => {
+                        // TODO: `Option::is_some_and()` is stabilized since Rust 1.70.0.
+                        if ((self.front == "/")
+                            && self.back.map_or(false, |back| back.starts_with('/')))
+                            || self.front.starts_with("//")
+                        {
+                            f.write_str("/.//")?;
+                            self.remove_start("//".len());
                         }
-                        _ => break,
                     }
-                }
-                rest.remove_start(skipped_len);
-                if rest.is_empty() {
-                    // Finished with a dot segment.
-                    // The last `/.` or `/..` should be replaced to `/`.
-                    if !authority_is_present && (only_a_slash_is_written == Some(true)) {
-                        // Insert a dot segment to break the prefix `//`.
-                        // Without this, the path starts with `//` and it may
-                        // be confused with the prefix of an authority.
-                        f.write_str(".//")?;
-                    } else {
-                        f.write_char('/')?;
+                    Some(true) => {
+                        if self.starts_with_slash() {
+                            f.write_str(".//")?;
+                            self.remove_start("/".len());
+                        }
                     }
-                    break;
+                    Some(false) => {}
                 }
             }
 
-            let mut queue: [Option<&'_ str>; QUEUE_SIZE] = Default::default();
-            let mut level: usize = 0;
-            let mut first_segment_has_leading_slash = false;
+            // Emit the path at once. No need to split into segments since it
+            // has no dot segments.
+            if op.mode.case_pct_normalization() {
+                write!(f, "{}", PctCaseNormalized::<S>::new(self.front))?;
+                if let Some(back) = &self.back {
+                    write!(f, "{}", PctCaseNormalized::<S>::new(back))?;
+                }
+            } else {
+                f.write_str(self.front)?;
+                if let Some(back) = &self.back {
+                    f.write_str(back)?;
+                }
+            }
+        }
 
-            // Find higher path segments.
-            let mut end = 0;
-            for seg in PathSegmentsIter::new(&rest) {
-                let kind = seg.kind(&rest);
+        Ok(())
+    }
+
+    /// Resolves the path and writes the prefixes as much as confirmed.
+    fn resolve_and_write_path_prefixes<S, W, const QUEUE_SIZE: usize>(
+        &mut self,
+        only_a_slash_is_written: &mut Option<bool>,
+        may_have_not_yet_resolved_dot_segments: &mut bool,
+        authority_is_present: bool,
+        f: &mut W,
+        op: NormalizationOp,
+    ) -> Result<ControlFlow<()>, fmt::Error>
+    where
+        S: Spec,
+        W: fmt::Write,
+    {
+        assert!(!self.is_empty());
+        assert!(*may_have_not_yet_resolved_dot_segments);
+
+        // Skip the dot segments at the head.
+        {
+            let skipped_len = PathSegmentsIter::new(self)
+                .map_while(|seg| match seg.kind(self) {
+                    SegmentKind::Dot | SegmentKind::DotDot => {
+                        debug_assert!(
+                            seg.has_leading_slash,
+                            "dot segments without a leading slash have already been skipped"
+                        );
+                        Some(seg.name_range.end)
+                    }
+                    SegmentKind::Normal => None,
+                })
+                .last()
+                .unwrap_or(0);
+            self.remove_start(skipped_len);
+            if self.is_empty() {
+                // Finished with a dot segment.
+                // The last `/.` or `/..` should be replaced to `/`.
+                if !authority_is_present && (*only_a_slash_is_written == Some(true)) {
+                    // Insert a dot segment to break the prefix `//`.
+                    // Without this, the path starts with `//` and it may
+                    // be confused with the prefix of an authority.
+                    f.write_str(".//")?;
+                } else {
+                    f.write_char('/')?;
+                }
+                return Ok(ControlFlow::Break(()));
+            }
+        }
+
+        // Find decisive path segments from higher to lower.
+        let (segname_queue, first_segment_has_leading_slash, resolved_end): (
+            [Option<&'_ str>; QUEUE_SIZE],
+            bool,
+            usize,
+        ) = {
+            let mut segname_queue: [Option<&'_ str>; QUEUE_SIZE] = [Default::default(); QUEUE_SIZE];
+            let mut first_segment_has_leading_slash = false;
+            // The end byte position of the prefix that is being written in this
+            // function call. The part before this position is ignorable after
+            // the next iteration.
+            let mut resolved_end = 0;
+
+            let mut level: usize = 0;
+            for seg in PathSegmentsIter::new(self) {
+                let kind = seg.kind(self);
                 match kind {
                     SegmentKind::Dot => {
-                        too_deep_area_may_have_dot_segments = true;
+                        *may_have_not_yet_resolved_dot_segments = true;
                     }
                     SegmentKind::DotDot => {
                         level = level.saturating_sub(1);
-                        too_deep_area_may_have_dot_segments = true;
-                        if level < queue.len() {
-                            queue[level] = None;
+                        *may_have_not_yet_resolved_dot_segments = true;
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = None;
                         }
                     }
                     SegmentKind::Normal => {
-                        if level < queue.len() {
-                            queue[level] = Some(seg.segment(&rest));
-                            too_deep_area_may_have_dot_segments = false;
-                            end = seg.range.end;
+                        if let Some(dest) = segname_queue.get_mut(level) {
+                            *dest = Some(seg.segment(self));
+                            *may_have_not_yet_resolved_dot_segments = false;
+                            resolved_end = seg.name_range.end;
                             if level == 0 {
                                 first_segment_has_leading_slash = seg.has_leading_slash;
                             }
@@ -263,47 +369,25 @@ impl PathToNormalize<'_> {
                 }
             }
 
-            // Write the path segments as possible, and update the internal state.
-            for segname in queue.iter().flatten() {
-                Self::emit_segment::<S, _>(
-                    f,
-                    &mut only_a_slash_is_written,
-                    first_segment_has_leading_slash,
-                    segname,
-                    authority_is_present,
-                    op,
-                )?;
-            }
+            (segname_queue, first_segment_has_leading_slash, resolved_end)
+        };
 
-            rest.remove_start(end);
+        // At this point, `segname_queue` has the prefix of the resolved path.
+        for segname in segname_queue.iter().flatten() {
+            PathToNormalize::emit_segment::<S, _>(
+                f,
+                only_a_slash_is_written,
+                first_segment_has_leading_slash,
+                segname,
+                authority_is_present,
+                op,
+            )?;
         }
 
-        if !rest.is_empty() {
-            // No need of searching dot segments anymore.
-            assert!(
-                !too_deep_area_may_have_dot_segments,
-                "[consistency] loop condition of the previous loop"
-            );
-            // Apply only normalization (if needed).
-            for seg in PathSegmentsIter::new(&rest) {
-                assert_eq!(
-                    seg.kind(&rest),
-                    SegmentKind::Normal,
-                    "[consistency] already confirmed that there are no more dot segments"
-                );
-                let segname = seg.segment(&rest);
-                Self::emit_segment::<S, _>(
-                    f,
-                    &mut only_a_slash_is_written,
-                    seg.has_leading_slash,
-                    segname,
-                    authority_is_present,
-                    op,
-                )?;
-            }
-        }
+        // Trim the processed prefix.
+        self.remove_start(resolved_end);
 
-        Ok(())
+        Ok(ControlFlow::Continue(()))
     }
 
     /// Emits a non-dot segment and update the current state.
@@ -322,8 +406,6 @@ impl PathToNormalize<'_> {
         match *only_a_slash_is_written {
             None => {
                 // First segment.
-                // This pass can be possible if `./` is repeated `QUEUE_SIZE`
-                // times at the beginning.
                 if first_segment_has_leading_slash {
                     f.write_char('/')?;
                 }
@@ -333,10 +415,11 @@ impl PathToNormalize<'_> {
             Some(only_a_slash) => {
                 if only_a_slash && !authority_is_present {
                     // Apply serialization like WHATWG URL Standard.
-                    // This prevents `<scheme=foo>:<path=//bar>` from written as
-                    // `foo://bar`, which is interpreted as
-                    // `<scheme=foo>://<authority=bar>`. Prepending `./`, the
-                    // serialization result would be `foo:/.//bar`, which is safe.
+                    // This prevents `<scheme=foo>:<path=//bar>` from written as `foo://bar`,
+                    // which is interpreted as `<scheme=foo>://<authority=bar>`, which is
+                    // semantically different from the original IRI. Prepending `./`, the
+                    // serialization result would be `foo:/.//bar`, which is semantically
+                    // equivalent to the original.
                     f.write_str("./")?;
                     *only_a_slash_is_written = Some(false);
                 }
@@ -503,7 +586,7 @@ impl PathCharacteristic {
             Ok(_) => PathCharacteristic::CommonRelative,
             Err(_) => writer
                 .result
-                .expect("[consistency] the formatting quits early by `Err` when the check is done"),
+                .expect("the formatting quits early by `Err` when the check is done"),
         }
     }
 }
@@ -523,6 +606,13 @@ impl SegmentKind {
     /// Creates a new `SegmentKind` from the given segment name.
     #[must_use]
     fn from_segment(s: &str) -> Self {
+        if !(1..=6).contains(&s.len()) {
+            // The length of a dot segment can only be 1, 2, 3, 4, or 6.
+            return SegmentKind::Normal;
+        }
+        if !(s.starts_with('.') || s.starts_with('%')) {
+            return SegmentKind::Normal;
+        }
         match s {
             "." | "%2E" | "%2e" => SegmentKind::Dot,
             ".." | ".%2E" | ".%2e" | "%2E." | "%2E%2E" | "%2E%2e" | "%2e." | "%2e%2E"
@@ -538,7 +628,7 @@ struct PathSegment {
     /// Presence of a leading slash.
     has_leading_slash: bool,
     /// Range of the segment name (without any slashes).
-    range: Range<usize>,
+    name_range: Range<usize>,
 }
 
 impl PathSegment {
@@ -546,17 +636,15 @@ impl PathSegment {
     #[inline]
     #[must_use]
     fn segment<'a>(&self, path: &PathToNormalize<'a>) -> &'a str {
-        if let Some(prefix) = path.0 {
-            let prefix_len = prefix.len();
-            if self.range.end <= prefix_len {
-                &prefix[self.range.clone()]
-            } else {
-                let range = (self.range.start - prefix_len)..(self.range.end - prefix_len);
-                &path.1[range]
-            }
-        } else {
-            &path.1[self.range.clone()]
+        if let Some(seg_name) = path.front.get(self.name_range.clone()) {
+            return seg_name;
         }
+        let front_len = path.front.len();
+        let back = path
+            .back
+            .expect("the segname range implies that the back buffer is filled");
+        let back_range = (self.name_range.start - front_len)..(self.name_range.end - front_len);
+        &back[back_range]
     }
 
     /// Returns the segment kind.
@@ -572,6 +660,9 @@ struct PathSegmentsIter<'a> {
     /// Path.
     path: &'a PathToNormalize<'a>,
     /// Current cursor position.
+    ///
+    /// This is the next scan start position. If the previous segment has a
+    /// trailing slash, the value will be the next byte position of the slash.
     cursor: usize,
 }
 
@@ -588,33 +679,24 @@ impl Iterator for PathSegmentsIter<'_> {
     type Item = PathSegment;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let path_len = self.path.len();
-        if self.cursor >= path_len {
-            return None;
-        }
-        let has_leading_slash = self.path.byte_at(self.cursor) == Some(b'/');
-
-        let prefix_len = self.path.len_prefix();
-        if (prefix_len != 0) && (self.cursor == prefix_len - 1) {
-            debug_assert!(has_leading_slash);
-            let end = self.path.1.find('/').unwrap_or(self.path.1.len()) + prefix_len;
-            self.cursor = end;
-            return Some(PathSegment {
-                has_leading_slash,
-                range: prefix_len..end,
-            });
-        }
-
-        if has_leading_slash {
+        let cursor_byte = self.path.byte_at(self.cursor)?;
+        let has_leading_slash = cursor_byte == b'/';
+        let segname_start = if has_leading_slash {
             // Skip the leading slash.
-            self.cursor += 1;
+            self.cursor + 1
+        } else {
+            self.cursor
         };
-        let start = self.cursor;
-        self.cursor = self.path.find_next_slash(self.cursor).unwrap_or(path_len);
 
+        // Find the trailing slash of the next segment.
+        let segname_end = self
+            .path
+            .find_next_slash_from(segname_start)
+            .unwrap_or_else(|| self.path.len());
+        self.cursor = segname_end;
         Some(PathSegment {
             has_leading_slash,
-            range: start..self.cursor,
+            name_range: segname_start..segname_end,
         })
     }
 }

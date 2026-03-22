@@ -54,6 +54,8 @@ pub(crate) enum ErrorKind {
     InvalidUserInfo,
     /// Invalid host.
     InvalidHost,
+    /// Invalid `reg-name`.
+    InvalidRegName,
     /// Invalid port.
     InvalidPort,
     /// Invalid path character.
@@ -80,6 +82,7 @@ impl ErrorKind {
             Self::InvalidScheme => "invalid scheme",
             Self::InvalidUserInfo => "invalid userinfo",
             Self::InvalidHost => "invalid host",
+            Self::InvalidRegName => "invalid reg-name",
             Self::InvalidPort => "invalid port",
             Self::InvalidPath => "invalid path",
             Self::InvalidQuery => "invalid query",
@@ -415,6 +418,43 @@ pub fn authority<S: Spec>(s: &str) -> Result<(), Error> {
 /// [host]: https://www.rfc-editor.org/rfc/rfc3986.html#section-3.2.2
 pub fn host<S: Spec>(s: &str) -> Result<(), Error> {
     parser::validate_host::<S>(s)
+}
+
+/// Validates [reg-name].
+///
+/// # Examples
+///
+/// ```
+/// use iri_string::{spec::UriSpec, validate::reg_name};
+/// assert!(reg_name::<UriSpec>("example.com").is_ok());
+/// assert!(reg_name::<UriSpec>("subdomain.example.com").is_ok());
+/// assert!(reg_name::<UriSpec>("no-period").is_ok());
+/// // Though strongly discouraged, this percent-encoded reg-name with
+/// // non-UTF-8 bytes is considered syntactically valid.
+/// assert!(reg_name::<UriSpec>("non-%99-utf-8").is_ok());
+/// // Empty host is valid. Remember `file:///` has empty authority (and empty host).
+/// assert!(reg_name::<UriSpec>("").is_ok());
+///
+/// // Even if this looks similar to `IPv4address`, it's not,
+/// // and this matches `reg-name` rule.
+/// assert!(reg_name::<UriSpec>("127.0.0.256").is_ok());
+///
+/// // IP addresses are not a `reg-name`.
+/// assert!(reg_name::<UriSpec>("127.0.0.1").is_err());
+/// assert!(reg_name::<UriSpec>("[::1]").is_err());
+/// assert!(reg_name::<UriSpec>("[::127.0.0.1]").is_err());
+/// // Syntax for future versions of IP addresses.
+/// assert!(reg_name::<UriSpec>("[v89ab.1+2,3(4)5&6]").is_err());
+///
+/// // `port` is not a part of the host.
+/// assert!(reg_name::<UriSpec>("host:8080").is_err());
+/// // `userinfo` is not a part of the host.
+/// assert!(reg_name::<UriSpec>("user:password@host").is_err());
+/// ```
+///
+/// [reg-name]: https://www.rfc-editor.org/rfc/rfc3986.html#page-21
+pub fn reg_name<S: Spec>(s: &str) -> Result<(), Error> {
+    parser::validate_reg_name::<S>(s)
 }
 
 /// Validates [IRI port][port].

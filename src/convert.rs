@@ -18,11 +18,6 @@ use crate::types::{
     RiAbsoluteString, RiFragmentString, RiQueryString, RiReferenceString, RiRelativeString,
     RiString,
 };
-#[cfg(feature = "alloc")]
-use crate::types::{
-    UriAbsoluteString, UriFragmentString, UriQueryString, UriReferenceString, UriRelativeString,
-    UriString,
-};
 
 /// Hexadecimal digits for a nibble.
 const HEXDIGITS: [u8; 16] = [
@@ -31,7 +26,7 @@ const HEXDIGITS: [u8; 16] = [
 
 /// A resource identifier mapped to a URI of some kind.
 ///
-/// Supported `Src` type are:
+/// Supported `Src` types are:
 ///
 /// * IRIs:
 ///     + [`IriAbsoluteStr`] (alias of `RiAbsoluteStr<IriSpec>`)
@@ -70,7 +65,7 @@ pub struct MappedToUri<'a, Src: ?Sized>(&'a Src);
 
 /// Implement conversions for an IRI string type.
 macro_rules! impl_for_iri {
-    ($borrowed:ident, $owned:ident, $owned_uri:ident) => {
+    ($borrowed:ident, $owned:ident) => {
         impl<S: Spec> fmt::Display for MappedToUri<'_, $borrowed<S>> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write_percent_encoded(f, self.0.as_str())
@@ -79,12 +74,18 @@ macro_rules! impl_for_iri {
 
         #[cfg(feature = "alloc")]
         impl<S: Spec> ToDedicatedString for MappedToUri<'_, $borrowed<S>> {
-            type Target = $owned_uri;
+            type Target = $owned<$crate::spec::UriSpec>;
 
             fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
                 let s = self.try_to_string()?;
-                Ok(TryFrom::try_from(s)
-                    .expect("[validity] the IRI must be encoded into a valid URI"))
+                // SAFETY: Conversion from an IRI to a URI always succeeds, so
+                // the resulting string is always a valid URI.
+                Ok(unsafe {
+                    <Self::Target>::new_unchecked_justified(
+                        s,
+                        "an IRI must always be encodable into a valid URI",
+                    )
+                })
             }
         }
 
@@ -105,12 +106,12 @@ macro_rules! impl_for_iri {
     };
 }
 
-impl_for_iri!(RiReferenceStr, RiReferenceString, UriReferenceString);
-impl_for_iri!(RiStr, RiString, UriString);
-impl_for_iri!(RiAbsoluteStr, RiAbsoluteString, UriAbsoluteString);
-impl_for_iri!(RiRelativeStr, RiRelativeString, UriRelativeString);
-impl_for_iri!(RiQueryStr, RiQueryString, UriQueryString);
-impl_for_iri!(RiFragmentStr, RiFragmentString, UriFragmentString);
+impl_for_iri!(RiReferenceStr, RiReferenceString);
+impl_for_iri!(RiStr, RiString);
+impl_for_iri!(RiAbsoluteStr, RiAbsoluteString);
+impl_for_iri!(RiRelativeStr, RiRelativeString);
+impl_for_iri!(RiQueryStr, RiQueryString);
+impl_for_iri!(RiFragmentStr, RiFragmentString);
 
 /// Percent-encodes and writes the IRI string using the given buffer.
 fn write_percent_encoded(f: &mut fmt::Formatter<'_>, mut s: &str) -> fmt::Result {
@@ -177,7 +178,7 @@ fn percent_encode_bytes(f: &mut fmt::Formatter<'_>, s: &str, buf: &mut [u8]) -> 
             debug_assert_eq!(
                 dest.len(),
                 3,
-                "[validity] `chunks_exact()` must return a slice with the exact length"
+                "`chunks_exact()` must return a slice with the exact length"
             );
             debug_assert_eq!(
                 dest[0], b'%',
@@ -250,14 +251,8 @@ pub(crate) fn try_percent_encode_iri_inline(
     let mut src_end = src_len;
     let mut rest_nonascii = num_nonascii;
     while rest_nonascii > 0 {
-        debug_assert!(
-            src_end > 0,
-            "[validity] the source position should not overrun"
-        );
-        debug_assert!(
-            dest_end > 0,
-            "[validity] the destination position should not overrun"
-        );
+        debug_assert!(src_end > 0, "the source position should not overrun");
+        debug_assert!(dest_end > 0, "the destination position should not overrun");
         src_end -= 1;
         dest_end -= 1;
         let byte = buf[src_end];
@@ -277,7 +272,7 @@ pub(crate) fn try_percent_encode_iri_inline(
     }
 
     // Move the result from the temporary buffer to the destination.
-    let s = String::from_utf8(buf).expect("[consistency] the encoding result is an ASCII string");
+    let s = String::from_utf8(buf).expect("the encoding result is an ASCII string");
     *iri = s;
     Ok(())
 }

@@ -1,5 +1,8 @@
 //! Relative IRI reference.
 
+#[cfg(feature = "alloc")]
+use alloc::collections::TryReserveError;
+
 use crate::components::AuthorityComponents;
 #[cfg(feature = "alloc")]
 use crate::mask_password::password_range_to_hide;
@@ -257,7 +260,12 @@ impl<S: Spec> RiRelativeStr<S> {
             // SAFETY: `extract_query` returns the query part of an IRI, and the
             // returned string should have only valid characters since is the
             // substring of the source IRI.
-            unsafe { RiQueryStr::new_maybe_unchecked(query) }
+            unsafe {
+                RiQueryStr::new_unchecked_justified(
+                    query,
+                    "query in a valid relative IRI reference must also be valid",
+                )
+            }
         })
     }
 
@@ -334,7 +342,17 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment(&self) -> Option<&RiFragmentStr<S>> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment()
+        trusted_parser::extract_fragment(self.as_str()).map(|fragment| {
+            // SAFETY: `extract_fragment` returns the fragment part of an IRI,
+            // and the returned string should have only valid characters since
+            // is the substring of the source IRI.
+            unsafe {
+                RiFragmentStr::new_unchecked_justified(
+                    fragment,
+                    "fragment in a valid relative IRI reference must also be valid",
+                )
+            }
+        })
     }
 
     /// Returns the fragment part as a raw string slice if exists.
@@ -378,7 +396,7 @@ impl<S: Spec> RiRelativeStr<S> {
     /// ```
     #[must_use]
     pub fn fragment_str(&self) -> Option<&str> {
-        AsRef::<RiReferenceStr<S>>::as_ref(self).fragment_str()
+        trusted_parser::extract_fragment(self.as_str())
     }
 
     /// Returns the authority components.
@@ -458,7 +476,7 @@ impl<S: Spec> RiRelativeString<S> {
     /// ```
     pub fn set_fragment(&mut self, fragment: Option<&RiFragmentStr<S>>) {
         raw::set_fragment(&mut self.inner, fragment.map(AsRef::as_ref));
-        debug_assert!(relative_ref::<S>(&self.inner).is_ok());
+        debug_assert_eq!(Self::validate(&self.inner), Ok(()));
     }
 
     /// Removes the password completely (including separator colon) from `self` even if it is empty.
@@ -501,9 +519,10 @@ impl<S: Spec> RiRelativeString<S> {
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(separator_colon..pw_range.end);
-            debug_assert!(
-                RiRelativeStr::<S>::new(buf).is_ok(),
-                "[validity] the IRI must be valid after the password component is removed"
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
+                "the IRI must be valid after the password component is removed"
             );
         }
     }
@@ -547,19 +566,174 @@ impl<S: Spec> RiRelativeString<S> {
         debug_assert_eq!(
             self.as_str().as_bytes().get(pw_range.start - 1).copied(),
             Some(b':'),
-            "[validity] the password component must be prefixed with a separator colon"
+            "the password component must be prefixed with a separator colon"
         );
         // SAFETY: the IRI must be valid after the password component is
         // replaced with the empty password.
         unsafe {
             let buf = self.as_inner_mut();
             buf.drain(pw_range);
-            debug_assert!(
-                RiRelativeStr::<S>::new(buf).is_ok(),
-                "[validity] the IRI must be valid after the password component \
+            debug_assert_eq!(
+                Self::validate(buf),
+                Ok(()),
+                "the IRI must be valid after the password component \
                  is replaced with the empty password"
             );
         }
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// If the IRI has no authority, returns `None` without doing nothing. Note
+    /// that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    fn try_replace_host_impl(
+        &mut self,
+        new_host: &'_ str,
+        replace_only_reg_name: bool,
+    ) -> Result<Option<&str>, TryReserveError> {
+        use crate::types::generic::replace_domain_impl;
+
+        let result: Result<Option<core::ops::Range<usize>>, TryReserveError>;
+        {
+            // SAFETY: Replacing the (already existing) host part with another
+            // valid host does not change the class of an IRI.
+            let strbuf = unsafe { self.as_inner_mut() };
+            result = replace_domain_impl::<S>(strbuf, new_host, replace_only_reg_name);
+            debug_assert_eq!(
+                RiRelativeStr::<S>::validate(strbuf),
+                Ok(()),
+                "replacing a host with another valid host must keep an IRI valid: raw={strbuf:?}",
+            );
+        }
+        result.map(|opt| opt.map(|range| &self.as_str()[range]))
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// If the IRI has no authority, returns `None` without doing nothing. Note
+    /// that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    ///
+    /// If you need to replace only when the host is `reg-name` (for example
+    /// when you attempt to apply IDNA encoding), use
+    /// [`try_replace_host_reg_name`][`Self::try_replace_host_reg_name`] method
+    /// instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::types::UriRelativeString;
+    /// let mut iri =
+    ///     UriRelativeString::try_from("//user:pass@example.com:443/").unwrap();
+    /// let new_host_opt = iri.replace_host("www.example.com");
+    /// assert_eq!(new_host_opt, Some("www.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "www.example.com");
+    /// assert_eq!(iri, "//user:pass@www.example.com:443/");
+    /// ```
+    pub fn replace_host(&mut self, new_host: &'_ str) -> Option<&str> {
+        self.try_replace_host(new_host)
+            .expect("failed to allocate memory when replacing the host part of an IRI")
+    }
+
+    /// Replaces the host in-place and returns the new host, if authority is not empty.
+    ///
+    /// This returns `TryReserveError` on memory allocation failure, instead of
+    /// panicking. Otherwise, this method behaves same as
+    /// [`replace_host`][`Self::replace_host`] method.
+    pub fn try_replace_host(&mut self, new_host: &'_ str) -> Result<Option<&str>, TryReserveError> {
+        self.try_replace_host_impl(new_host, false)
+    }
+
+    /// Replaces the domain name (`reg-name`) in-place and returns the new host,
+    /// if authority is not empty.
+    ///
+    /// If the IRI has no authority or the host is not a reg-name (i.e., is
+    /// neither an IP-address nor empty), returns `None` without doing nothing.
+    /// Note that an empty host is distinguished from the absence of an authority.
+    ///
+    /// If the new host is invalid (i.e., [`validate::validate_host`][`crate::validate::host`]
+    /// returns `Err(_)`), also returns `None` without doing anything.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use iri_string::types::UriRelativeString;
+    /// let mut iri =
+    ///     UriRelativeString::try_from("//user:pass@example.com:443/").unwrap();
+    /// let new_host_opt = iri.replace_host("www.example.com");
+    /// assert_eq!(new_host_opt, Some("www.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "www.example.com");
+    /// assert_eq!(iri, "//user:pass@www.example.com:443/");
+    /// ```
+    ///
+    /// ```
+    /// # use iri_string::types::UriRelativeString;
+    /// let mut iri =
+    ///     UriRelativeString::try_from("//192.168.0.1/").unwrap();
+    /// let new_host_opt = iri.replace_host_reg_name("localhost");
+    /// assert_eq!(new_host_opt, None, "IPv4 address is not a reg-name");
+    /// assert_eq!(iri, "//192.168.0.1/", "won't be changed");
+    /// ```
+    ///
+    /// To apply IDNA conversion, get the domain by [`AuthorityComponents::reg_name`]
+    /// method, convert the domain, and then set it by this
+    /// `replace_host_reg_name` method.
+    ///
+    /// ```
+    /// # extern crate alloc;
+    /// # use alloc::string::String;
+    /// # use iri_string::types::IriRelativeString;
+    /// /// Converts the given into IDNA encoding.
+    /// fn conv_idna(domain: &str) -> String {
+    ///     /* ... */
+    /// #   if domain == "\u{03B1}.example.com" {
+    /// #       "xn--mxa.example.com".into()
+    /// #   } else {
+    /// #       unimplemented!()
+    /// #   }
+    /// }
+    ///
+    /// // U+03B1: GREEK SMALL LETTER ALPHA
+    /// let mut iri =
+    ///     IriRelativeString::try_from("//\u{03B1}.example.com/").unwrap();
+    ///
+    /// let old_domain = iri
+    ///     .authority_components()
+    ///     .expect("authority is not empty")
+    ///     .reg_name()
+    ///     .expect("the host is reg-name");
+    /// assert_eq!(old_domain, "\u{03B1}.example.com");
+    ///
+    /// // Get the new host by your own.
+    /// let new_domain: String = conv_idna(old_domain);
+    /// assert_eq!(new_domain, "xn--mxa.example.com");
+    ///
+    /// let new_host_opt = iri.replace_host(&new_domain);
+    /// assert_eq!(new_host_opt, Some("xn--mxa.example.com"));
+    /// assert_eq!(iri.authority_components().unwrap().host(), "xn--mxa.example.com");
+    /// assert_eq!(iri, "//xn--mxa.example.com/");
+    /// ```
+    pub fn replace_host_reg_name(&mut self, new_host: &'_ str) -> Option<&str> {
+        self.try_replace_host_reg_name(new_host)
+            .expect("failed to allocate memory when replacing the host part of an IRI")
+    }
+
+    /// Replaces the domain name (`reg-name`) in-place and returns the new host,
+    /// if authority is not empty.
+    ///
+    /// This returns `TryReserveError` on memory allocation failure, instead of
+    /// panicking. Otherwise, this method behaves same as
+    /// [`replace_host_reg_name`][`Self::replace_host_reg_name`] method.
+    pub fn try_replace_host_reg_name(
+        &mut self,
+        new_host: &'_ str,
+    ) -> Result<Option<&str>, TryReserveError> {
+        self.try_replace_host_impl(new_host, true)
     }
 }
 

@@ -2,6 +2,70 @@
 
 ## [Unreleased]
 
+## [v0.7.11]
+
+* Add utility functions to visit a list or an associative array for URI template
+  expansion.
+* Add methods to replace host in allocated IRI string types.
+* Support creating a `build::Builder` from IRI reference types.
+* Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
+  percent-decoding by the user.
+* Add a syntax checker for `reg-name` and `ireg-name` syntax.
+* doc: Add a guidance to apply IDNA conversion to IRI types.
+* internal refactoring: Reduce redundant validation of string type conversions.
+
+### Added
+* Add utility functions to visit a list or an associative array for URI template
+  expansion.
+    + List of added trait methods:
+        + `template::context::Visitor::visit_list_direct()`
+        + `template::context::Visitor::visit_assoc_direct()`
+* Add methods to replace host in allocated IRI string types.
+    + In summary, added `{,try_}replace_host{,_reg_name}` methods to types
+      that can contain authorities (i.e.,
+      `Ri{Absolute,Reference,Relative,}String`).
+    + List of added methods:
+        + `types::generic::RiAbsoluteString::replace_host`
+        + `types::generic::RiAbsoluteString::replace_host_reg_name`
+        + `types::generic::RiAbsoluteString::try_replace_host`
+        + `types::generic::RiAbsoluteString::try_replace_host_reg_name`
+        + `types::generic::RiReferenceString::replace_host`
+        + `types::generic::RiReferenceString::replace_host_reg_name`
+        + `types::generic::RiReferenceString::try_replace_host`
+        + `types::generic::RiReferenceString::try_replace_host_reg_name`
+        + `types::generic::RiRelativeString::replace_host`
+        + `types::generic::RiRelativeString::replace_host_reg_name`
+        + `types::generic::RiRelativeString::try_replace_host`
+        + `types::generic::RiRelativeString::try_replace_host_reg_name`
+        + `types::generic::RiString::replace_host`
+        + `types::generic::RiString::replace_host_reg_name`
+        + `types::generic::RiString::try_replace_host`
+        + `types::generic::RiString::try_replace_host_reg_name`
+* Support creating a `build::Builder` from IRI reference types.
+    + List of added trait impls:
+        + `From<types::RiAbsoluteStr<S>> for build::Builder<'_>`
+        + `From<types::RiReferenceStr<S>> for build::Builder<'_>`
+        + `From<types::RiRelativeStr<S>> for build::Builder<'_>`
+        + `From<types::RiStr<S>> for build::Builder<'_>`
+* Add `percent_encode::decode::decode_whatwg_bytes()` and related types for
+  percent-decoding by the user.
+    + List of added items:
+        + `percent_decode::decode::decode_whatwg_bytes()` function
+        + `percent_decode::decode::PercentDecodedWhatwgBytyes` type
+        + `percent_decode::decode::DecodedFragment` type
+        + `percent_decode::decode::PercentDecodedBytesFragment` iterator type
+* Add a syntax checker for `reg-name` and `ireg-name` syntax.
+    + List of added functions:
+        - `validate::reg_name()`
+* doc: Add a guidance to apply IDNA conversion to IRI types.
+    + See the module documentation for `types::generic`.
+
+### Changed (non-breaking)
+* internal refactoring: Reduce redundant validation of string type conversions.
+    + Previously, syntax validations had sometimes run again on the already
+      validated or always valid strings.
+    + This change will improve performance a bit for some string conversions.
+
 ## [0.7.10]
 
 * Add syntax checkers for more components of URIs/IRIs.
@@ -1062,7 +1126,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.10...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.11...develop>
+[0.7.11]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.11>
 [0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>
 [0.7.9]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.9>
 [0.7.8]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.8>

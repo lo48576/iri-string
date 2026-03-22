@@ -272,7 +272,7 @@ impl<'a> NormalizationInput<'a> {
         Self {
             scheme: r.scheme_str(r_iri).unwrap_or_else(|| {
                 b.scheme_str(b_iri)
-                    .expect("[validity] non-relative IRI must have a scheme")
+                    .expect("non-relative IRI must have a scheme")
             }),
             authority: ref_toplevel.choose_then(
                 RefToplevel::Authority,
@@ -297,7 +297,7 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for NormalizationInput<'a> {
     fn from(iri: &'a RiStr<S>) -> Self {
         let components = RiReferenceComponents::<S>::from(iri.as_ref());
         let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let scheme = scheme.expect("`absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
         NormalizationInput {
@@ -325,7 +325,7 @@ impl<'a, S: Spec> From<&'a RiAbsoluteStr<S>> for NormalizationInput<'a> {
     fn from(iri: &'a RiAbsoluteStr<S>) -> Self {
         let components = RiReferenceComponents::<S>::from(iri.as_ref());
         let (scheme, authority, path, query, fragment) = components.to_major();
-        let scheme = scheme.expect("[validity] `absolute IRI must have `scheme`");
+        let scheme = scheme.expect("`absolute IRI must have `scheme`");
         let path = Path::NeedsProcessing(PathToNormalize::from_single_path(path));
 
         NormalizationInput {
@@ -478,8 +478,7 @@ pub(crate) fn normalize_scheme(f: &mut fmt::Formatter<'_>, scheme: &str) -> fmt:
     // no percent-encoded characters.
     scheme
         .chars()
-        .map(|c| c.to_ascii_lowercase())
-        .try_for_each(|c| f.write_char(c))
+        .try_for_each(|c| f.write_char(c.to_ascii_lowercase()))
 }
 
 /// Writes the normalized authority.
@@ -644,7 +643,13 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiStr<S>> {
 
     fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
         let s = self.try_to_string()?;
-        Ok(TryFrom::try_from(s).expect("[validity] the normalization result must be a valid IRI"))
+        // SAFETY: Normalization provided by this crate must always succeed for
+        // URIs/IRIs. "Fallible" normalization in this crate mean that the
+        // resulting URIs/IRIs can point to the semantically different resources,
+        // but in such cases they are still syntactically valid as URIs/IRIs.
+        Ok(unsafe {
+            Self::Target::new_unchecked_justified(s, "the normalization result must be a valid IRI")
+        })
     }
 }
 
@@ -670,7 +675,16 @@ impl<S: Spec> ToDedicatedString for Normalized<'_, RiAbsoluteStr<S>> {
 
     fn try_to_dedicated_string(&self) -> Result<Self::Target, TryReserveError> {
         let s = self.try_to_string()?;
-        Ok(TryFrom::try_from(s).expect("[validity] the normalization result must be a valid IRI"))
+        // SAFETY: Normalization provided by this crate must always succeed for
+        // URIs/IRIs. "Fallible" normalization in this crate mean that the
+        // resulting URIs/IRIs can point to the semantically different resources,
+        // but in such cases they are still syntactically valid as URIs/IRIs.
+        Ok(unsafe {
+            Self::Target::new_unchecked_justified(
+                s,
+                "the normalization result must be a valid absolute IRI",
+            )
+        })
     }
 }
 
