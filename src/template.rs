@@ -116,6 +116,7 @@
     doc = "[`SimpleContext`]: `simple_context::SimpleContext`"
 )]
 mod components;
+#[macro_use]
 pub mod context;
 mod error;
 mod expand;
