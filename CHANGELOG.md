@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Add helpers to make it easy to implement `template::context::Context` trait.
+
+### Added
+* Add helpers to make it easy to implement `template::context::Context` trait.
+    + List of added items:
+        + `template::context::VisitValueNaive` trait
+        + `template::context::visit_value_naive` function
+        + `impl_template_context_naive!` macro
+
 ## [v0.7.11]
 
 * Add utility functions to visit a list or an associative array for URI template
