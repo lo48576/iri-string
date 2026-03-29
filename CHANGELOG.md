@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+* Make `template::context::simple_context::SimpleContext::insert()` ignore the
+  entry if the given key is invalid as a variable name.
+
+### Changed (non-breaking)
+* Make `template::context::simple_context::SimpleContext::insert()` ignore the
+  entry if the given key is invalid as a variable name.
+    + Previously, such entries were added to the internal table but they can
+      never be queried because `get()` requires `key: VarName<'_>` parameter.
+
 ## [0.7.12]
 
 * Add helpers to make it easy to implement `template::context::Context` trait.
