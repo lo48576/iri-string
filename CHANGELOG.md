@@ -11,7 +11,7 @@
         + `template::context::visit_value_naive` function
         + `impl_template_context_naive!` macro
 
-## [v0.7.11]
+## [0.7.11]
 
 * Add utility functions to visit a list or an associative array for URI template
   expansion.
