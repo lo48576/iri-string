@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.12]
+
 * Add helpers to make it easy to implement `template::context::Context` trait.
 
 ### Added
@@ -1135,7 +1137,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.11...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.12...develop>
+[0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.12>
 [0.7.11]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.11>
 [0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>
 [0.7.9]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.9>
