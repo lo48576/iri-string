@@ -119,7 +119,6 @@ impl<S: Spec> RiReferenceStr<S> {
         // > --- <https://www.rfc-editor.org/rfc/rfc3987.html#section-2.2>.
 
         let s = self.as_str();
-        // TODO: Just checking `scheme:` is enough.
         if trusted_parser::extract_scheme(s).is_some() {
             // Has a scheme followed by a colon. An IRI.
             // SAFETY: an IRI reference with scheme is an absolute IRI.
