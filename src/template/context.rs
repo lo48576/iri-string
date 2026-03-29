@@ -38,6 +38,12 @@
 //!    }
 //! }
 //! ```
+//!
+//! Also check [`impl_template_context_naive!`] macro if your visitor
+//! implementation will be straight-forward and most of field types are simple
+//! standard types. The macro might reduce boilerplate.
+//!
+//! [`impl_template_context_naive!`]: `crate::impl_template_context_naive!`
 //
 // # Developers note
 //
@@ -52,10 +58,218 @@
 // would work as expected if the internal usage of the visitors are correct.
 // Making visitors noncloneable is an optional safety guard (with no overhead).
 
+/// Implement [`VisitValueNaive`] for the type.
+///
+/// # Synopsis
+///
+/// ```text
+/// impl_template_context_naive! {
+///     MyContextType {
+///         my_field [ : "var_name" ] [ => fn_visit ]
+///     }
+/// }
+/// ```
+///
+/// * `my_field` is the field name of `MyContextType`.
+///     + If the context type is tuple, use the index like `0` and `1`.
+/// * `"var_name"` is a `&str` literal for a variable name.
+///     + If omitted, `my_field` is used as a variable name.
+/// * `fn_visit` is an expression of a visitor function for the field.
+///     + If omitted, [`template::context::visit_value_naive`][`visit_value_naive`]
+///       function will be used.
+///     + The signature should be <code>fn fn_visit<V: [Visitor][`Visitor`]>(visitor: V,
+///       my_field_value: &MyFieldType)</code>
+///     + Note that this function cannot be a closure, because it should be
+///       generic over `V: Visitor` parameter and the current Rust (as of Rust
+///       1.94) does not allow closures to be generic.
+///
+/// # Examples
+///
+/// ```
+/// # use iri_string::template::Error;
+/// use iri_string::impl_template_context_naive;
+/// use iri_string::spec::UriSpec;
+/// use iri_string::template::UriTemplateStr;
+/// use iri_string::template::context::Visitor;
+///
+/// struct MyContext {
+///     id: Option<u64>,
+///     name: &'static str,
+///     tags: &'static [&'static str],
+///     children: &'static [(&'static str, usize)],
+///     ignored: i32,
+/// }
+///
+/// impl_template_context_naive! {
+///     MyContext {
+///         // custom styling and custom field name.
+///         id: "user_id" => my_visit_user_id,
+///         // custom field name.
+///         name: "username",
+///         // default styling and default field name.
+///         tags,
+///         // custom styling.
+///         children => my_visit_slice_assoc,
+///     }
+/// }
+///
+/// fn my_visit_user_id<V>(visitor: V, id: &Option<u64>) -> V::Result
+/// where
+///     V: Visitor,
+/// {
+///     match id {
+///         Some(v) => visitor.visit_string(format_args!("{v:04}")),
+///         None => visitor.visit_undefined(),
+///     }
+/// }
+///
+/// fn my_visit_slice_assoc<V, K, T>(visitor: V, entries: &[(K, T)]) -> V::Result
+/// where
+///     V: Visitor,
+///     K: core::fmt::Display,
+///     T: core::fmt::Display,
+/// {
+///     visitor.visit_assoc_direct(entries.iter().map(|(k, v)| (k, v)))
+/// }
+///
+/// let context = MyContext {
+///     id: Some(42),
+///     name: "foo",
+///     tags: &["user", "admin"],
+///     children: &[("bar", 99), ("baz", 314)],
+///     ignored: 12345,
+/// };
+///
+/// // The examples below requires `alloc` feature
+/// // to be enabled (for `.to_string()`).
+/// # #[cfg(feature = "alloc")] {
+/// #
+/// let id_user_template = UriTemplateStr::new("{?user_id,username}").unwrap();
+/// assert_eq!(
+///     id_user_template.expand::<UriSpec, _>(&context)?.to_string(),
+///     "?user_id=0042&username=foo",
+///     "custom styling and custom field name is used"
+/// );
+///
+/// let tags_template = UriTemplateStr::new("{?tags*}").unwrap();
+/// assert_eq!(
+///     tags_template.expand::<UriSpec, _>(&context)?.to_string(),
+///     "?tags=user&tags=admin"
+/// );
+///
+/// let children_template = UriTemplateStr::new("{?children*}").unwrap();
+/// assert_eq!(
+///     children_template.expand::<UriSpec, _>(&context)?.to_string(),
+///     "?bar=99&baz=314"
+/// );
+///
+/// let ignored_template = UriTemplateStr::new("{?ignored}").unwrap();
+/// assert_eq!(
+///     ignored_template.expand::<UriSpec, _>(&context)?.to_string(),
+///     "",
+///     "`ignored` field is not visited so the value is undefined"
+/// );
+/// #
+/// # }
+/// # Ok::<(), Error>(())
+/// ```
+///
+/// For tuple struct:
+///
+/// ```
+/// # use iri_string::template::Error;
+/// use iri_string::impl_template_context_naive;
+/// use iri_string::spec::UriSpec;
+/// use iri_string::template::UriTemplateStr;
+/// use iri_string::template::context::Visitor;
+///
+/// struct Utf8Check(bool);
+///
+/// impl_template_context_naive! {
+///     Utf8Check {
+///         0: "utf8" => my_visit_utf8_bool,
+///     }
+/// }
+///
+/// fn my_visit_utf8_bool<V>(visitor: V, checked: &bool) -> V::Result
+/// where
+///     V: Visitor,
+/// {
+///     if *checked {
+///         // U+2713 CHECK MARK
+///         visitor.visit_string("\u{2713}")
+///     } else {
+///         visitor.visit_undefined()
+///     }
+/// }
+///
+/// let checked_ctx = Utf8Check(true);
+/// let unchecked_ctx = Utf8Check(false);
+///
+/// // The examples below requires `alloc` feature
+/// // to be enabled (for `.to_string()`).
+/// # #[cfg(feature = "alloc")] {
+/// #
+/// let utf8_template = UriTemplateStr::new("{?utf8}").unwrap();
+/// assert_eq!(
+///     utf8_template.expand::<UriSpec, _>(&checked_ctx)?.to_string(),
+///     "?utf8=%E2%9C%93"
+/// );
+/// assert_eq!(
+///     utf8_template.expand::<UriSpec, _>(&unchecked_ctx)?.to_string(),
+///     ""
+/// );
+/// #
+/// # }
+/// # Ok::<(), Error>(())
+/// ```
+#[macro_export]
+macro_rules! impl_template_context_naive {
+    ($ty:ty {
+        $(
+            $field:tt
+            $(: $var_name:literal)?
+            $(=> $fn_visit:expr)?
+        ),*
+        $(,)?
+    }) => {
+        impl $crate::template::context::Context for $ty {
+            fn visit<V>(&self, visitor: V) -> V::Result
+            where
+                V: $crate::template::context::Visitor,
+            {
+                match visitor.var_name().as_str() {
+                    $(
+                        $crate::impl_template_context_naive!(@ var_name $field, $([ $var_name ])?)
+                            => {
+                            let fn_visit = $crate::impl_template_context_naive!(@ fn_visit $($fn_visit)?);
+                            fn_visit(visitor, &self.$field)
+                        },
+                    )*
+                    _ => visitor.visit_undefined(),
+                }
+            }
+        }
+    };
+    (@ var_name $field:tt,) => {
+        stringify!($field)
+    };
+    (@ var_name $field:tt, [ $var_name:literal ]) => {
+        $var_name
+    };
+    (@ fn_visit $fn_visit:expr) => {
+        $fn_visit
+    };
+    (@ fn_visit) => {
+        $crate::template::context::visit_value_naive
+    };
+}
+
 use core::fmt;
 use core::ops::ControlFlow;
 
 pub use crate::template::components::VarName;
+pub use crate::template::value::{visit_value_naive, VisitValueNaive};
 
 /// A trait for types that can behave as a static URI template expansion context.
 ///
