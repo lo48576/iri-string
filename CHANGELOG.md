@@ -4,12 +4,16 @@
 
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the
   entry if the given key is invalid as a variable name.
+* doc: Move the guidance of IDNA conversion to a public module.
 
 ### Changed (non-breaking)
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the
   entry if the given key is invalid as a variable name.
     + Previously, such entries were added to the internal table but they can
       never be queried because `get()` requires `key: VarName<'_>` parameter.
+* doc: Move the guidance of IDNA conversion to a public module.
+    + The section was added to the private module in v0.7.11, so it wasn't
+      visible in the normally generated documents (including `docs.rs`).
 
 ## [0.7.12]
 
