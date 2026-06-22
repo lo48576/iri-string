@@ -4,7 +4,18 @@
 
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the
   entry if the given key is invalid as a variable name.
+* Implement conversion from a reference of owned IRI string types into
+  `build::Builder`.
 * doc: Move the guidance of IDNA conversion to a public module.
+
+### Added
+* Implement conversion from a reference of owned IRI string types into
+  `build::Builder`.
+    + List of added implementations:
+        - `From<&'a RiRelativeString<S>> for build::Builder<'a>`
+        - `From<&'a RiString<S>> for build::Builder<'a>`
+        - `From<&'a RiAbsoluteString<S>> for build::Builder<'a>`
+        - `From<&'a RiReferenceString<S>> for build::Builder<'a>`
 
 ### Changed (non-breaking)
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the

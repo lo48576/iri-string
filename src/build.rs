@@ -1066,6 +1066,38 @@ impl<'a, S: Spec> From<&'a RiStr<S>> for Builder<'a> {
     }
 }
 
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiAbsoluteString<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiAbsoluteString<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiReferenceString<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiReferenceString<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiRelativeString<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiRelativeString<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl<'a, S: Spec> From<&'a RiString<S>> for Builder<'a> {
+    #[inline]
+    fn from(iri: &'a RiString<S>) -> Self {
+        Self::from(AsRef::<RiReferenceStr<S>>::as_ref(iri))
+    }
+}
+
 /// [`Display`]-able IRI build result.
 ///
 /// The value of this type can generate an IRI using [`From`]/[`Into`] traits or
