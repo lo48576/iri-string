@@ -53,7 +53,7 @@ define_custom_string_owned! {
     /// An owned string of an IRI fragment (i.e. after the first `#` character).
     ///
     /// This corresponds to [`ifragment` rule] in [RFC 3987] (and [`fragment` rule] in [RFC 3986]).
-    /// The rule for `absolute-IRI` is `*( ipchar / "/" / "?" )`.
+    /// The rule for `fragment` is `*( ipchar / "/" / "?" )`.
     ///
     /// For details, see the documentation for [`RiFragmentStr`].
     ///
