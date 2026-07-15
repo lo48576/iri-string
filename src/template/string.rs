@@ -588,11 +588,8 @@ impl<'a> Iterator for UriTemplateVariables<'a> {
             let expr = self.chunks.find_map(|chunk| match chunk {
                 Chunk::Literal(_) => None,
                 Chunk::Expr(v) => Some(v),
-            });
-            self.vars_in_chunk = match expr {
-                Some(expr) => Some(expr.decompose().1.into_iter()),
-                None => return None,
-            }
+            })?;
+            self.vars_in_chunk = Some(expr.decompose().1.into_iter());
         }
     }
 }

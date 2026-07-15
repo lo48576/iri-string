@@ -84,6 +84,9 @@ impl SimpleContext {
     /// The entry will be inserted or removed even if the key is invalid as a
     /// variable name. Such entries will be simply ignored on expansion.
     ///
+    /// If the key is invalid as a variable name, returns `None` without doing
+    /// anything.
+    ///
     /// # Examples
     ///
     /// ```
@@ -136,6 +139,12 @@ impl SimpleContext {
         V: Into<Value>,
     {
         let key = key.into();
+        if VarName::new(&key).is_err() {
+            // The key is not valid as a variable name. `get()` only accepts
+            // `VarName<'_>` as a key, so the entry will never be looked up.
+            // Ignore this and do nothing.
+            return None;
+        }
         match value.into() {
             Value::Undefined => self.variables.remove(&key),
             value => self.variables.insert(key, value),

@@ -7,36 +7,13 @@ define_custom_string_slice! {
     /// A borrowed slice of an IRI query (i.e. after the first `?` and before the first `#`).
     ///
     /// This corresponds to [`iquery` rule] in [RFC 3987] (and [`query` rule] in [RFC 3986]).
-    /// The rule for `ifragment` is `*( ipchar / iprivate / "/" / "?" )`.
+    /// The rule for `iquery` is `*( ipchar / iprivate / "/" / "?" )`.
     ///
     /// # Valid values
     ///
-    /// This type can have an IRI fragment.
-    /// Note that the IRI `foo://bar/baz#qux` has the fragment `qux`, **not** `#qux`.
+    /// This type can have an IRI query string.
+    /// Note that the IRI `foo://bar/baz?qux` has the query `qux`, **not** `?qux`.
     ///
-    /// ```
-    /// # use iri_string::types::IriFragmentStr;
-    /// assert!(IriFragmentStr::new("").is_ok());
-    /// assert!(IriFragmentStr::new("foo").is_ok());
-    /// assert!(IriFragmentStr::new("foo/bar").is_ok());
-    /// assert!(IriFragmentStr::new("/foo/bar").is_ok());
-    /// assert!(IriFragmentStr::new("//foo/bar").is_ok());
-    /// assert!(IriFragmentStr::new("https://user:pass@example.com:8080").is_ok());
-    /// assert!(IriFragmentStr::new("https://example.com/").is_ok());
-    /// ```
-    ///
-    /// Some characters and sequences cannot used in a fragment.
-    ///
-    /// ```
-    /// # use iri_string::types::IriFragmentStr;
-    /// // `<` and `>` cannot directly appear in an IRI reference.
-    /// assert!(IriFragmentStr::new("<not allowed>").is_err());
-    /// // Broken percent encoding cannot appear in an IRI reference.
-    /// assert!(IriFragmentStr::new("%").is_err());
-    /// assert!(IriFragmentStr::new("%GG").is_err());
-    /// // Hash sign `#` cannot appear in an IRI fragment.
-    /// assert!(IriFragmentStr::new("#hash").is_err());
-    /// ```
     /// ```
     /// use iri_string::types::IriQueryStr;
     /// assert!(IriQueryStr::new("").is_ok());
@@ -75,10 +52,10 @@ define_custom_string_slice! {
 
 #[cfg(feature = "alloc")]
 define_custom_string_owned! {
-    /// An owned string of an IRI fragment (i.e. after the first `#` character).
+    /// A owned slice of an IRI query (i.e. after the first `?` and before the first `#`).
     ///
     /// This corresponds to [`iquery` rule] in [RFC 3987] (and [`query` rule] in [RFC 3986]).
-    /// The rule for `absolute-IRI` is `*( ipchar / iprivate / "/" / "?" )`.
+    /// The rule for `iquery` is `*( ipchar / iprivate / "/" / "?" )`.
     ///
     /// For details, see the documentation for [`RiQueryStr`].
     ///

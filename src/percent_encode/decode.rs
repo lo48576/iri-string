@@ -89,15 +89,12 @@ impl<'a> PercentDecodedWhatwgBytes<'a> {
 
         while !rest.is_empty() {
             #[cfg(feature = "memchr")]
-            let pct_pos = memchr::memchr(b'%', rest);
+            let pct_pos = memchr::memchr(b'%', rest)?;
             #[cfg(not(feature = "memchr"))]
-            let pct_pos = rest.iter().position(|&b| b == b'%');
+            let pct_pos = rest.iter().position(|&b| b == b'%')?;
 
             let after_pct;
-            (len_before_pct, after_pct) = match pct_pos {
-                None => return None,
-                Some(pos) => (pos, &rest[(pos + 1)..]),
-            };
+            (len_before_pct, after_pct) = (pct_pos, &rest[(pct_pos + 1)..]);
 
             let decoded;
             (decoded, rest) = strip_decode_xdigits2(after_pct);

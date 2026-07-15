@@ -182,6 +182,115 @@
 //! # Ok::<_, Error>(())
 //! ```
 //!
+//! # IDNA encoding
+//!
+//! This crate does not have built-in IDNA converter, but the user can provide
+//! such conversion function and replace the domain part of IRIs.
+//!
+//! ## Slice IRI types
+//!
+//! 1. Get host by `authority_components()?.host()`.
+//! 2. Process the name.
+//! 3. Create a builder by `Builder::from(&...)`.
+//! 4. Overwrite the domain by `.host(...)`.
+//! 5. Build the new IRI by `.build()`.
+//!
+//! ```
+//! # #[cfg(feature = "alloc")] extern crate alloc;
+//! # #[cfg(feature = "alloc")] use alloc::string::ToString;
+//! use iri_string::build::Builder;
+//! use iri_string::types::{IriStr, UriStr};
+//!
+//! struct IdnaEncodedDomain<'a> {
+//!     /* ... */
+//! #   raw: &'a str,
+//! }
+//! impl IdnaEncodedDomain<'_> {
+//!     pub fn as_str(&self) -> &str {
+//!         /* ... */
+//! #       match self.raw {
+//! #           "alpha.\u{03B1}.example.com" => "alpha.xn--mxa.example.com",
+//! #           _ => unimplemented!(),
+//! #       }
+//!     }
+//! }
+//! // Usually IDNA conversion requires dynamic memory allocation, but
+//! // `iri-string` itself does not require or assume that. It is enough if the
+//! // conversion result can be retrieved as `&str`, so users can do whatever
+//! // such as limiting the possible input and/or using statically allocated buffer.
+//! fn apply_idna(s: &str) -> IdnaEncodedDomain<'_> {
+//!     /* ... */
+//! #   IdnaEncodedDomain { raw: s }
+//! }
+//!
+//! let orig_iri = IriStr::new("https://alpha.\u{03B1}.example.com").unwrap();
+//!
+//! // 1. Get the host.
+//! let orig_host = orig_iri.authority_components()
+//!     .expect("orig_iri has a host")
+//!     .host();
+//! debug_assert_eq!(orig_host, "alpha.\u{03B1}.example.com");
+//!
+//! // 2. Process the name.
+//! let new_domain = apply_idna(orig_host);
+//!
+//! // 3. Create a builder.
+//! let mut builder = Builder::from(orig_iri);
+//!
+//! // 4. Overwrite the domain.
+//! builder.host(new_domain.as_str());
+//!
+//! // 5. Build the new IRI.
+//! let new_iri = builder.build::<UriStr>()
+//!     .expect("the new host is a valid domain and now they are US-ASCII only");
+//!
+//! // Note that `ToString::to_string()` requires `alloc` feature.
+//! #[cfg(feature = "alloc")]
+//! debug_assert_eq!(new_iri.to_string(), "https://alpha.xn--mxa.example.com");
+//! ```
+//!
+//! ## Allocated IRI types
+//!
+//! For allocated types such as `IriString`, you can use
+//! `{,try_}replace_host{,_reg_name}` methods.
+//!
+//! 1. Get host by `authority_components()?.host()`.
+//! 2. Process the name.
+//! 3. Replace the host by the new result.
+//!
+//! ```
+//! # #[cfg(feature = "alloc")] {
+//! # extern crate alloc;
+//! # use alloc::string::String;
+//! use iri_string::types::IriString;
+//!
+//! fn apply_idna(s: &str) -> String {
+//!     /* ... */
+//! #   match s {
+//! #       "alpha.\u{03B1}.example.com" => "alpha.xn--mxa.example.com".to_owned(),
+//! #       _ => unimplemented!(),
+//! #   }
+//! }
+//!
+//! let mut iri =
+//!     IriString::try_from("https://alpha.\u{03B1}.example.com")
+//!         .unwrap();
+//!
+//! // 1. Get the host.
+//! let orig_host = iri.authority_components()
+//!     .expect("orig_iri has a host")
+//!     .host();
+//! debug_assert_eq!(orig_host, "alpha.\u{03B1}.example.com");
+//!
+//! // 2. Process the name.
+//! let new_domain = apply_idna(orig_host);
+//!
+//! // 3. Replace the host.
+//! iri.replace_host(&new_domain);
+//! debug_assert_eq!(iri, "https://alpha.xn--mxa.example.com");
+//! # }
+//! ```
+//!
 //! [RFC 3986]: https://www.rfc-editor.org/rfc/rfc3986.html
 //! [RFC 3987]: https://www.rfc-editor.org/rfc/rfc3987.html
 //! [`RiStr`]: struct.RiStr.html
