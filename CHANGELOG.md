@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.13]
+
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the
   entry if the given key is invalid as a variable name.
 * Implement conversion from a reference of owned IRI string types into
@@ -1161,7 +1163,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.12...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.13...develop>
+[0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.13>
 [0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.12>
 [0.7.11]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.11>
 [0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>
