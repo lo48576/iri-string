@@ -52,7 +52,7 @@ define_custom_string_slice! {
 
 #[cfg(feature = "alloc")]
 define_custom_string_owned! {
-    /// A owned slice of an IRI query (i.e. after the first `?` and before the first `#`).
+    /// An owned slice of an IRI query (i.e. after the first `?` and before the first `#`).
     ///
     /// This corresponds to [`iquery` rule] in [RFC 3987] (and [`query` rule] in [RFC 3986]).
     /// The rule for `iquery` is `*( ipchar / iprivate / "/" / "?" )`.
