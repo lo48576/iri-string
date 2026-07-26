@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+## [0.7.14]
+
+* Reject an empty fragment correctly for absolute IRIs.
+
+### Fixed
+* Reject an empty fragment correctly for absolute IRIs.
+    + An empty fragment was incorrectly accepted for absolute IRI types
+      such as `types::RiAbsoluteStr`. Now the parser is fixed to reject them.
+
 ## [0.7.13]
 
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the
@@ -1163,8 +1172,9 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.13...develop>
-[0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.13>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.14...develop>
+[0.7.14]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.14>
+[0.7.13]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.13>
 [0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.12>
 [0.7.11]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.11>
 [0.7.10]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.10>

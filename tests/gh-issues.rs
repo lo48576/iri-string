@@ -213,3 +213,41 @@ mod issue_48 {
         );
     }
 }
+
+/// <https://github.com/lo48576/iri-string/issues/62>
+mod issue_62 {
+    use iri_string::types::IriAbsoluteStr;
+    #[cfg(feature = "alloc")]
+    use iri_string::types::IriAbsoluteString;
+
+    /// Any fragment (including empty one) should be rejected for an absolute IRI.
+    #[test]
+    fn invalid_absolute_iri_with_empty_fragment() {
+        assert!(IriAbsoluteStr::new("foo:#").is_err());
+        assert!(IriAbsoluteStr::new("foo:?#").is_err());
+        assert!(IriAbsoluteStr::new("foo:?baz#").is_err());
+
+        assert!(IriAbsoluteStr::new("foo:bar#").is_err());
+        assert!(IriAbsoluteStr::new("foo:bar?#").is_err());
+        assert!(IriAbsoluteStr::new("foo:bar?baz#").is_err());
+
+        assert!(IriAbsoluteStr::new("foo://bar#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar?baz#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar:9876#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar:9876?baz#").is_err());
+        assert!(IriAbsoluteStr::new("foo://127.0.0.1#").is_err());
+        assert!(IriAbsoluteStr::new("foo://127.0.0.1?bar#").is_err());
+        assert!(IriAbsoluteStr::new("foo://[::1]#").is_err());
+        assert!(IriAbsoluteStr::new("foo://[::1]?bar#").is_err());
+
+        assert!(IriAbsoluteStr::new("foo://bar/#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar/?#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar/?baz#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar/baz#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar/baz?qux#").is_err());
+        assert!(IriAbsoluteStr::new("foo://bar/baz?qux?quux#").is_err());
+
+        #[cfg(feature = "alloc")]
+        assert!("foo:#".parse::<IriAbsoluteString>().is_err());
+    }
+}
