@@ -10,12 +10,15 @@ when:
 variables:
   # Docker image of the latest stable Rust.
   rust_image: &rust_image 'library/rust:slim'
-  rust_nightly_image: &rust_nightly_image 'rustlang/rust:nightly-slim'
   configure_toolchain_cmds: &configure_toolchain_cmds
     - cp .woodpecker/cargo-config.toml $${CARGO_HOME}/config.toml
       # Use the Rust toolchain(s) cached in the CI workspace directory.
     - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
     - rustc --version && cargo --version
+  fetch_deps_cmds: &fetch_deps_cmds
+    - cargo fetch --locked
+    - mkdir -p .cargo
+    - cargo vendor --color=always --locked >> .cargo/config.toml
 
 matrix:
   RUST_CHANNEL:
@@ -74,6 +77,7 @@ steps:
     commands:
       # Ensure `Cargo.lock` exists.
       - if [ ! -f Cargo.lock ] ; then echo "Cargo.lock is missing" >&2 ; exit 1 ; fi
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: default
@@ -83,35 +87,34 @@ steps:
     commands:
       - <<: *configure_toolchain_cmds
       - cargo update
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: prepare deps
-    image: *rust_nightly_image
+    image: *rust_image
     commands:
-      - rustc --version && cargo --version
-      - cargo update -Zminimal-versions
+      - <<: *configure_toolchain_cmds
+      - rustup install nightly --profile minimal
+      - rustc +nightly --version && cargo +nightly --version
+      - cargo +nightly update -Zminimal-versions
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
 
   - name: prepare deps
-    image: *rust_nightly_image
-    commands:
-      - rustc --version && cargo --version
-      - cargo update -Zdirect-minimal-versions
-    when:
-      - matrix:
-          RUST_DEP_VERSIONS: direct-minimal
-
-  - name: fetch deps
     image: *rust_image
     commands:
       - <<: *configure_toolchain_cmds
-      - cargo fetch --locked
-      - mkdir -p .cargo
-      - cargo vendor --color=always --locked >> .cargo/config.toml
+      - rustup install nightly --profile minimal
+      - rustc +nightly --version && cargo +nightly --version
+      - cargo +nightly update -Zdirect-minimal-versions
+      - <<: *fetch_deps_cmds
+    when:
+      - matrix:
+          RUST_DEP_VERSIONS: direct-minimal
 
   - name: clippy (allow warning)
     image: *rust_image
