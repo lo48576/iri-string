@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+* Reject an empty fragment correctly for absolute IRIs.
+
+### Fixed
+* Reject an empty fragment correctly for absolute IRIs.
+    + An empty fragment was incorrectly accepted for absolute IRI types
+      such as `types::RiAbsoluteStr`. Now the parser is fixed to reject them.
+
 ## [0.7.13]
 
 * Make `template::context::simple_context::SimpleContext::insert()` ignore the

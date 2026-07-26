@@ -194,20 +194,30 @@ pub(crate) fn validate_relative_ref<S: Spec>(i: &str) -> Result<(), Error> {
 
 /// Returns `Ok(_)` if the string matches `[ "?" query ] [ "#" fragment ]` (or IRI version).
 fn validate_after_path<S: Spec>(first: u8, rest: &str, accept_fragment: bool) -> Result<(), Error> {
+    // `maybe_query` and `maybe_fragment` here does NOT have the first prefix
+    // `?` and `#` respectively. For example, `maybe_query` will be `foo` for
+    // `/path?foo`, and will be `?double` for `/path??double`.
+    //
+    // Note that absense of the fragment matters but absense of the query does not.
+    // Absense of the query and an empty query are both represented as an empty
+    // string in `maybe_query`.
     let (maybe_query, maybe_fragment) = if first == b'?' {
         match find_split_hole(rest, b'#') {
-            Some(v) => v,
-            None => (rest, ""),
+            Some((query, fragment)) => (query, Some(fragment)),
+            None => (rest, None),
         }
     } else {
         debug_assert_eq!(first, b'#');
-        ("", rest)
+        ("", Some(rest))
     };
     validate_query::<S>(maybe_query)?;
-    if !accept_fragment && !maybe_fragment.is_empty() {
-        return Err(Error::with_kind(ErrorKind::UnexpectedFragment));
+    if let Some(maybe_fragment) = maybe_fragment {
+        if !accept_fragment {
+            return Err(Error::with_kind(ErrorKind::UnexpectedFragment));
+        }
+        validate_fragment::<S>(maybe_fragment)?;
     }
-    validate_fragment::<S>(maybe_fragment)
+    Ok(())
 }
 
 /// Returns `Ok(_)` if the string matches `fragment`/`ifragment` rules.
