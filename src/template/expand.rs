@@ -463,14 +463,7 @@ fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
                     writer.write_str(s)
                 }
                 PctEncodedFragments::NoPctStr(s) => {
-                    let mut chars = s.char_indices();
-                    let count = chars
-                        .by_ref()
-                        .take(max_len)
-                        .last()
-                        .map(|(i, _)| i)
-                        .expect("decomposed string fragment must not be empty");
-                    let sub_len = s.len() - chars.as_str().len();
+                    let (count, sub_len) = prefix_count_and_len(s, max_len);
                     max_len -= count;
                     write!(
                         writer,
@@ -513,6 +506,14 @@ fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
     }
 }
 
+/// Returns the number of characters in the prefix of `s` with at most
+/// `max_chars` characters, and the length of that prefix in bytes.
+fn prefix_count_and_len(s: &str, max_chars: usize) -> (usize, usize) {
+    let mut chars = s.chars();
+    let count = chars.by_ref().take(max_chars).count();
+    (count, s.len() - chars.as_str().len())
+}
+
 /// A writer that truncates the input to the given length and writes to the backend.
 struct TruncatePercentEncodeWriter<'a, S, W> {
     /// Inner writer.
@@ -528,13 +529,7 @@ impl<S: Spec, W: fmt::Write> fmt::Write for TruncatePercentEncodeWriter<'_, S, W
         if self.rest_num_chars == 0 {
             return Ok(());
         }
-        let mut chars = s.char_indices();
-        let skip_count = chars
-            .by_ref()
-            .take(self.rest_num_chars)
-            .last()
-            .map_or(0, |(i, _)| i + 1);
-        let len = s.len() - chars.as_str().len();
+        let (skip_count, len) = prefix_count_and_len(s, self.rest_num_chars);
         let truncated = &s[..len];
         write!(
             self.inner,
