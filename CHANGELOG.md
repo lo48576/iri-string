@@ -5,6 +5,7 @@
 * Add a function to create a URI template from non-ASCII string
 * Fix panics and incorrect truncation on URI template expansion of non-ASCII
   values.
+* Fix loose validation of prefix modifiers in URI template strings
 
 ### Added
 * Add a function to create a URI template from non-ASCII string
@@ -22,6 +23,9 @@
     + A prefix modifier in reserved and fragment expansions (such as
       `{+var:3}`) kept too many characters after a percent-encoded triplet.
     + See [issue #63](https://github.com/lo48576/iri-string/issues/63).
+* Fix loose validation of prefix modifiers in URI template strings
+    + Previously, 5-digits max-len (such as `{var:99999}`) and max-len starting
+      with `0` (such as `{var:01}`) were wrongly accepted.
 
 ## [0.7.14]
 

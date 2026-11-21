@@ -26,7 +26,8 @@ fn validate_varspec(s: &str, offset: usize) -> Result<(), Error> {
     match find_split2_hole(s, b':', b'*') {
         Some((maybe_varname, b':', maybe_len)) => {
             validate_varname(maybe_varname, offset)?;
-            if !(1..=5).contains(&maybe_len.len()) {
+            // `max-length = %x31-39 0*3DIGIT`
+            if !((1..=4).contains(&maybe_len.len()) && !maybe_len.starts_with('0')) {
                 return Err(Error::new(
                     ErrorKind::InvalidExpression,
                     offset + maybe_varname.len() + 2,
