@@ -232,6 +232,9 @@ pub(super) enum Modifier {
     /// No modifiers.
     None,
     /// Max length, greater than 0 and less than 10000.
+    ///
+    /// Note that `MaxLen` is named after `max-length` in RFC 6570 (section
+    /// 2.4.1), so it is a character count rather than a byte count.
     MaxLen(u16),
     /// Explode the variable, e.g. the var spec has `*`.
     Explode,

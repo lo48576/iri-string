@@ -445,6 +445,9 @@ fn escape_write<S: Spec, T: fmt::Display, W: fmt::Write>(
 }
 
 /// Truncates the given value as a string, escapes the value, and writes it.
+///
+/// Note that `max_len` is named after `max-length` in RFC 6570 (section 2.4.1),
+/// so it is a character count rather than a byte count.
 fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
     writer: &mut PrefixOnceWriter<'_, W>,
     v: T,
