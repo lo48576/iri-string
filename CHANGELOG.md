@@ -2,13 +2,14 @@
 
 ## [Unreleased]
 
-* Fix URI template expansion of non-ASCII values.
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
 
 ### Fixed
-* Fix URI template expansion of non-ASCII values.
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
     + Reserved and fragment expansions (`{+var}` and `{#var}`) panicked when
-      a non-ASCII character came first or right after a percent-encoded
-      triplet.
+      a non-ASCII character came first or right after a percent-encoded triplet.
     + A prefix modifier (such as `{var:2}`) counted bytes instead of
       characters for multibyte values. This panicked in debug builds.
     + A prefix modifier in reserved and fragment expansions (such as
