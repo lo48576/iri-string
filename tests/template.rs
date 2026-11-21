@@ -465,9 +465,18 @@ fn prefix_modifier_for_fragmented_non_ascii_write() {
         }
     }
 
-    let template = UriTemplateStr::new("{x:2}").expect("must be valid template");
-    let expanded = template
-        .expand::<UriSpec, _>(&Fragmented)
-        .expect("must not have variable type error");
-    assert_eq!(expanded.to_string(), "%CE%B1%CE%B2");
+    {
+        let template = UriTemplateStr::new("{x:2}").expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&Fragmented)
+            .expect("must not have variable type error");
+        assert_eq!(expanded.to_string(), "%CE%B1%CE%B2");
+    }
+    {
+        let template = UriTemplateStr::new("{+x:2}").expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&Fragmented)
+            .expect("must not have variable type error");
+        assert_eq!(expanded.to_string(), "%CE%B1%CE%B2");
+    }
 }
