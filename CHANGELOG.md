@@ -6,6 +6,7 @@
 * Fix panics and incorrect truncation on URI template expansion of non-ASCII
   values.
 * Fix loose validation of prefix modifiers in URI template strings
+* Fix URI template validation to reject invalid use of periods in variable names
 
 ### Added
 * Add a function to create a URI template from non-ASCII string
@@ -26,6 +27,10 @@
 * Fix loose validation of prefix modifiers in URI template strings
     + Previously, 5-digits max-len (such as `{var:99999}`) and max-len starting
       with `0` (such as `{var:01}`) were wrongly accepted.
+* Fix URI template validation to reject invalid use of periods in variable names
+    + Previously, contiguous periods in a variable names (such as `{x..y}`) and
+      variable names starting or ending with a periond (such as `{.x}` and
+      `{x.}`) were wrongly accepted.
 
 ## [0.7.14]
 
