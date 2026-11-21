@@ -375,7 +375,7 @@ fn fragmented_write() {
 }
 
 #[test]
-fn github_issue_39() {
+fn github_issue_45() {
     #[derive(Default)]
     struct MyContext {
         on_expansion_start_called: Cell<bool>,
@@ -383,6 +383,8 @@ fn github_issue_39() {
     }
     impl DynamicContext for MyContext {
         fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+            assert!(self.on_expansion_start_called.get());
+            assert!(!self.on_expansion_end_called.get());
             visitor.visit_undefined()
         }
         fn on_expansion_start(&mut self) {
