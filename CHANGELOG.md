@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
+
+### Fixed
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
+    + Reserved and fragment expansions (`{+var}` and `{#var}`) panicked when
+      a non-ASCII character came first or right after a percent-encoded triplet.
+    + A prefix modifier (such as `{var:2}`) counted bytes instead of
+      characters for multibyte values. This panicked in debug builds.
+    + A prefix modifier in reserved and fragment expansions (such as
+      `{+var:3}`) kept too many characters after a percent-encoded triplet.
+    + See [issue #63](https://github.com/lo48576/iri-string/issues/63).
+
 ## [0.7.14]
 
 * Reject an empty fragment correctly for absolute IRIs.
