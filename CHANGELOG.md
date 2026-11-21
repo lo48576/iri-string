@@ -2,8 +2,15 @@
 
 ## [Unreleased]
 
+* Add a function to create a URI template from non-ASCII string
 * Fix panics and incorrect truncation on URI template expansion of non-ASCII
   values.
+
+### Added
+* Add a function to create a URI template from non-ASCII string
+    + `template::UriTemplateString::try_from_non_ascii()` creates a URI template
+      string as `Cow<'_, UriTemplateStr>`. When it finds non-ASCII characters in
+      the parameter, it percent-encodes them and returns heap-allocated string.
 
 ### Fixed
 * Fix panics and incorrect truncation on URI template expansion of non-ASCII

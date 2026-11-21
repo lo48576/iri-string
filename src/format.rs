@@ -6,6 +6,8 @@
 use core::fmt::{self, Write as _};
 
 #[cfg(feature = "alloc")]
+use alloc::borrow::Cow;
+#[cfg(feature = "alloc")]
 use alloc::collections::TryReserveError;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
@@ -86,6 +88,67 @@ impl fmt::Write for StringWriter<'_> {
         }
         // This should never fail since `.try_reserve(s.len())` succeeded.
         self.buffer.push_str(s);
+        Ok(())
+    }
+}
+
+/// Writer to the `Cow`.
+#[cfg(feature = "alloc")]
+pub(crate) struct CowWriter<'a> {
+    /// Expected string.
+    ///
+    /// If the written content is the prefix of this value, the writer won't
+    /// heap-allocate.
+    expected: &'a str,
+    /// Destination buffer.
+    ///
+    /// `Ok(len)` or `Err(content)`.
+    buf: Result<usize, String>,
+}
+
+#[cfg(feature = "alloc")]
+impl<'a> CowWriter<'a> {
+    /// Creates a new writer with an expected string.
+    #[inline]
+    #[must_use]
+    pub(crate) fn new(expected: &'a str) -> Self {
+        Self {
+            expected,
+            buf: Ok(0),
+        }
+    }
+
+    /// Returns the buffer as `Cow<str>`.
+    #[inline]
+    #[must_use]
+    pub(crate) fn into_cow(self) -> Cow<'a, str> {
+        match self.buf {
+            Ok(len) => Cow::Borrowed(&self.expected[..len]),
+            Err(buf) => Cow::Owned(buf),
+        }
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl fmt::Write for CowWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s.is_empty() {
+            return Ok(());
+        }
+        match &mut self.buf {
+            Ok(len) => {
+                let rest_expected = &self.expected[*len..];
+                if rest_expected.starts_with(s) {
+                    *len += s.len();
+                } else {
+                    let mut allocated = String::with_capacity(*len + s.len());
+                    allocated.push_str(&self.expected[..*len]);
+                    allocated.push_str(s);
+                    self.buf = Err(allocated);
+                }
+            }
+            Err(buf) => buf.push_str(s),
+        }
         Ok(())
     }
 }

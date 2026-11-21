@@ -1,6 +1,6 @@
 //! Owned `UriTemplateString`.
 
-use core::fmt;
+use core::fmt::{self, Write as _};
 
 use alloc::borrow::Cow;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
@@ -10,6 +10,10 @@ use alloc::boxed::Box;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 
+use crate::format::CowWriter;
+use crate::parser::char::is_nonascii_ucschar_or_iprivate;
+use crate::parser::str::take_first_char;
+use crate::percent_encode::write_pct_encoded_char;
 use crate::template::error::{CreationError, Error, ErrorKind};
 use crate::template::parser::validate_template_str;
 use crate::template::string::UriTemplateStr;
@@ -78,6 +82,68 @@ impl UriTemplateString {
         // or at least should require users to validate the value by
         // making the function `unsafe`.
         Self { inner: s }
+    }
+
+    /// Encodes non-ASCII characters if necessary and creates a URI template string.
+    ///
+    /// ```
+    /// use std::borrow::Cow;
+    ///
+    /// use iri_string::template::UriTemplateString;
+    ///
+    /// let ascii_only = UriTemplateString::try_from_non_ascii("foo/{var}")
+    ///     .expect("valid template string");
+    /// assert!(matches!(ascii_only, Cow::Borrowed(_)));
+    /// assert_eq!(&*ascii_only, "foo/{var}");
+    ///
+    /// let with_non_ascii = UriTemplateString::try_from_non_ascii("\u{03B1}/{alpha}")
+    ///     .expect("valid template when non-ASCII chars are percent-encoded");
+    /// assert!(matches!(with_non_ascii, Cow::Owned(_)));
+    /// assert_eq!(&*with_non_ascii, "%CE%B1/{alpha}");
+    /// ```
+    pub fn try_from_non_ascii(
+        s: &str,
+    ) -> Result<Cow<'_, UriTemplateStr>, CreationError<Cow<'_, str>>> {
+        let mut writer = CowWriter::new(s);
+        let mut rest = s;
+        while !rest.is_empty() {
+            // Process a chunk of ASCII characters.
+            let ascii_prefix_len = rest.find(|c: char| !c.is_ascii()).unwrap_or(rest.len());
+            if ascii_prefix_len > 0 {
+                let ascii_prefix;
+                (ascii_prefix, rest) = rest.split_at(ascii_prefix_len);
+                // Write the ASCII fragment as is.
+                writer
+                    .write_str(ascii_prefix)
+                    .expect("CowWriter never fails");
+                if rest.is_empty() {
+                    break;
+                }
+            }
+
+            // Process non-ASCII characters.
+            while let Some((c, suffix)) = take_first_char(rest) {
+                if is_nonascii_ucschar_or_iprivate(c) {
+                    write_pct_encoded_char(&mut writer, c).expect("CowWriter never fails");
+                    rest = suffix;
+                } else {
+                    break;
+                }
+            }
+        }
+        match writer.into_cow() {
+            Cow::Borrowed(s) => match UriTemplateStr::new(s) {
+                Ok(v) => Ok(Cow::Borrowed(v)),
+                Err(e) => Err(CreationError::new(e, Cow::Borrowed(s))),
+            },
+            Cow::Owned(s) => match UriTemplateString::try_from(s) {
+                Ok(v) => Ok(Cow::Owned(v)),
+                Err(e) => Err(CreationError::new(
+                    e.validation_error(),
+                    Cow::Owned(e.into_source()),
+                )),
+            },
+        }
     }
 
     /// Checks if the given string content is valid as `Self`.
