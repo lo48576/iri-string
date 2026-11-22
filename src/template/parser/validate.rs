@@ -26,7 +26,8 @@ fn validate_varspec(s: &str, offset: usize) -> Result<(), Error> {
     match find_split2_hole(s, b':', b'*') {
         Some((maybe_varname, b':', maybe_len)) => {
             validate_varname(maybe_varname, offset)?;
-            if !(1..=5).contains(&maybe_len.len()) {
+            // `max-length = %x31-39 0*3DIGIT`
+            if !((1..=4).contains(&maybe_len.len()) && !maybe_len.starts_with('0')) {
                 return Err(Error::new(
                     ErrorKind::InvalidExpression,
                     offset + maybe_varname.len() + 2,
@@ -61,8 +62,11 @@ pub(crate) fn validate_varname(s: &str, offset: usize) -> Result<(), Error> {
         Some(b) if b.is_ascii() && is_ascii_varchar_start(*b) => &s[1..],
         _ => return Err(Error::new(ErrorKind::InvalidExpression, offset)),
     };
-    let is_valid = satisfy_chars_with_pct_encoded(rest, is_ascii_varchar_continue, |_| false);
-    if !is_valid {
+    // No periods on either ends, and no consecutive periods.
+    let periods_are_valid = !(s.starts_with('.') || s.ends_with('.') || s.contains(".."));
+    let chars_are_valid =
+        satisfy_chars_with_pct_encoded(rest, is_ascii_varchar_continue, |_| false);
+    if !(chars_are_valid && periods_are_valid) {
         return Err(Error::new(ErrorKind::InvalidExpression, offset));
     }
     Ok(())
