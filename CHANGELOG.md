@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.15]
+
 * Add a function to create a URI template from non-ASCII string
 * Fix panics and incorrect truncation on URI template expansion of non-ASCII
   values.
@@ -1202,7 +1204,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.14...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.15...develop>
+[0.7.15]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.15>
 [0.7.14]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.14>
 [0.7.13]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.13>
 [0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.12>
