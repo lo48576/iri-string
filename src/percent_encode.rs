@@ -42,7 +42,8 @@ enum Context {
     Fragment,
     /// Encode all characters except for `unreserved` characters.
     Unreserve,
-    /// Encode characters only if they cannot appear anywhere in an IRI reference.
+    /// Encode characters only if they cannot appear anywhere in an IRI reference
+    /// or it is a percent character.
     ///
     /// `%` character will be always encoded.
     Character,
@@ -296,8 +297,8 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     /// use iri_string::percent_encode::PercentEncoded;
     /// use iri_string::spec::UriSpec;
     ///
-    /// let unreserved = "%a0-._~\u{03B1}";
-    /// let unreserved_encoded = "%25a0-._~%CE%B1";
+    /// let unreserved = "a0-._~\u{03B1}";
+    /// let unreserved_encoded = "a0-._~%CE%B1";
     /// assert_eq!(
     ///     PercentEncoded::<_, UriSpec>::characters(unreserved).to_string(),
     ///     unreserved_encoded
@@ -305,10 +306,18 @@ impl<T: fmt::Display, S: Spec> PercentEncoded<T, S> {
     ///
     /// let reserved = ":/?#[]@ !$&'()*+,;=";
     /// // Note that `%20` cannot appear directly in an IRI reference.
-    /// let expected = ":/?#[]@%20!$&'()*+,;=";
+    /// let reserved_expected = ":/?#[]@%20!$&'()*+,;=";
     /// assert_eq!(
     ///     PercentEncoded::<_, UriSpec>::characters(reserved).to_string(),
-    ///     expected
+    ///     reserved_expected
+    /// );
+    ///
+    /// let percent = "a%61-percent%25-byte%ff-invalid%fg";
+    /// // Note that ANY occurence of `%` are encoded into `%25`.
+    /// let percent_expected = "a%2561-percent%2525-byte%25ff-invalid%25fg";
+    /// assert_eq!(
+    ///     PercentEncoded::<_, UriSpec>::characters(percent).to_string(),
+    ///     percent_expected
     /// );
     /// # }
     /// ```
@@ -379,7 +388,7 @@ impl<T: fmt::Display, S: Spec> fmt::Display for PercentEncoded<T, S> {
 
 /// Percent-encodes the given character and writes it.
 #[inline]
-fn write_pct_encoded_char<W: fmt::Write>(writer: &mut W, c: char) -> fmt::Result {
+pub(crate) fn write_pct_encoded_char<W: fmt::Write>(writer: &mut W, c: char) -> fmt::Result {
     let mut buf = [0_u8; 4];
     let buf = c.encode_utf8(&mut buf);
     buf.bytes().try_for_each(|b| write!(writer, "%{:02X}", b))

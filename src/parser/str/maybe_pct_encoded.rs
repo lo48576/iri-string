@@ -275,8 +275,8 @@ impl DecoderBuffer {
                 // Expect `%`.
                 if c != '%' {
                     // Undecodable.
-                    // `-1`: the last byte is peeked but not consumed.
-                    let len_consumed = s.len() - chars.as_str().len() - 1;
+                    // The last character is peeked but not consumed.
+                    let len_consumed = s.len() - chars.as_str().len() - c.len_utf8();
                     let len_result = self.len_encoded;
                     self.write_and_pop(buf, len_result);
                     return (len_consumed, PushResult::Undecodable(len_result));
@@ -289,8 +289,8 @@ impl DecoderBuffer {
             // Expect a nibble.
             if !c.is_ascii_hexdigit() {
                 // Undecodable.
-                // `-1`: the last byte is peeked but not consumed.
-                let len_consumed = s.len() - chars.as_str().len() - 1;
+                // The last character is peeked but not consumed.
+                let len_consumed = s.len() - chars.as_str().len() - c.len_utf8();
                 let len_result = self.len_encoded;
                 self.write_and_pop(buf, len_result);
                 return (len_consumed, PushResult::Undecodable(len_result));

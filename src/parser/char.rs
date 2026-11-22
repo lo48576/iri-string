@@ -1,6 +1,6 @@
 //! Characters.
 
-use crate::spec::Spec;
+use crate::spec::{IriSpec, Spec, SpecInternal};
 
 /// A mask to test whether the character is continue character of `scheme`.
 // `ALPHA / DIGIT / "+" / "-" / "."`
@@ -231,6 +231,13 @@ pub(crate) const fn is_ascii_frag_query(c: u8) -> bool {
 #[must_use]
 pub(crate) fn is_nonascii_query<S: Spec>(c: char) -> bool {
     S::is_nonascii_char_unreserved(c) || S::is_nonascii_char_private(c)
+}
+
+/// Returns `true` if the given non-ASCII character is `ucschar` or `iprivate`.
+#[inline]
+#[must_use]
+pub(crate) fn is_nonascii_ucschar_or_iprivate(c: char) -> bool {
+    IriSpec::is_nonascii_char_unreserved(c) || IriSpec::is_nonascii_char_private(c)
 }
 
 /// Returns `true` if the given non-ASCII character is allowed to appear in `ifragment`.

@@ -13,6 +13,10 @@ variables:
       # Use the Rust toolchain(s) cached in the CI workspace directory.
     - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
     - rustc --version && cargo --version
+  fetch_deps_cmds: &fetch_deps_cmds
+    - cargo fetch --locked
+    - mkdir -p .cargo
+    - cargo vendor --color=always --locked >> .cargo/config.toml
 
 matrix:
   OPT_FEATURES:
@@ -39,6 +43,12 @@ steps:
       - .woodpecker/scripts/prepare-toolchain.sh $${RUST_CHANNEL}
     environment:
       RUST_CHANNEL: *msrv_channel
+
+  - name: fetch deps
+    image: *rust_image
+    commands:
+      - <<: *configure_toolchain_cmds
+      - <<: *fetch_deps_cmds
 
   - name: doc
     image: *rust_image

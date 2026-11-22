@@ -445,6 +445,9 @@ fn escape_write<S: Spec, T: fmt::Display, W: fmt::Write>(
 }
 
 /// Truncates the given value as a string, escapes the value, and writes it.
+///
+/// Note that `max_len` is named after `max-length` in RFC 6570 (section 2.4.1),
+/// so it is a character count rather than a byte count.
 fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
     writer: &mut PrefixOnceWriter<'_, W>,
     v: T,
@@ -463,20 +466,9 @@ fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
                     writer.write_str(s)
                 }
                 PctEncodedFragments::NoPctStr(s) => {
-                    let mut chars = s.char_indices();
-                    let count = chars
-                        .by_ref()
-                        .take(max_len)
-                        .last()
-                        .map(|(i, _)| i)
-                        .expect("decomposed string fragment must not be empty");
-                    let sub_len = s.len() - chars.as_str().len();
+                    let (nopct, count) = truncate_by_max_chars(s, max_len);
                     max_len -= count;
-                    write!(
-                        writer,
-                        "{}",
-                        PercentEncoded::<_, S>::characters(&s[..sub_len])
-                    )
+                    write!(writer, "{}", PercentEncoded::<_, S>::characters(nopct))
                 }
                 PctEncodedFragments::StrayPercent => {
                     max_len -= 1;
@@ -513,6 +505,14 @@ fn escape_write_with_maxlen<S: Spec, T: fmt::Display, W: fmt::Write>(
     }
 }
 
+/// Returns the truncated string and the number of characters after truncation.
+fn truncate_by_max_chars(s: &str, max_chars: usize) -> (&str, usize) {
+    let mut chars = s.chars();
+    let count = chars.by_ref().take(max_chars).count();
+    let len = s.len() - chars.as_str().len();
+    (&s[..len], count)
+}
+
 /// A writer that truncates the input to the given length and writes to the backend.
 struct TruncatePercentEncodeWriter<'a, S, W> {
     /// Inner writer.
@@ -528,14 +528,7 @@ impl<S: Spec, W: fmt::Write> fmt::Write for TruncatePercentEncodeWriter<'_, S, W
         if self.rest_num_chars == 0 {
             return Ok(());
         }
-        let mut chars = s.char_indices();
-        let skip_count = chars
-            .by_ref()
-            .take(self.rest_num_chars)
-            .last()
-            .map_or(0, |(i, _)| i + 1);
-        let len = s.len() - chars.as_str().len();
-        let truncated = &s[..len];
+        let (truncated, skip_count) = truncate_by_max_chars(s, self.rest_num_chars);
         write!(
             self.inner,
             "{}",

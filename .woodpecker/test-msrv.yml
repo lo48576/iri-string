@@ -10,12 +10,15 @@ variables:
   msrv_channel: &msrv_channel '1.60.0'
   # Docker image of the MSRV.
   rust_msrv_image: &rust_image 'library/rust:1.60.0-slim'
-  rust_nightly_image: &rust_nightly_image 'rustlang/rust:nightly-slim'
   configure_toolchain_cmds: &configure_toolchain_cmds
     - cp .woodpecker/cargo-config.toml $${CARGO_HOME}/config.toml
       # Use the Rust toolchain(s) cached in the CI workspace directory.
     - export RUSTUP_HOME=$${CI_WORKSPACE}/.tmp-rustup-home && test -d $${RUSTUP_HOME}
     - rustc --version && cargo --version
+  fetch_deps_cmds: &fetch_deps_cmds
+    - cargo fetch --locked
+    - mkdir -p .cargo
+    - cargo vendor --color=always --locked >> .cargo/config.toml
 
 matrix:
   BUILD_PROFILE:
@@ -60,6 +63,7 @@ steps:
     commands:
       # Ensure `Cargo.lock` exists.
       - if [ ! -f Cargo.lock ] ; then echo "Cargo.lock is missing" >&2 ; exit 1 ; fi
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: default
@@ -69,35 +73,35 @@ steps:
     commands:
       - <<: *configure_toolchain_cmds
       - cargo update
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: updated
 
   - name: prepare deps
-    image: *rust_nightly_image
+    image: *rust_image
     commands:
-      - rustc --version && cargo --version
-      - cargo update --workspace -Zminimal-versions
+      - <<: *configure_toolchain_cmds
+      - rustup install nightly --profile minimal
+      - rustc +nightly --version && cargo +nightly --version
+      - cargo +nightly update -Zminimal-versions
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: minimal
 
   - name: prepare deps
-    image: *rust_nightly_image
+    image: *rust_image
     commands:
-      - rustc --version && cargo --version
-      - cargo update -Zdirect-minimal-versions
+      - <<: *configure_toolchain_cmds
+      - rustup install nightly --profile minimal
+      - rustc +nightly --version && cargo +nightly --version
+      - cargo +nightly update -Zdirect-minimal-versions
+      - <<: *fetch_deps_cmds
     when:
       - matrix:
           RUST_DEP_VERSIONS: direct-minimal
 
-  - name: fetch deps
-    image: *rust_image
-    commands:
-      - <<: *configure_toolchain_cmds
-      - cargo fetch --locked
-      - mkdir -p .cargo
-      - cargo vendor --color=always --locked >> .cargo/config.toml
 
   - name: clippy (allow warning)
     image: *rust_image

@@ -216,7 +216,7 @@ dependencies = [
 
 [[package]]
 name = "iri-string"
-version = "0.7.14"
+version = "0.7.15"
 dependencies = [
  "memchr",
  "serde",

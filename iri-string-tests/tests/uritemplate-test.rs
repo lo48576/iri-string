@@ -1,12 +1,13 @@
 //! Tests using <https://github.com/uri-templates/uritemplate-test>.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
 use iri_string::spec::UriSpec;
 use iri_string::template::simple_context::{SimpleContext, Value};
-use iri_string::template::UriTemplateStr;
+use iri_string::template::{UriTemplateStr, UriTemplateString};
 
 use serde::Deserialize;
 use serde_json::Value as JsonValue;
@@ -80,7 +81,19 @@ fn test_with_file(filename: &str) {
                 ),
                 v => panic!("unexpected `expected` value: {v:?}"),
             };
-            let result = UriTemplateStr::new(template)
+            let template_result =
+                UriTemplateString::try_from_non_ascii(template).map_err(|e| e.validation_error());
+            if let Ok(parsed) = &template_result {
+                assert_eq!(
+                    matches!(parsed, Cow::Borrowed(_)),
+                    template.is_ascii(),
+                    "UriTemplateString::from_non_ascii() allocates if and only if \
+                     the template contains non-ASCII chars: tempalte={template:?}"
+                );
+            }
+            let result = template_result
+                .as_ref()
+                .map_err(|&e| e)
                 .and_then(|template| template.expand::<UriSpec, _>(&context));
             match (result, expected) {
                 (Ok(expanded), Some(candidates)) => {

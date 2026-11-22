@@ -375,7 +375,7 @@ fn fragmented_write() {
 }
 
 #[test]
-fn github_issue_39() {
+fn github_issue_45() {
     #[derive(Default)]
     struct MyContext {
         on_expansion_start_called: Cell<bool>,
@@ -383,6 +383,8 @@ fn github_issue_39() {
     }
     impl DynamicContext for MyContext {
         fn visit_dynamic<V: Visitor>(&mut self, visitor: V) -> V::Result {
+            assert!(self.on_expansion_start_called.get());
+            assert!(!self.on_expansion_end_called.get());
             visitor.visit_undefined()
         }
         fn on_expansion_start(&mut self) {
@@ -401,4 +403,82 @@ fn github_issue_39() {
     assert_eq!(s, "hello/");
     assert!(dyctx.on_expansion_start_called.get());
     assert!(dyctx.on_expansion_end_called.get());
+}
+
+#[test]
+fn prefix_modifier_and_reserved_expansion_for_non_ascii_content() {
+    let mut context = SimpleContext::new();
+    context.insert("greek", "\u{03B1}\u{03B2}\u{03B3}");
+    context.insert("mixed", "\u{03B2}a");
+    context.insert("pct_then_non_ascii", "%41\u{00E9}b");
+    context.insert("non_ascii_then_pct", "\u{00E9}%41b");
+    context.insert("ascii_then_pct", "ab%41cd");
+
+    // `&[(template, expected)]`.
+    const CASES: &[(&str, &str)] = &[
+        ("{greek:2}", "%CE%B1%CE%B2"),
+        ("{greek:3}", "%CE%B1%CE%B2%CE%B3"),
+        ("{mixed:2}", "%CE%B2a"),
+        ("{+greek}", "%CE%B1%CE%B2%CE%B3"),
+        ("{+greek:2}", "%CE%B1%CE%B2"),
+        ("{#greek:1}", "#%CE%B1"),
+        ("{+mixed}", "%CE%B2a"),
+        ("{+pct_then_non_ascii}", "%41%C3%A9b"),
+        ("{+pct_then_non_ascii:2}", "%41%C3%A9"),
+        ("{+non_ascii_then_pct}", "%C3%A9%41b"),
+        ("{+non_ascii_then_pct:2}", "%C3%A9%41"),
+        ("{+ascii_then_pct:1}", "a"),
+        ("{+ascii_then_pct:3}", "ab%41"),
+        ("{+ascii_then_pct:4}", "ab%41c"),
+    ];
+
+    for (template, expected) in CASES {
+        let template = UriTemplateStr::new(template).expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&context)
+            .expect("must not have variable type error");
+        assert_eq!(expanded.to_string(), *expected, "template={template:?}");
+
+        let expanded_dynamic = template
+            .expand_dynamic_to_string::<UriSpec, _>(&mut context.clone())
+            .expect("must not have variable type error");
+        assert_eq!(
+            expanded_dynamic, *expected,
+            "dynamic, template={template:?}"
+        );
+    }
+}
+
+#[test]
+fn prefix_modifier_for_fragmented_non_ascii_write() {
+    use core::fmt;
+
+    #[derive(Clone)]
+    struct Fragmented;
+    impl fmt::Display for Fragmented {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("\u{03B1}\u{03B2}")?;
+            f.write_str("\u{03B3}")
+        }
+    }
+    impl Context for Fragmented {
+        fn visit<V: Visitor>(&self, visitor: V) -> V::Result {
+            visitor.visit_string(Fragmented)
+        }
+    }
+
+    {
+        let template = UriTemplateStr::new("{x:2}").expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&Fragmented)
+            .expect("must not have variable type error");
+        assert_eq!(expanded.to_string(), "%CE%B1%CE%B2");
+    }
+    {
+        let template = UriTemplateStr::new("{+x:2}").expect("must be valid template");
+        let expanded = template
+            .expand::<UriSpec, _>(&Fragmented)
+            .expect("must not have variable type error");
+        assert_eq!(expanded.to_string(), "%CE%B1%CE%B2");
+    }
 }

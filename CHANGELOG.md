@@ -2,6 +2,38 @@
 
 ## [Unreleased]
 
+## [0.7.15]
+
+* Add a function to create a URI template from non-ASCII string
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
+* Fix loose validation of prefix modifiers in URI template strings
+* Fix URI template validation to reject invalid use of periods in variable names
+
+### Added
+* Add a function to create a URI template from non-ASCII string
+    + `template::UriTemplateString::try_from_non_ascii()` creates a URI template
+      string as `Cow<'_, UriTemplateStr>`. When it finds non-ASCII characters in
+      the parameter, it percent-encodes them and returns heap-allocated string.
+
+### Fixed
+* Fix panics and incorrect truncation on URI template expansion of non-ASCII
+  values.
+    + Reserved and fragment expansions (`{+var}` and `{#var}`) panicked when
+      a non-ASCII character came first or right after a percent-encoded triplet.
+    + A prefix modifier (such as `{var:2}`) counted bytes instead of
+      characters for multibyte values. This panicked in debug builds.
+    + A prefix modifier in reserved and fragment expansions (such as
+      `{+var:3}`) kept too many characters after a percent-encoded triplet.
+    + See [issue #63](https://github.com/lo48576/iri-string/issues/63).
+* Fix loose validation of prefix modifiers in URI template strings
+    + Previously, 5-digits max-len (such as `{var:99999}`) and max-len starting
+      with `0` (such as `{var:01}`) were wrongly accepted.
+* Fix URI template validation to reject invalid use of periods in variable names
+    + Previously, contiguous periods in a variable names (such as `{x..y}`) and
+      variable names starting or ending with a periond (such as `{.x}` and
+      `{x.}`) were wrongly accepted.
+
 ## [0.7.14]
 
 * Reject an empty fragment correctly for absolute IRIs.
@@ -1172,7 +1204,8 @@ Beleive rustdoc rather than this CHANGELOG.**
 
 Totally rewritten.
 
-[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.14...develop>
+[Unreleased]: <https://github.com/lo48576/iri-string/compare/v0.7.15...develop>
+[0.7.15]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.15>
 [0.7.14]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.14>
 [0.7.13]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.13>
 [0.7.12]: <https://github.com/lo48576/iri-string/releases/tag/v0.7.12>
