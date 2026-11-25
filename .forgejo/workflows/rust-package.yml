@@ -86,6 +86,8 @@ jobs:
           cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
 
       - name: Clippy
+        # MSRV is too old. Use stable channel for diagnostics by clippy.
+        continue-on-error: true
         run: |
           echo '[command]cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings'
           cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings

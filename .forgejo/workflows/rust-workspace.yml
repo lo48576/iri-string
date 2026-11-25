@@ -47,6 +47,8 @@ jobs:
         # `package.metadata.docs.rs.rustc-args` into account.
         run: |
           export RUSTDOCFLAGS='-D warnings'
+          # For very old serde (1.0.103).
+          export RUSTDOCFLAGS="${RUSTDOCFLAGS} -A unexpected_cfgs"
           echo '[command]cargo rustdoc --all-features --package ${{ matrix.package }} -- --cfg docsrs'
           cargo rustdoc --all-features --package ${{ matrix.package }} -- --cfg docsrs
 
