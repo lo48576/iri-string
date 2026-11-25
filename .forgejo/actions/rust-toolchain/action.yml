@@ -1,0 +1,96 @@
+inputs:
+  channel:
+    default: stable
+    description: Rust toolchain chunnel to install
+  components:
+    default: 'rustc,cargo,rust-std'
+    description: Rust toolchain components
+output:
+
+runs:
+  using: "composite"
+  steps:
+    - name: Dump parameters
+      run: |
+        echo "##[group]Parameters"
+        echo 'channel=${{ inputs.channel }}'
+        echo 'components=${{ inputs.components }}'
+        echo "##[endgroup]"
+
+    - name: Generate cache keys
+      id: cache-rust-tools-keys
+      run: echo 'components=${{ inputs.components }}' | sed -e 's/,/+/g' >"$FORGEJO_OUTPUT"
+    - run: echo '::group::Restoring Rust tools cache'
+    - name: Restore Rust tools cache
+      id: cache-restore-rust-tools
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          ~/.cargo/bin/rustup
+          ~/.cargo/bin/cargo
+          ~/.cargo/bin/cargo-clippy
+          ~/.cargo/bin/cargo-fmt
+          ~/.cargo/bin/cargo-miri
+          ~/.cargo/bin/rustc
+          ~/.cargo/bin/rustdoc
+          ~/.cargo/bin/rustfmt
+          ~/.rustup/
+        key: "_3_rusttools-${{ runner.os }}-${{ runner.arch }}-${{ inputs.channel }}-${{ steps.cache-rust-tools-keys.outputs.components }}"
+    - name: Clean up $RUSTUP_HOME if cache restoration failed
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: rm -rf ~/.rustup/*
+    - run: echo '::endgroup::'
+
+    - name: Add $CARGO_HOME/bin to $PATH
+      run: echo "${HOME}/.cargo/bin" >>"$FORGEJO_PATH"
+
+    - name: Install rustup
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: |
+        echo '##[group]Installing rustup'
+        echo "[command]curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y"
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain none -y
+        echo '[command]rustup --version'
+        rustup --version
+        echo '##[endgroup]'
+
+    - name: Install Rust toolchain
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: |
+        echo '##[group]Installing Rust toolchain'
+        echo '[command]rustup toolchain install --no-self-update --default --allow-downgrade --profile minimal --component '${{ inputs.components }}' ${{ inputs.channel }}'
+        rustup toolchain install --no-self-update --default --allow-downgrade --profile minimal --component '${{ inputs.components }}' ${{ inputs.channel }}
+        echo '[command]rustc --version'
+        rustc --version
+        echo '[command]cargo --version'
+        cargo --version
+        echo '##[endgroup]'
+
+    - run: echo '::group::Saving Rust tools cache'
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+    - name: Save Rust tools cache
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      id: cache-save-rust-tools
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          ~/.cargo/bin/rustup
+          ~/.cargo/bin/cargo
+          ~/.cargo/bin/cargo-clippy
+          ~/.cargo/bin/cargo-fmt
+          ~/.cargo/bin/cargo-miri
+          ~/.cargo/bin/rustc
+          ~/.cargo/bin/rustdoc
+          ~/.cargo/bin/rustfmt
+          ~/.rustup/
+        key: "_3_rusttools-${{ runner.os }}-${{ runner.arch }}-${{ inputs.channel }}-${{ steps.cache-rust-tools-keys.outputs.components }}"
+    - run: echo '::endgroup::'
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+
+    - name: Install cargo config
+      run: |
+        CONFIG_SRC=.forgejo/assets/cargo-config.toml
+        if [ -f "$CONFIG_SRC" ] ; then
+          echo "[command]cp -v \"$CONFIG_SRC\" ~/.cargo/config.toml"
+          cp -v "$CONFIG_SRC" ~/.cargo/config.toml
+        fi

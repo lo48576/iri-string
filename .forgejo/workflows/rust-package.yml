@@ -1,0 +1,187 @@
+name: Per-package Rust checks
+
+on:
+  push:
+  release:
+  workflow_dispatch:
+
+env:
+  MSRV: &msrv '1.60'
+
+jobs:
+  # Baseline that the packages are guaranteed to work.
+  #
+  # * All acceptable combinations of crate features should work.
+  #     + Testing literally all combinations will be too heavy for CI infrastructure,
+  #       so omit if they will be basically covered by other combos.
+  # * Default Cargo.lock deps and minimal deps should work.
+  #     + They are (almost) fully controlled by the developer (especially by who
+  #       commits Cargo.lock), so they should compile at any timing.
+  test-baseline:
+    name: Baseline ${{ matrix.package.name }} (MSRV, dep=${{ matrix.dep-versions }}, feat=${{ matrix.package.opt-features }})
+    runs-on: docker
+    strategy:
+      matrix:
+        package:
+          # iri-string
+          - { name: iri-string, opt-features: '--features=' } # no features
+          - { name: iri-string, opt-features: '--features=default' }
+          - { name: iri-string, opt-features: '--all-features' }
+          - { name: iri-string, opt-features: '--features=alloc' }
+          - { name: iri-string, opt-features: '--features=std' }
+          - { name: iri-string, opt-features: '--features=memchr' }
+          - { name: iri-string, opt-features: '--features=serde' }
+          - { name: iri-string, opt-features: '--features=alloc,serde' }
+          - { name: iri-string, opt-features: '--features=std,serde' }
+          - { name: iri-string, opt-features: '--features=std,memchr' }
+        # `dep-versions == 'minimal'` and `dep-versions == 'default'` has (almost)
+        # deterministic dependencies, so they are always expected to work.
+        dep-versions:
+          - minimal
+          - default
+        build-profile:
+          - dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.forgejo/actions/rust-toolchain
+        with:
+          channel: ${{ env.MSRV }}
+          components: clippy
+      - uses: ./.forgejo/actions/rust-deps
+        with:
+          update-mode: ${{ matrix.dep-versions }}
+
+      - name: cargo check
+        run: |
+          echo '[command]cargo check --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo check --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Build documents
+        run: |
+          export RUSTDOCFLAGS='-D warnings'
+          echo '[command]cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }}'
+          cargo doc --workspace --no-deps --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Build private documents
+        run: |
+          export RUSTDOCFLAGS='-D warnings'
+          echo '[command]cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }} --document-private-items'
+          cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }} --document-private-items
+
+      - name: Build
+        run: |
+          echo '[command]cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Tests
+        run: |
+          export RUST_BACKTRACE=1
+          echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Doc tests
+        run: |
+          export RUST_BACKTRACE=1
+          echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Clippy
+        # MSRV is too old. Use stable channel for diagnostics by clippy.
+        continue-on-error: true
+        run: |
+          echo '[command]cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings'
+          cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings
+
+  # Tests with the current environment (newer deps, newer toolchain, etc.)
+  #
+  # Basically these are guaranteed by best-effort basis at best, because we cannot always avoid
+  # being hit by unplanned incompatible changes of toolchains and/or dependencies.
+  # Developers may want to be notified by such changes and to fix the breakage as soon as they
+  # notice, but it may not always block the release (especially if it is a breakage with the beta or
+  # nightly toolchain).
+  test-current:
+    name: Current ${{ matrix.package.name }} (Rust ${{ matrix.rust-channel }}, dep=${{ matrix.dep-versions }}, feat=${{ matrix.package.opt-features }})
+    runs-on: docker
+    # `dep-versions == 'minimal'` and `dep-versions == 'default'` has (almost)
+    # deterministic dependencies, so they are always expected to work.
+    continue-on-error: ${{ (matrix.should-success != 'true') || (matrix.rust-channel != 'stable') }}
+    strategy:
+      matrix:
+        rust-channel:
+          - stable
+          #- beta
+        build-profile:
+          - dev
+        package:
+          # iri-string
+          - { name: iri-string, opt-features: '--features=' } # no features
+          - { name: iri-string, opt-features: '--features=default' }
+          - { name: iri-string, opt-features: '--all-features' }
+        dep-versions:
+          # NOTE: Disabling `minimal`, `minimal-direct`, and `default` until
+          # MSRV and deps are updated.
+          #- minimal
+          #- minimal-direct
+          #- default
+          - updated
+        include:
+          - rust-channel: beta
+            build-profile: dev
+            package: { name: iri-string, opt-features: '--features=' }
+            dep-versions: updated
+          - rust-channel: beta
+            build-profile: dev
+            package: { name: iri-string, opt-features: '--features=default' }
+            dep-versions: updated
+          - rust-channel: beta
+            build-profile: dev
+            package: { name: iri-string, opt-features: '--all-features' }
+            dep-versions: updated
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.forgejo/actions/rust-toolchain
+        with:
+          channel: ${{ matrix.rust-channel }}
+          components: clippy
+      - uses: ./.forgejo/actions/rust-deps
+        with:
+          update-mode: ${{ matrix.dep-versions }}
+
+      - name: cargo check
+        run: |
+          echo '[command]cargo check --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo check --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Build documents
+        run: |
+          export RUSTDOCFLAGS='-D warnings'
+          echo '[command]cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }}'
+          cargo doc --workspace --no-deps --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Build private documents
+        run: |
+          export RUSTDOCFLAGS='-D warnings'
+          echo '[command]cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }} --document-private-items'
+          cargo doc --package ${{ matrix.package.name }} --no-deps --no-default-features ${{ matrix.package.opt-features }} --document-private-items
+
+      - name: Build
+        run: |
+          echo '[command]cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Test
+        run: |
+          export RUST_BACKTRACE=1
+          echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Test
+        run: |
+          export RUST_BACKTRACE=1
+          echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
+          cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
+
+      - name: Clippy
+        run: |
+          echo '[command]cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings'
+          cargo clippy --color=always --frozen --package ${{ matrix.package.name }} --all-targets --no-deps --no-default-features ${{ matrix.opt-features }} -- --deny warnings
