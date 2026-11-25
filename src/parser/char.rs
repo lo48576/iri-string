@@ -1,6 +1,8 @@
 //! Characters.
 
-use crate::spec::{IriSpec, Spec, SpecInternal};
+use crate::spec::Spec;
+#[cfg(feature = "alloc")]
+use crate::spec::{IriSpec, SpecInternal};
 
 /// A mask to test whether the character is continue character of `scheme`.
 // `ALPHA / DIGIT / "+" / "-" / "."`
@@ -234,6 +236,7 @@ pub(crate) fn is_nonascii_query<S: Spec>(c: char) -> bool {
 }
 
 /// Returns `true` if the given non-ASCII character is `ucschar` or `iprivate`.
+#[cfg(feature = "alloc")]
 #[inline]
 #[must_use]
 pub(crate) fn is_nonascii_ucschar_or_iprivate(c: char) -> bool {

@@ -2,6 +2,7 @@
 
 use core::fmt;
 
+#[cfg(feature = "alloc")]
 pub(crate) use self::internal::SpecInternal;
 
 // Note that this MUST be private module.
