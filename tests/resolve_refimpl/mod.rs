@@ -121,9 +121,7 @@ fn remove_dot_segments(mut input: String) -> String {
             // 2E.
             let first_seg_end = if let Some(after_slash) = input.strip_prefix('/') {
                 // `+1` is the length of the initial slash.
-                after_slash
-                    .find('/')
-                    .map_or_else(|| input.len(), |pos| pos + 1)
+                after_slash.find('/').map_or(input.len(), |pos| pos + 1)
             } else {
                 input.find('/').unwrap_or(input.len())
             };

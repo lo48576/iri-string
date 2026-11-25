@@ -28,7 +28,7 @@ pub(crate) fn password_range_to_hide<S: Spec>(iri: &RiReferenceStr<S>) -> Option
             .find("//")
             .expect("`authority` component must be prefixed with `//`");
         let end = authority_start + userinfo.len();
-        let start = authority_start + userinfo.find(':').map_or_else(|| userinfo.len(), |v| v + 1);
+        let start = authority_start + userinfo.find(':').map_or(userinfo.len(), |v| v + 1);
         Some(start..end)
     }
 
