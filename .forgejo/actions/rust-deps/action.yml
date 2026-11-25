@@ -1,0 +1,116 @@
+inputs:
+  update-mode:
+    default: 'default'
+    description: |
+      How to update the dependencies.
+
+      - default: Use the Cargo.lock as is.
+      - updated: Use the latest versions for all dependencies as possible.
+      - minimal: Use the minimal versions as possible for all dependencies.
+      - minimal-direct: Use the minimal versions as possible for direct
+          dependencies, and use the latest versions for all other dependencies.
+output:
+
+runs:
+  using: "composite"
+  steps:
+    - name: Dump parameters
+      run: |
+        echo "##[group]Parameters"
+        echo 'update-mode=${{ inputs.update-mode }}'
+        echo "##[endgroup]"
+
+    - name: Validate update-mode
+      run: |
+        case "${{ inputs.update-mode }}" in
+          default|updated|minimal|minimal-direct)
+            ;;
+          *)
+            echo 'Unknown update-mode: ${{ inputs.update-mode }}. expected one of: default, updated, minimal, or minimal-direct.' >&2
+            exit 1
+        esac
+
+    - run: echo '::group::Restoring Rust deps cache'
+    - name: Restore Rust deps cache
+      id: cache-restore-rust-deps
+      uses: actions/cache/restore@v6
+      with:
+        path: |
+          .cargo/vendor.config.toml
+          vendor/
+        key: "_1_rustdeps-${{ inputs.update-mode }}-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('Cargo.lock') }}"
+        restore-keys: |
+          _1_rustdeps-${{ inputs.update-mode }}-${{ hashFiles('**/Cargo.toml') }}-
+    - name: Clean up cached files if cache restoration failed
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: rm -rf .cargo/vendor.config.toml vendor/
+    - run: echo '::endgroup::'
+
+    - run: echo '::group::Updating Rust dependencies'
+
+    - name: Update the dependencies (mode=default)
+      if: (steps.cache-restore-rust-tools.outputs.cache-hit != 'true') && (inputs.update-mode == 'default')
+      run: |
+        # Ensure `Cargo.lock` exists.
+        if [ ! -f Cargo.lock ] ; then echo "Cargo.lock is missing" >&2 ; exit 1 ; fi
+
+    - name: Update the dependencies (mode=updated)
+      if: (steps.cache-restore-rust-tools.outputs.cache-hit != 'true') && (inputs.update-mode == 'updated')
+      run: |
+        echo '[command]cargo update'
+        cargo update
+
+    - name: Install Rust nightly toolchain (mode=minimal,minimal-direct)
+      if: (steps.cache-restore-rust-tools.outputs.cache-hit != 'true') && (inputs.update-mode == 'minimal' || inputs.update-mode == 'minimal-direct')
+      run: |
+        echo '[command]rustup install nightly --profile minimal'
+        rustup install nightly --profile minimal
+        echo '[command]rustc +nightly --version'
+        rustc +nightly --version
+        echo '[command]cargo +nightly --version'
+        cargo +nightly --version
+
+    - name: Update the dependencies (mode=minimal)
+      if: (steps.cache-restore-rust-tools.outputs.cache-hit != 'true') && (inputs.update-mode == 'minimal')
+      run: |
+        echo '[command]cargo +nightly update -Zminimal-versions'
+        cargo +nightly update -Zminimal-versions
+
+    - name: Update the dependencies (mode=minimal-direct)
+      if: (steps.cache-restore-rust-tools.outputs.cache-hit != 'true') && (inputs.update-mode == 'minimal-direct')
+      run: |
+        echo '[command]cargo +nightly update -Zdirect-minimal-versions'
+        cargo +nightly update -Zdirect-minimal-versions
+
+    - run: echo '::endgroup::'
+
+    - run: echo '::group::Fetching Rust dependencies'
+    - name: Fetch crates
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: |
+        echo '[command]cargo fetch --locked'
+        cargo fetch --locked
+
+    - name: Vendor crates
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p .cargo
+        echo '[command]cargo vendor --color=always --locked | tee .cargo/vendor.config.toml'
+        cargo vendor --color=always --locked | tee .cargo/vendor.config.toml
+        echo '[command]cat .cargo/vendor.config.toml >>.cargo/config.toml'
+        cat .cargo/vendor.config.toml >>.cargo/config.toml
+    - run: echo '::endgroup::'
+
+    - run: echo '::group::Saving Rust deps cache'
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+    - name: Save Rust deps cache
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
+      id: cache-save-rust-deps
+      uses: actions/cache/save@v6
+      with:
+        path: |
+          .cargo/vendor.config.toml
+          vendor/
+        key: "_1_rustdeps-${{ inputs.update-mode }}-${{ hashFiles('**/Cargo.toml') }}-${{ hashFiles('Cargo.lock') }}"
+    - run: echo '::endgroup::'
+      if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'

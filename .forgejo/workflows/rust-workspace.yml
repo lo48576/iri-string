@@ -1,0 +1,77 @@
+name: Workspace-wide Rust checks
+
+on:
+  push:
+  release:
+  workflow_dispatch:
+
+env:
+  MSRV: &msrv '1.60'
+  MSRV_REGEX: '1\.60'
+
+jobs:
+  format:
+    runs-on: docker
+    continue-on-error: ${{ matrix.rust-channel != matrix.msrv }}
+    strategy:
+      matrix:
+        msrv: [*msrv]
+        rust-channel:
+          - *msrv
+          - stable
+          - beta
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.forgejo/actions/rust-toolchain
+        with:
+          channel: ${{ matrix.rust-channel }}
+          components: rustfmt
+      - name: Check format
+        run: cargo fmt --all -- --check
+
+  docs-rs:
+    runs-on: docker
+    strategy:
+      matrix:
+        package:
+          - iri-string
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.forgejo/actions/rust-toolchain
+        with:
+          channel: nightly
+      - uses: ./.forgejo/actions/rust-deps
+
+      - name: Build documents for docs.rs
+        # NOTE: This is a simplified test: it does not take
+        # `package.metadata.docs.rs.rustc-args` into account.
+        run: |
+          export RUSTDOCFLAGS='-D warnings'
+          echo '[command]cargo rustdoc --all-features --package ${{ matrix.package }} -- --cfg docsrs'
+          cargo rustdoc --all-features --package ${{ matrix.package }} -- --cfg docsrs
+
+  repo-msrv-consistency:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check README.md
+        run: |
+          echo "[command]grep --color=always --with-filename --line-number --ignore-case 'minimum supported rust\\(c\\)\\? version.*"'${{ env.MSRV_REGEX }}'"\\($\\|\\d\\)' README.md"
+          grep --color=always --with-filename --line-number --ignore-case 'minimum supported rust\(c\)\? version.*${{ env.MSRV_REGEX }}\($\|[^0-9]\)' README.md
+
+      - name: Check Cargo.toml
+        run: |
+          echo "[command]grep --color=always --with-filename --line-number --ignore-case '^\\s*rust-version\\s*=\\s*['\\''\"]"'${{ env.MSRV_REGEX }}'"['\\''\"]' Cargo.toml"
+          grep --color=always --with-filename --line-number --ignore-case '^\s*rust-version\s*=\s*['\''"]${{ env.MSRV_REGEX }}['\''"]' Cargo.toml
+
+      - name: Check Forgejo Actions files
+        run: |
+          for yml_path in .forgejo/workflows/*.yml ; do
+              echo "checking ${yml_path}"
+
+              # Check `&msrv`.
+              if grep --quiet '&msrv' "$yml_path" ; then
+                  echo "[command]grep --color=always --with-filename --line-number '\\s\\+&msrv\\s*['\\''\"]"'${{ env.MSRV_REGEX }}'"['\\''\"]' \"$yml_path\""
+                  grep --color=always --with-filename --line-number '\s\+&msrv\s*['\''"]${{ env.MSRV_REGEX }}['\''"]' "$yml_path"
+              fi
+          done
