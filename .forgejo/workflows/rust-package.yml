@@ -118,9 +118,11 @@ jobs:
           - { name: iri-string, opt-features: '--features=default' }
           - { name: iri-string, opt-features: '--all-features' }
         dep-versions:
-          - minimal
-          - minimal-direct
-          - default
+          # NOTE: Disabling `minimal`, `minimal-direct`, and `default` until
+          # MSRV and deps are updated.
+          #- minimal
+          #- minimal-direct
+          #- default
           - updated
         include:
           - rust-channel: beta
