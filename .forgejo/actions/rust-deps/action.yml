@@ -89,7 +89,9 @@ runs:
       if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
       run: |
         echo '[command]cargo fetch --locked'
-        cargo fetch --locked
+        # Retry when failed since this may fail due to network errors
+        # ("failed to fetch `https://github.com/rust-lang/crates.io-index`").
+        cargo fetch --locked || cargo fetch --locked
 
     - name: Vendor crates
       if: steps.cache-restore-rust-tools.outputs.cache-hit != 'true'
