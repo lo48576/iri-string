@@ -169,13 +169,13 @@ jobs:
           echo '[command]cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
           cargo build --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
 
-      - name: Test
+      - name: Tests
         run: |
           export RUST_BACKTRACE=1
           echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
           cargo test --color=always --frozen --package ${{ matrix.package.name }} --all-targets --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}
 
-      - name: Test
+      - name: Doc tests
         run: |
           export RUST_BACKTRACE=1
           echo '[command]cargo test --color=always --frozen --package ${{ matrix.package.name }} --doc --profile=${{ matrix.build-profile }} --no-default-features ${{ matrix.package.opt-features }}'
