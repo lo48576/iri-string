@@ -195,6 +195,19 @@ fn normalizedness() {
             is_normalized_rfc3986: false,
             is_normalized_whatwg_like: true,
         },
+        // Empty port should be removed by normalization.
+        Case {
+            iri: "scheme://authority:/foo",
+            is_normalized_default: false,
+            is_normalized_rfc3986: false,
+            is_normalized_whatwg_like: false,
+        },
+        Case {
+            iri: "scheme://:",
+            is_normalized_default: false,
+            is_normalized_rfc3986: false,
+            is_normalized_whatwg_like: false,
+        },
     ];
 
     for case in CASES {

@@ -384,6 +384,12 @@ pub(crate) fn is_normalized<S: Spec>(i: &str, mode: NormalizednessCheckMode) -> 
                 return false;
             }
         }
+
+        // Syntax-based normalization: an empty port and its `:` delimiter
+        // should be removed (see RFC 3986 section 3.2.3).
+        if authority_components.port() == Some("") {
+            return false;
+        }
     }
 
     // Check `path`.

@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+* Fix `is_normalized*()` methods returning `true` for IRIs with an empty port
+
+### Fixed
+* Fix `is_normalized*()` methods returning `true` for IRIs with an empty port
+    + Normalization removes an empty port and its `:` delimiter (such as
+      `http://example.com:/` to `http://example.com/`), but
+      `is_normalized()`, `is_normalized_rfc3986()`, and
+      `is_normalized_but_authorityless_relative_path_preserved()` returned
+      `true` for such IRIs.
+
 ## [0.7.15]
 
 * Add a function to create a URI template from non-ASCII string
