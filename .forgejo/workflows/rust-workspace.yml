@@ -77,3 +77,24 @@ jobs:
                   grep --color=always --with-filename --line-number '\s\+&msrv\s*['\''"]${{ env.MSRV_REGEX }}['\''"]' "$yml_path"
               fi
           done
+
+  # Tests that depends on external assets.
+  external-tests:
+    runs-on: docker
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: ./.forgejo/actions/rust-toolchain
+        with:
+          channel: ${{ env.MSRV }}
+          components: clippy
+      - uses: ./.forgejo/actions/rust-deps
+        with:
+          update-mode: default
+
+      - name: Tests (iri-string-tests)
+        run: |
+          export RUST_BACKTRACE=1
+          echo '[command]cargo test --color=always --frozen --package iri-string-tests --all-targets --profile=dev'
+          cargo test --color=always --frozen --package iri-string-tests --all-targets --profile=dev
