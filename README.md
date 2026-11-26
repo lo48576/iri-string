@@ -49,11 +49,12 @@ See the [documentation](https://docs.rs/iri-string) for details.
 ## CI
 
 CI is running on the main author's private instance of
-[Woodpecker CI](https://woodpecker-ci.org/), and CI runs should pass on
-`master` and `develop` branches.
+[Forgejo Actions](https://forgejo.org/docs/latest/user/actions/overview/), and
+CI runs should pass on `master` and `develop` branches.
 
-While the instance is not public, anyone can run the CI tests if you have (or
-they deploy) their own Woodpecker CI instance.
+While the instance is not for public use, anyone can run the CI tests if you
+have (or they deploy) their own Forgejo instance (with
+[Forgejo Runners](https://forgejo.org/docs/latest/admin/actions/) set up).
 
 The reason not to use free CI services are:
 
